@@ -52,6 +52,13 @@ one-tap human decision in the cockpit. Registered in the routine-contract
 registry so the foreman notices if it ever stops running. Nothing is ever
 deleted; structuring is append-only over the raw log.
 
+V1 status (2026-07-20): `os capture --raw` and the explicit-path
+`os capture-inbox` adapter are implemented with global byte/line/line-length
+budgets, source-byte immutability, minimized append-only candidates, and a
+sanitized operational-cockpit view. The routine contract is registered but
+disabled. Creating `~/.dad/inbox.md`, scheduling the 26-hour routine, model
+routing, and automatic workstream creation remain separately human-gated.
+
 ### 1.4 Kernel B - The interruption contract
 
 A standing agent contract (AGENTS.md addition + skill), with a deterministic

@@ -36,7 +36,9 @@ from digital_asset_directory.portfolio_convergence import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-NOW = datetime(2026, 7, 19, 4, tzinfo=timezone.utc)
+# Relative to wall clock so CLI --check (which uses datetime.now) cannot drift
+# past the default 26h stale window as absolute fixture dates age.
+NOW = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(hours=1)
 
 
 def _write_json(path: Path, value: dict[str, object]) -> None:
@@ -49,6 +51,7 @@ def _source_paths(hub: Path) -> dict[str, Path]:
         "portfolio_v1": hub / "processed/reports/portfolio_os/cockpit.json",
         "portfolio_v2": hub / "processed/reports/portfolio_os/cockpit-v2.json",
         "convergence_radar": hub / "processed/reports/portfolio_os/convergence-radar.json",
+        "capture_inbox": hub / "processed/reports/portfolio_os/capture-inbox.json",
         "capability_os": hub / "processed/portfolio_os/capability-os-cockpit.json",
         "daemon": hub / "processed/reports/daemon-heartbeat.json",
         "event_pipeline": hub / "processed/events/reports/event_pipeline.json",
@@ -61,6 +64,7 @@ def _seed_sources(hub: Path, *, timestamp: datetime = NOW) -> None:
         "operational-cockpit.schema.json",
         "portfolio-cockpit.schema.json",
         "portfolio-cockpit-v2.schema.json",
+        "portfolio-capture-inbox-report.schema.json",
         "capability-os-cockpit.schema.json",
     ):
         schema_target = hub / "schemas" / schema_name
@@ -207,6 +211,46 @@ def _seed_sources(hub: Path, *, timestamp: datetime = NOW) -> None:
     )
     _write_json(paths["convergence_radar"], convergence_report)
     _write_json(
+        paths["capture_inbox"],
+        {
+            "schema_version": "dad.portfolio_capture_inbox_report.v1",
+            "generated_at": generated,
+            "report_id": "dad:portfolio-capture-inbox:" + "e" * 64,
+            "status": "current_candidate",
+            "source": {
+                "fingerprint": "sha256:" + "f" * 64,
+                "byte_count": 128,
+                "mutated": False,
+            },
+            "summary": {
+                "observed_line_count": 4,
+                "candidate_count": 2,
+                "new_candidate_count": 1,
+                "duplicate_candidate_count": 1,
+                "blank_line_count": 1,
+                "redaction_count": 1,
+                "human_decision_count": 2,
+            },
+            "coverage": {
+                "complete": True,
+                "problems": [],
+                "limits": {
+                    "max_inbox_bytes": 512000,
+                    "max_lines": 500,
+                    "max_line_chars": 2000,
+                },
+            },
+            "ledger": {
+                "record_count": 2,
+                "fingerprint": "sha256:" + "1" * 64,
+                "schema_version": "dad.portfolio_capture_candidate.v1",
+            },
+            "candidate_only": True,
+            "execution_authorized": False,
+            "authority_boundary": "This adapter reads one explicitly supplied local inbox without changing or acknowledging it and exposes no captured text in the cockpit.",
+        },
+    )
+    _write_json(
         paths["daemon"],
         {
             "schema_version": "dad.daemon.heartbeat.v1",
@@ -339,10 +383,10 @@ def test_missing_sources_are_partial_and_never_false_green(
     validate_operational_cockpit(ROOT, cockpit)
     assert cockpit["status"] == "partial_candidate"
     assert cockpit["summary"] == {
-        "source_count": 6,
+        "source_count": 7,
         "current_count": 0,
         "stale_count": 0,
-        "missing_count": 6,
+        "missing_count": 7,
         "invalid_count": 0,
         "immediate_decision_count": 0,
         "all_sources_current": False,
@@ -354,8 +398,11 @@ def test_missing_sources_are_partial_and_never_false_green(
     assert overview["convergence"]["availability"] == "unavailable"
     assert overview["convergence"]["candidate_count"] is None
     assert overview["convergence"]["top_candidates"] == []
-    assert overview["readiness"]["source_gap_count"] == 6
-    assert len(overview["readiness"]["source_actions"]) == 6
+    assert overview["capture_inbox"]["availability"] == "unavailable"
+    assert overview["capture_inbox"]["candidate_count"] is None
+    assert overview["capture_inbox"]["source_mutated"] is None
+    assert overview["readiness"]["source_gap_count"] == 7
+    assert len(overview["readiness"]["source_actions"]) == 7
     assert cockpit["execution_authorized"] is False
 
 
@@ -397,6 +444,12 @@ def test_current_sources_compose_bounded_decisions_and_event_cursor(
     assert convergence["top_candidates"][0]["shared_touched_path_count"] == 1
     assert convergence["top_candidates"][0]["execution_authorized"] is False
 
+    capture = first["operator_overview"]["capture_inbox"]
+    assert capture["availability"] == "current"
+    assert capture["candidate_count"] == 2
+    assert capture["new_candidate_count"] == 1
+    assert capture["source_mutated"] is False
+    assert capture["coverage_complete"] is True
     assert first["adapter_contract"]["core_kind"] == "portable_core"
     assert first["adapter_contract"]["rollout"] == "reviewed_opt_in_enrollment_wave"
 
@@ -417,7 +470,7 @@ def test_stale_and_invalid_sources_remain_visible(
 
     validate_operational_cockpit(ROOT, cockpit)
     assert cockpit["status"] == "partial_candidate"
-    assert cockpit["summary"]["stale_count"] == 5
+    assert cockpit["summary"]["stale_count"] == 6
     assert cockpit["summary"]["invalid_count"] == 1
     assert cockpit["sources"]["event_pipeline"]["problems"] == ["source_unreadable_or_invalid_json"]
 
@@ -577,7 +630,7 @@ def test_in_progress_daemon_heartbeat_cannot_make_cockpit_current(
     cockpit = build_operational_cockpit(tmp_path, now=NOW)
 
     assert cockpit["status"] == "partial_candidate"
-    assert cockpit["summary"]["current_count"] == 5
+    assert cockpit["summary"]["current_count"] == 6
     assert cockpit["summary"]["invalid_count"] == 1
     assert cockpit["sources"]["daemon"]["status"] == "invalid"
     assert cockpit["sources"]["daemon"]["freshness"] == "unknown"
@@ -675,7 +728,7 @@ def test_semantically_inconsistent_snapshot_is_rejected(
 
     contradictory = build_operational_cockpit(tmp_path, now=NOW)
     contradictory["status"] = "partial_candidate"
-    contradictory["summary"]["current_count"] = 5
+    contradictory["summary"]["current_count"] = 6
     contradictory["summary"]["stale_count"] = 1
     contradictory["summary"]["all_sources_current"] = False
     contradictory["sources"]["portfolio_v1"]["status"] = "stale"
@@ -906,7 +959,15 @@ def test_html_is_accessible_script_free_and_escapes_source_text(
     assert "&middot;" in html
     assert 'href="#main"' in html
     assert 'aria-label="Cockpit sections"' in html
-    for section in ("decisions", "portfolio", "convergence", "signals", "sources", "contract"):
+    for section in (
+        "decisions",
+        "portfolio",
+        "capture",
+        "convergence",
+        "signals",
+        "sources",
+        "contract",
+    ):
         assert f'href="#{section}"' in html
         assert f'id="{section}"' in html
     assert "Unknown is never shown as zero." in html
@@ -917,6 +978,9 @@ def test_html_is_accessible_script_free_and_escapes_source_text(
     assert "codex/cockpit-refresh-a" in html
     assert "src/cockpit.py" not in html
     assert "No action is authorized" in html
+    assert "Capture inbox" in html
+    assert "Captured text is intentionally absent" in html
+    assert "2</strong>review candidates" in html
 
 
 def test_foreground_host_is_loopback_read_only_and_route_bounded(

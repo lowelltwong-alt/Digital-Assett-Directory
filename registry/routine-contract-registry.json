@@ -86,6 +86,22 @@
       "consumer": "weekly review; coverage cycle log"
     },
     {
+      "routine_id": "dad-capture-inbox-structuring",
+      "kind": "cli_on_demand",
+      "enabled": false,
+      "owner": "lowell",
+      "description": "Bounded report-only structuring of an explicitly supplied local drop file (asset-dir os capture-inbox).",
+      "artifact": {"root": "data", "path": "processed/reports/portfolio_os/structured-captures.jsonl"},
+      "freshness_hours": 26,
+      "dependency_paths": [
+        "src/digital_asset_directory/portfolio_capture_core.py",
+        "src/digital_asset_directory/portfolio_capture_inbox.py"
+      ],
+      "consumer": "operational cockpit capture-inbox status; human workstream review",
+      "kill_criteria": "Retire or redesign if bounded operator review shows privacy leakage, false-intent creation, or no demonstrated reduction in capture loss.",
+      "notes": "Dormant registration only. Enabling or scheduling requires Lowell approval. The command never creates, clears, acknowledges, or mutates the source inbox and never creates workstreams."
+    },
+    {
       "routine_id": "dad-portfolio-convergence-radar",
       "kind": "cli_on_demand",
       "enabled": true,
@@ -96,6 +112,54 @@
       "consumer": "operational cockpit convergence view; human branch/worktree review",
       "kill_criteria": "Retire or redesign if bounded operator review shows persistent false-positive overload or if a replacement preserves the report-only authority boundary.",
       "notes": "Registration is on-demand only. It does not schedule a scan, run a daemon, or authorize any merge, close, deletion, cleanup, or source-repository write."
+    },
+    {
+      "routine_id": "dad-learning-loop-yield-report",
+      "kind": "cli_on_demand",
+      "enabled": false,
+      "owner": "lowell",
+      "description": "Monthly report-only learning-loop yield projection (asset-dir agent yield-report).",
+      "artifact": {"root": "data", "path": "processed/reports/learning_loop_yield.json", "parse_json": true},
+      "freshness_hours": null,
+      "dependency_paths": [
+        "src/digital_asset_directory/learning_yield_report.py",
+        "schemas/learning-loop-yield-report.schema.json"
+      ],
+      "consumer": "human learning-loop review; optional future cockpit surface",
+      "kill_criteria": "Retire or redesign if operators treat unknown coverage as zero or if self-scores begin driving counts.",
+      "notes": "Dormant registration only. Enabling or scheduling requires Lowell approval. Source records only; anti-gaming preserves coverage_unavailable."
+    },
+    {
+      "routine_id": "dad-agent-session-split-report",
+      "kind": "cli_on_demand",
+      "enabled": false,
+      "owner": "lowell",
+      "description": "Dry-run compare of legacy vs data-root agent sessions (asset-dir agent session-split-report).",
+      "artifact": {"root": "data", "path": "processed/reports/agent_session_split.json", "parse_json": true},
+      "freshness_hours": null,
+      "dependency_paths": [
+        "src/digital_asset_directory/agent_session_split_report.py",
+        "schemas/agent-session-split-report.schema.json"
+      ],
+      "consumer": "human lifecycle integrity review before any session migration",
+      "kill_criteria": "Retire after legacy and data-root session surfaces are proven identical for a reviewed window and apply is either completed or declined.",
+      "notes": "Dormant registration only. Report-only; apply/migrate/delete of session files requires a separate named human approval."
+    },
+    {
+      "routine_id": "dad-agent-session-reaper",
+      "kind": "cli_on_demand",
+      "enabled": false,
+      "owner": "lowell",
+      "description": "Dry-run classify of stale open agent sessions (asset-dir agent reaper --dry-run).",
+      "artifact": {"root": "data", "path": "processed/reports/agent_session_reaper.json", "parse_json": true},
+      "freshness_hours": null,
+      "dependency_paths": [
+        "src/digital_asset_directory/agent_session_reaper.py",
+        "schemas/agent-session-reaper-report.schema.json"
+      ],
+      "consumer": "human lifecycle review; F2 reaper apply gate evidence",
+      "kill_criteria": "Retire or redesign if dry-run false-positive closes dominate operator review or if apply is approved under a successor routine.",
+      "notes": "Dormant registration only. --dry-run is mandatory; apply/close is out of scope until named human approval (F2/G5)."
     }
   ]
 }

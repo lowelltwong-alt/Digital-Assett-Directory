@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-capture-inbox-report.schema.json",
+  "title": "DAD Portfolio OS capture inbox report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "generated_at", "report_id", "status", "source",
+    "summary", "coverage", "ledger", "candidate_only", "execution_authorized",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_capture_inbox_report.v1"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "report_id": {"type": "string", "pattern": "^dad:portfolio-capture-inbox:[0-9a-f]{64}$"},
+    "status": {"enum": ["current_candidate", "partial_candidate"]},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fingerprint", "byte_count", "mutated"],
+      "properties": {
+        "fingerprint": {"type": "string", "pattern": "^(|sha256:[0-9a-f]{64})$"},
+        "byte_count": {"type": "integer", "minimum": 0, "maximum": 8000000},
+        "mutated": {"const": false}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observed_line_count", "candidate_count", "new_candidate_count",
+        "duplicate_candidate_count", "blank_line_count", "redaction_count",
+        "human_decision_count"
+      ],
+      "properties": {
+        "observed_line_count": {"type": "integer", "minimum": 0, "maximum": 10001},
+        "candidate_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "new_candidate_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "duplicate_candidate_count": {"type": "integer", "minimum": 0, "maximum": 20000},
+        "blank_line_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "redaction_count": {"type": "integer", "minimum": 0},
+        "human_decision_count": {"type": "integer", "minimum": 0, "maximum": 10000}
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["complete", "problems", "limits"],
+      "properties": {
+        "complete": {"type": "boolean"},
+        "problems": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "byte_budget_exhausted", "invalid_utf8", "line_budget_exhausted",
+              "line_length_budget_exhausted", "non_text_line"
+            ]
+          }
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max_inbox_bytes", "max_lines", "max_line_chars"],
+          "properties": {
+            "max_inbox_bytes": {"type": "integer", "minimum": 1024, "maximum": 8000000},
+            "max_lines": {"type": "integer", "minimum": 1, "maximum": 10000},
+            "max_line_chars": {"type": "integer", "minimum": 32, "maximum": 20000}
+          }
+        }
+      }
+    },
+    "ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_count", "fingerprint", "schema_version"],
+      "properties": {
+        "record_count": {"type": "integer", "minimum": 0, "maximum": 20000},
+        "fingerprint": {"type": "string", "pattern": "^(|sha256:[0-9a-f]{64})$"},
+        "schema_version": {"const": "dad.portfolio_capture_candidate.v1"}
+      }
+    },
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 100}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "current_candidate"}}},
+      "then": {
+        "properties": {
+          "source": {"properties": {"fingerprint": {"pattern": "^sha256:[0-9a-f]{64}$"}}},
+          "coverage": {
+            "properties": {
+              "complete": {"const": true},
+              "problems": {"maxItems": 0}
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "source": {"properties": {"fingerprint": {"const": ""}}},
+          "summary": {
+            "properties": {
+              "candidate_count": {"const": 0},
+              "new_candidate_count": {"const": 0},
+              "human_decision_count": {"const": 0}
+            }
+          },
+          "coverage": {
+            "properties": {
+              "complete": {"const": false},
+              "problems": {"minItems": 1}
+            }
+          },
+          "ledger": {
+            "properties": {
+              "record_count": {"const": 0},
+              "fingerprint": {"const": ""}
+            }
+          }
+        }
+      }
+    }
+  ]
+}

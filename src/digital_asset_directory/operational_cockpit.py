@@ -173,6 +173,35 @@ def _source_specs(hub_root: Path) -> tuple[SourceSpec, ...]:
             validation_schema=(hub_root / "schemas/portfolio-convergence-report.schema.json"),
         ),
         SourceSpec(
+            "capture_inbox",
+            reports / "portfolio_os" / "capture-inbox.json",
+            "dad.portfolio_capture_inbox_report.v1",
+            "portfolio_capture_inbox",
+            "src/digital_asset_directory/portfolio_capture_inbox.py",
+            required_fields=(
+                "status",
+                "source",
+                "summary",
+                "coverage",
+                "ledger",
+                "candidate_only",
+                "execution_authorized",
+            ),
+            field_types=(
+                ("status", str),
+                ("source", dict),
+                ("summary", dict),
+                ("coverage", dict),
+                ("ledger", dict),
+            ),
+            required_values=(
+                ("status", "current_candidate"),
+                ("candidate_only", True),
+                ("execution_authorized", False),
+            ),
+            validation_schema=(hub_root / "schemas/portfolio-capture-inbox-report.schema.json"),
+        ),
+        SourceSpec(
             "daemon",
             reports / "daemon-heartbeat.json",
             "dad.daemon.heartbeat.v1",
@@ -543,6 +572,40 @@ def _convergence_overview(
     }
 
 
+def _capture_inbox_overview(
+    sources: dict[str, dict[str, Any]],
+    payloads: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    source = sources["capture_inbox"]
+    payload = payloads.get("capture_inbox")
+    if payload is None:
+        return {
+            "availability": "unavailable",
+            "source_id": "capture_inbox",
+            "source_fingerprint": "",
+            "candidate_count": None,
+            "new_candidate_count": None,
+            "duplicate_candidate_count": None,
+            "human_decision_count": None,
+            "redaction_count": None,
+            "source_mutated": None,
+            "coverage_complete": None,
+        }
+    summary = payload["summary"]
+    return {
+        "availability": "current",
+        "source_id": "capture_inbox",
+        "source_fingerprint": source["fingerprint"],
+        "candidate_count": summary["candidate_count"],
+        "new_candidate_count": summary["new_candidate_count"],
+        "duplicate_candidate_count": summary["duplicate_candidate_count"],
+        "human_decision_count": summary["human_decision_count"],
+        "redaction_count": summary["redaction_count"],
+        "source_mutated": payload["source"]["mutated"],
+        "coverage_complete": payload["coverage"]["complete"],
+    }
+
+
 def _operator_overview(
     sources: dict[str, dict[str, Any]],
     payloads: dict[str, dict[str, Any]],
@@ -577,6 +640,7 @@ def _operator_overview(
     return {
         "portfolio_scope": portfolio_scope,
         "convergence": _convergence_overview(sources, payloads),
+        "capture_inbox": _capture_inbox_overview(sources, payloads),
         "readiness": {
             "evidence_status": evidence_status,
             "projection_renderable": True,
@@ -745,6 +809,33 @@ def validate_operational_cockpit(hub_root: Path, cockpit: dict[str, Any]) -> Non
     ):
         raise ValueError("unavailable convergence overview must not expose candidate evidence")
 
+    capture = overview["capture_inbox"]
+    capture_source = cockpit["sources"]["capture_inbox"]
+    capture_counts = (
+        "candidate_count",
+        "new_candidate_count",
+        "duplicate_candidate_count",
+        "human_decision_count",
+        "redaction_count",
+    )
+    if capture_source["status"] == "observed":
+        if (
+            capture["availability"] != "current"
+            or capture["source_fingerprint"] != capture_source["fingerprint"]
+            or capture["source_mutated"] is not False
+            or capture["coverage_complete"] is not True
+            or any(capture[field] is None for field in capture_counts)
+        ):
+            raise ValueError("capture inbox overview does not match current source")
+    elif (
+        capture["availability"] != "unavailable"
+        or capture["source_fingerprint"]
+        or capture["source_mutated"] is not None
+        or capture["coverage_complete"] is not None
+        or any(capture[field] is not None for field in capture_counts)
+    ):
+        raise ValueError("unavailable capture inbox overview must not expose capture evidence")
+
     digest_body = {
         "sources": cockpit["sources"],
         "decisions": cockpit["decisions"],
@@ -768,6 +859,7 @@ def operational_cockpit_html(cockpit: dict[str, Any]) -> str:
     readiness = overview["readiness"]
     pulse = cockpit["event_pulse"]
     convergence = overview["convergence"]
+    capture = overview["capture_inbox"]
 
     def display_count(value: Any) -> str:
         if isinstance(value, int) and not isinstance(value, bool):
@@ -819,6 +911,21 @@ def operational_cockpit_html(cockpit: dict[str, Any]) -> str:
             "No repository action is implied.</p></article>"
         )
 
+    if capture["availability"] == "current":
+        capture_cards = (
+            f"<div class='metric'><strong>{display_count(capture['candidate_count'])}</strong>review candidates</div>"
+            f"<div class='metric'><strong>{display_count(capture['new_candidate_count'])}</strong>new this pass</div>"
+            f"<div class='metric'><strong>{display_count(capture['duplicate_candidate_count'])}</strong>duplicates withheld</div>"
+            f"<div class='metric'><strong>{display_count(capture['redaction_count'])}</strong>redactions</div>"
+        )
+        capture_note = "Source unchanged; complete bounded coverage. Captured text is intentionally absent from this page."
+    else:
+        capture_cards = "<div class='metric'><strong>unknown</strong>capture readiness</div>"
+        capture_note = (
+            "Run asset-dir os capture-inbox --inbox &lt;explicit-path&gt; on demand. "
+            "DAD will not create, clear, acknowledge, or schedule the inbox."
+        )
+
     source_rows = "".join(
         "<tr>"
         f"<th scope='row'>{escape(source_id.replace('_', ' ').title())}</th>"
@@ -831,7 +938,7 @@ def operational_cockpit_html(cockpit: dict[str, Any]) -> str:
         for source_id, source in cockpit["sources"].items()
     )
     status_text = (
-        "All six precomputed sources are current. This remains candidate evidence."
+        "All seven precomputed sources are current. This remains candidate evidence."
         if summary["all_sources_current"]
         else "Some sources are missing, stale, or invalid. DAD is deliberately withholding an all-clear."
     )
@@ -893,7 +1000,7 @@ main{{width:min(1320px,94vw);margin:auto;padding:3rem 0 5rem}}h1{{font-size:clam
 <p class="eyebrow">DAD &middot; local operational envelope</p>
 <h1>See the whole field. Act on only what is proven.</h1>
 <p class="lede">A foreground, loopback-only view over existing portfolio, capability, daemon, and event evidence. Page requests never scan repositories.</p>
-<nav class="section-nav" aria-label="Cockpit sections"><a href="#decisions">Now</a><a href="#portfolio">Portfolio</a><a href="#convergence">Convergence</a><a href="#signals">Signals</a><a href="#sources">Sources</a><a href="#contract">Authority</a></nav>
+<nav class="section-nav" aria-label="Cockpit sections"><a href="#decisions">Now</a><a href="#portfolio">Portfolio</a><a href="#capture">Capture</a><a href="#convergence">Convergence</a><a href="#signals">Signals</a><a href="#sources">Sources</a><a href="#contract">Authority</a></nav>
 <div class="notice" role="status">{escape(status_text)}</div>
 <section class="summary" aria-label="Source summary"><div class="metric"><strong>{summary["current_count"]}/{summary["source_count"]}</strong>current sources</div><div class="metric"><strong>{summary["stale_count"] + summary["missing_count"] + summary["invalid_count"]}</strong>source gaps</div><div class="metric"><strong>{summary["immediate_decision_count"]}</strong>immediate decisions</div></section>
 <h2 id="decisions">Now</h2>
@@ -902,6 +1009,9 @@ main{{width:min(1320px,94vw);margin:auto;padding:3rem 0 5rem}}h1{{font-size:clam
 <p class="meta">Available only from a current, schema-validated Portfolio v1 source. Unknown is never shown as zero.</p>
 <section class="scope-grid" aria-label="Portfolio scope">{portfolio_metrics}</section>
 <section class="summary" aria-label="Portfolio uncertainty">{uncertainty_metrics}</section>
+<h2 id="capture">Capture inbox</h2>
+<p class="meta">{escape(capture_note)}</p>
+<section class="scope-grid" aria-label="Capture inbox status">{capture_cards}</section>
 <h2 id="convergence">Convergence candidates</h2>
 <p class="meta">Top five deterministic review candidates from branch names, touched paths, and merge-base distance. Similarity never authorizes an action.</p>
 <section class="decisions" aria-label="Convergence candidates">{convergence_cards}</section>
