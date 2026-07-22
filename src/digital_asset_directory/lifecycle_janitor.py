@@ -173,7 +173,18 @@ def plan_session_reap(
 
 
 def apply_session_reap(hub_root: Path, plan: dict[str, Any], *, approval_ref: str) -> dict[str, Any]:
-    """Close auto-eligible idle sessions honestly (status 'abandoned_reaped')."""
+    """Close auto-eligible idle sessions honestly (status 'abandoned_reaped').
+
+    Refuses to act without a nonempty ``approval_ref``: closing another agent's
+    governance record requires a named human approval (F2/G5), not just a flag.
+    """
+    if not str(approval_ref).strip():
+        return {
+            "closed": [],
+            "closed_count": 0,
+            "failed": [],
+            "skipped": "empty_approval_ref_named_human_approval_required",
+        }
     now_iso = utc_now()
     closed: list[str] = []
     failed: list[dict[str, str]] = []
@@ -181,7 +192,7 @@ def apply_session_reap(hub_root: Path, plan: dict[str, Any], *, approval_ref: st
         reason = (
             f"Reaped idle agent session (idle {entry.get('idle_hours')}h >= "
             f"{plan.get('autoapply_idle_hours')}h) by lifecycle janitor "
-            f"(approval={approval_ref or 'config'}). Marked abandoned, not completed; "
+            f"(approval={approval_ref}). Marked abandoned, not completed; "
             "any work remains on its branch/worktree."
         )
         path = Path(str(entry.get("path")))
@@ -366,10 +377,17 @@ def run_janitor_cycle(
 
     actions: dict[str, Any] = {"applied": apply}
     if apply:
-        if bool(session_cfg.get("apply")):
+        approval_ref = str(session_cfg.get("approval_ref", "")).strip()
+        if bool(session_cfg.get("apply")) and approval_ref:
             actions["session_reap"] = apply_session_reap(
-                hub_root, session_plan, approval_ref=str(session_cfg.get("approval_ref", ""))
+                hub_root, session_plan, approval_ref=approval_ref
             )
+        elif bool(session_cfg.get("apply")):
+            # apply=true but no named approval: the F2/G5 gate must be a named
+            # human approval, not just a config flag, or it is non-load-bearing.
+            actions["session_reap"] = {
+                "skipped": "session_reap.apply=true but approval_ref is empty; a named human approval (F2/G5) is required to close another agent's session record"
+            }
         else:
             actions["session_reap"] = {"skipped": "session_reap.apply=false (F2/G5 opt-in required)"}
         if bool(cfg["worktree_prune"].get("apply", True)):

@@ -520,6 +520,7 @@ def _run_janitor_report_step(hub_root: Path) -> dict[str, Any]:
     sessions = report["plan"]["sessions"]
     return {
         "status": "ok",
+        "generated_at": report["generated_at"],
         "session_auto_eligible": len(sessions["auto_eligible"]),
         "session_review_needed": len(sessions["review_needed"]),
         "worktrees_prunable": report["plan"]["worktrees"]["prunable_count"],
@@ -527,6 +528,24 @@ def _run_janitor_report_step(hub_root: Path) -> dict[str, Any]:
         "report_path": paths["json_path"],
         "authority_boundary": report["authority_boundary"],
     }
+
+
+# The janitor dry-run surfaces time-based transitions (a session crossing the
+# idle threshold) that do NOT change the cycle input fingerprint. Refresh it on a
+# cadence so idle cycles cannot silently starve it, without abandoning the
+# idle-cycle fast path in the common case.
+_JANITOR_REFRESH_CADENCE_HOURS = 1.0
+
+
+def _janitor_refresh_due(previous_heartbeat: dict[str, Any], now: str) -> bool:
+    last = str(previous_heartbeat.get("lifecycle_janitor_generated_at") or "").strip()
+    if not last:
+        return True
+    last_dt = _parse_time(last)
+    now_dt = _parse_time(now)
+    if last_dt is None or now_dt is None:
+        return True
+    return (now_dt - last_dt).total_seconds() >= _JANITOR_REFRESH_CADENCE_HOURS * 3600.0
 
 
 def _step_result(name: str, func, *args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -813,6 +832,7 @@ def run_daemon_cycle(
         and previous_heartbeat.get("input_fingerprint") == input_fingerprint
         and not bool(journal_status_result.get("checkpoint_due"))
         and not bool(weekly_due.get("due"))
+        and not _janitor_refresh_due(previous_heartbeat, generated_at)
     ):
         return _idle_cycle_result(
             hub_root,
@@ -974,6 +994,7 @@ def run_daemon_cycle(
             "scheduled_tasks_report_path": scheduled_tasks_result["report_path"],
             "scheduled_task_count": scheduled_tasks_result["task_count"],
             "lifecycle_janitor_status": janitor_result.get("status"),
+            "lifecycle_janitor_generated_at": janitor_result.get("generated_at"),
             "lifecycle_janitor_session_auto_eligible": janitor_result.get("session_auto_eligible"),
             "lifecycle_janitor_worktrees_prunable": janitor_result.get("worktrees_prunable"),
             "lifecycle_janitor_report_path": janitor_result.get("report_path"),

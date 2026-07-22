@@ -68,10 +68,14 @@ python -m digital_asset_directory.cli janitor --hub .
 python -m digital_asset_directory.cli janitor --apply --hub .
 ```
 
-The daemon runs the janitor in **dry-run** on every cycle for visibility
-(surfaced in the heartbeat as `lifecycle_janitor_*`). To automate cleanup,
-schedule `janitor --apply` on the DAD scheduler; enable session reaping by
-setting `session_reap.apply: true` in `config/janitor.yaml`.
+The daemon runs the janitor in **dry-run** on every active cycle for visibility
+(surfaced in the heartbeat as `lifecycle_janitor_*`), and forces a refresh at
+least hourly even when the cycle would otherwise be idle — because a session
+crossing the idle threshold is a time-based transition that does not change the
+cycle input fingerprint. To automate *cleanup*, schedule `janitor --apply` on the
+DAD scheduler; enable session reaping by setting `session_reap.apply: true` **and
+a nonempty `approval_ref`** (a named human approval — the flag alone is not the
+gate) in `config/janitor.yaml`.
 
 ## Configuration
 

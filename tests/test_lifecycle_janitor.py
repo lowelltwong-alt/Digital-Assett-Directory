@@ -132,8 +132,22 @@ def test_cycle_apply_gates_session_reap_behind_optin(tmp_path: Path) -> None:
     report = lj.run_janitor_cycle(tmp_path, repository=tmp_path.resolve(), apply=True)
     assert json.loads(p.read_text(encoding="utf-8"))["status"] == "open"
     assert "skipped" in report["actions"]["session_reap"]
-    # Operator opt-in (F2/G5) -> now it reaps.
+    # apply=True but blank approval_ref -> STILL blocked (F2/G5 gate is load-bearing).
     cfg = lj.load_janitor_config(tmp_path)
     cfg["session_reap"]["apply"] = True
+    report2 = lj.run_janitor_cycle(tmp_path, repository=tmp_path.resolve(), apply=True, config=cfg)
+    assert json.loads(p.read_text(encoding="utf-8"))["status"] == "open"
+    assert "approval_ref is empty" in report2["actions"]["session_reap"]["skipped"]
+    # Named human approval -> now it reaps.
+    cfg["session_reap"]["approval_ref"] = "human:lowell:2026-07-22:reap-idle"
     lj.run_janitor_cycle(tmp_path, repository=tmp_path.resolve(), apply=True, config=cfg)
     assert json.loads(p.read_text(encoding="utf-8"))["status"] == "abandoned_reaped"
+
+
+def test_apply_session_reap_refuses_empty_approval_ref(tmp_path: Path) -> None:
+    _write_session(tmp_path, "dad:session:auto", idle_hours=48.0)
+    plan = lj.plan_session_reap(tmp_path, repository=tmp_path.resolve(),
+                                idle_live_hours=6.0, autoapply_idle_hours=24.0)
+    result = lj.apply_session_reap(tmp_path, plan, approval_ref="   ")
+    assert result["closed_count"] == 0
+    assert "skipped" in result

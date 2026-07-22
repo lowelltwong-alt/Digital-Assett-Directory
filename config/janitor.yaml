@@ -8,7 +8,8 @@ janitor:
   session_reap:
     apply: false          # set true to auto-close provably-idle sessions
     idle_hours: 24        # only auto-close sessions idle at least this long (margin above the 6h dry-run flag)
-    approval_ref: ""      # named human approval to record when apply=true
+    approval_ref: ""      # REQUIRED when apply=true: a named human approval. A blank
+                          # ref does NOT authorize reaping (the flag alone is not the gate).
   worktree_prune:
     apply: true           # `git worktree prune`: removes admin metadata for already-deleted worktree dirs only
     remove_merged_clean: false  # (reserved) opt-in removal of present worktrees on merged+clean branches
