@@ -155,6 +155,7 @@ from .agent_session_reaper import (
     DEFAULT_PRESERVATION_POINTER,
     write_agent_session_reaper_report,
 )
+from .lifecycle_janitor import run_janitor_cycle, write_janitor_report
 from .agent_session_split_report import write_agent_session_split_report
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_repo_status, journal_status
 from .lesson_automation_coverage import (
@@ -4797,6 +4798,40 @@ def catalog_vacuum(
             "removed": removed,
             "counts_before": before,
             "counts_after": after,
+        }
+    )
+
+
+@app.command("janitor")
+def janitor(
+    apply: bool = typer.Option(
+        False, "--apply", help="Execute config-authorized sweeps; default is a dry-run plan."
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Lifecycle janitor: reap idle sessions, prune orphaned worktrees, run catalog retention.
+
+    Dry-run by default. `--apply` runs the sweeps `config/janitor.yaml` authorizes:
+    catalog retention and `git worktree prune` are safe and on by default; session
+    reaping is opt-in (F2/G5). Cleans only the hub's own state; never mutates
+    scanned source repos or force-removes a worktree with uncommitted work.
+    """
+    cfg = _cfg(config, hub)
+    report = run_janitor_cycle(cfg.repo_root, repository=cfg.repo_root, apply=apply)
+    paths = write_janitor_report(cfg.repo_root, report)
+    actions = report["actions"]
+    console.print_json(
+        data={
+            "applied": report["applied"],
+            "sessions_auto_eligible": len(report["plan"]["sessions"]["auto_eligible"]),
+            "sessions_review_needed": len(report["plan"]["sessions"]["review_needed"]),
+            "sessions_closed": actions.get("session_reap", {}).get("closed_count", 0),
+            "worktrees_prunable": report["plan"]["worktrees"]["prunable_count"],
+            "worktrees_pruned": actions.get("worktree_prune", {}).get("pruned_admin_entries", 0),
+            "catalog_size_bytes": report["plan"]["catalog"].get("size_bytes"),
+            "catalog_reclaimed_bytes": actions.get("catalog_retention", {}).get("reclaimed_bytes", 0),
+            "report": paths,
         }
     )
 

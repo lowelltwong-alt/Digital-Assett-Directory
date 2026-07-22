@@ -826,6 +826,7 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         "graph_inference",
         "transport_audit",
         "weekly_asset_coverage",
+        "lifecycle_janitor",
         "scheduled_task_registry",
         "daily_review_queue",
         "heartbeat",

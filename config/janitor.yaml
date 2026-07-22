@@ -1,0 +1,17 @@
+# Lifecycle janitor configuration. See docs/LIFECYCLE_JANITOR.md.
+#
+# Safe defaults: catalog retention and `git worktree prune` apply automatically
+# (they only touch the hub's own data / already-deleted worktree metadata).
+# Session reaping is opt-in because closing another agent's session record is a
+# governance action (honors the agent_session_reaper F2/G5 boundary).
+janitor:
+  session_reap:
+    apply: false          # set true to auto-close provably-idle sessions
+    idle_hours: 24        # only auto-close sessions idle at least this long (margin above the 6h dry-run flag)
+    approval_ref: ""      # REQUIRED when apply=true: a named human approval. A blank
+                          # ref does NOT authorize reaping (the flag alone is not the gate).
+  worktree_prune:
+    apply: true           # `git worktree prune`: removes admin metadata for already-deleted worktree dirs only
+    remove_merged_clean: false  # (reserved) opt-in removal of present worktrees on merged+clean branches
+  catalog_retention:
+    apply: true           # prune superseded per-scan rows to the latest complete scan + VACUUM
