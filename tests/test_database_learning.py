@@ -86,6 +86,10 @@ def test_preflight_postflight_closes_session_and_persists(tmp_path: Path):
         "subagent_when_available_else_checklist",
         "checklist_if_useful",
     }
+    learning_capture = lanes["review-lane:learning-loop-completion"]["capture"]
+    assert "criterion-level" in learning_capture
+    assert "insufficient_evidence" in learning_capture
+    assert "agent ratings" not in learning_capture
     handoff, lesson = postflight(
         hub,
         db_path,
@@ -494,5 +498,43 @@ def test_asset_use_pay_forward_rule_does_not_match_trivial_non_software_task():
     )
 
     assert "learning-rule:software-work-should-search-asset-use-pay-forward" not in {
+        match["rule_id"] for match in matches
+    }
+
+
+@pytest.mark.parametrize(
+    "task",
+    [
+        "rate this subagent out of 100",
+        "interpret the agent capability score",
+        "compare agent performance ratings",
+    ],
+)
+def test_numeric_agent_rating_rule_requires_calibration_context(task: str):
+    matches = match_learning_rules(ROOT, task=task)
+    matched = next(
+        match
+        for match in matches
+        if match["rule_id"]
+        == "learning-rule:numeric-agent-ratings-require-calibration-context"
+    )
+
+    assert matched["enforcement_level"] == "require_ack"
+
+
+@pytest.mark.parametrize(
+    "task",
+    [
+        "ordinary unit-test PASS/FAIL for the artifact",
+        "deterministic validator PASS",
+        "coverage is 98 percent",
+        "criterion PASS for the locked attempt",
+        "count the tests launched by a subagent",
+    ],
+)
+def test_numeric_agent_rating_rule_ignores_plain_verification_metrics(task: str):
+    matches = match_learning_rules(ROOT, task=task)
+
+    assert "learning-rule:numeric-agent-ratings-require-calibration-context" not in {
         match["rule_id"] for match in matches
     }

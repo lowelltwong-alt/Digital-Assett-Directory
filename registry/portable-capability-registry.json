@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.17",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.18",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -441,7 +441,7 @@
         "tests/test_intelligence_routing.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:b63d16ae35ad9ac8848fc9b0ed02eff5118a2c9dd88a157d5080e94895fe4e47",
+      "content_digest": "sha256:752cc132891d68ce01546fe9d0df01896096eb46585429f46fa508d5ab64d634",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -496,7 +496,8 @@
         "tests/test_portability_control.py",
         "tests/test_governance.py",
         "tests/test_contract_check.py",
-        "tests/test_enrollment.py"
+        "tests/test_enrollment.py",
+        "tests/test_database_learning.py"
       ],
       "fresh_until": "2026-10-15T00:00:00-04:00",
       "rollback_ref": "Revert the control-plane revision and restore the prior externally protected required-check revision.",
@@ -1243,7 +1244,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:ci-module-boundary-governance",
-      "revision_id": "portability-card-revision:ci-module-boundary-governance:0.1.0",
+      "revision_id": "portability-card-revision:ci-module-boundary-governance:0.1.1",
       "artifact_id": "skill:dad-ci-module-boundary-governance",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -1265,7 +1266,7 @@
         "templates/ci-module-boundary/multi-repo-law-firm-os/family-module-boundaries.yaml",
         "assets/coding-harnesses/ci-module-boundary-governance/tests-or-evals/scenarios.yaml"
       ],
-      "content_digest": "sha256:649022d67f7f41d290e55b82c78f9a051fe91da0897cf5f23395782d4b67e86a",
+      "content_digest": "sha256:56a7fa3626e3a2bcb4e8a86664592b598d7153cb4262e770569f445d6e4a1bb6",
       "source_observation_digest": "sha256:6fa79a984581c86ca50c8f4bf75a5db18fcd07f086e37e62e430b54e5dbc957d",
       "contract_digests": {
         "input": "sha256:01298fbb37ec7f2fc1f46541873ea2f100f0a88510cbb71c50da9df0f8d126c9",
@@ -1314,12 +1315,13 @@
         "enrolled-repo-adoption-audit"
       ],
       "adapter_revision_ids": [
-        "portability-card-revision:ci-module-boundary-github-adapter:0.1.0"
+        "portability-card-revision:ci-module-boundary-github-adapter:0.1.1"
       ],
       "harness_revision_id": "harness-revision:ci-module-boundary-governance:0.1.0",
       "evidence_refs": [
         "tests/test_ci_module_boundaries.py",
-        "roadmap/evidence/ci-module-boundary-decision.md"
+        "roadmap/evidence/ci-module-boundary-decision.md",
+        "tests/test_database_learning.py"
       ],
       "fresh_until": "2026-10-16T00:00:00-04:00",
       "rollback_ref": "Remove activation pointers and provider adapters while preserving candidate manifests and evidence.",
@@ -1416,7 +1418,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:ci-module-boundary-github-adapter",
-      "revision_id": "portability-card-revision:ci-module-boundary-github-adapter:0.1.0",
+      "revision_id": "portability-card-revision:ci-module-boundary-github-adapter:0.1.1",
       "artifact_id": "runtime-adapter:ci-module-boundary-github",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
@@ -1424,7 +1426,7 @@
       "owner": "DAD and Lowell",
       "status": "schema_validated",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "core_revision_id": "portability-card-revision:ci-module-boundary-governance:0.1.0",
+      "core_revision_id": "portability-card-revision:ci-module-boundary-governance:0.1.1",
       "target_capability_predicate": {
         "provider": "github-actions",
         "required_status": "always_starting_aggregator"
