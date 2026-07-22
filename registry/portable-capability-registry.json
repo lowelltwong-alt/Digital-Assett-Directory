@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.15",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.17",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -415,6 +415,7 @@
         "src/digital_asset_directory/portfolio_cockpit.py",
         "src/digital_asset_directory/routine_health.py",
         "src/digital_asset_directory/validation.py",
+        "src/digital_asset_directory/utils.py",
         "schemas/agent-skill-library.schema.json",
         "schemas/subagent-pack.schema.json",
         "src/digital_asset_directory/dad_library.py",
@@ -437,7 +438,7 @@
         "tests/test_intelligence_routing.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:aab53fdb25af80089ec3d2d8c4c6f0903f6d3d3af421856e9efb57d1b059afa9",
+      "content_digest": "sha256:b949ed07c1b33081b82b61fafc3054754ad88b5bc4ec3b59c01680d38e96ca09",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 import digital_asset_directory.utils as utils
-from digital_asset_directory.utils import atomic_write_text
+from digital_asset_directory.utils import atomic_write_text, tokens
 
 
 def test_atomic_write_text_retries_transient_replace_permission_error(
@@ -105,3 +105,17 @@ def test_atomic_write_text_cleanup_permission_error_does_not_mask_replace_failur
 
     assert cleanup_attempts["count"] == 2
     assert not list(tmp_path.glob(".last_checked.json.*"))
+
+
+def test_tokens_preserves_acronym_prefixed_camel_case_components() -> None:
+    # A bare camelCase split peels a short leading fragment (the "O" in
+    # OAuthToken, the "i"/"OS" in iOSDevice) into its own piece and drops it
+    # for being too short, silently losing a searchable component.
+    assert "oauth" in tokens("OAuthToken")
+    assert "token" in tokens("OAuthToken")
+    assert "ios" in tokens("iOSDevice")
+    assert "device" in tokens("iOSDevice")
+
+
+def test_tokens_still_splits_multi_word_acronym_prefixes() -> None:
+    assert "request" in tokens("HTTPRequest")

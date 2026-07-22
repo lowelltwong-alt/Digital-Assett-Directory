@@ -156,6 +156,56 @@ def redact_sensitive_text(text: str) -> tuple[str, int]:
     return redacted, count
 
 
+# Delimiters used in snake_case, kebab-case, paths, and other joined identifiers.
+_TOKEN_SPLIT_RE = re.compile(r"[_./\-+#]+")
+# camelCase / PascalCase / digit-boundary splitter applied within a delimited segment.
+_CAMEL_SPLIT_RE = re.compile(r"[A-Z]+(?=[A-Z][a-z])|[A-Z]?[a-z]+|[A-Z]+|[0-9]+")
+
+
+def _camel_parts(segment: str) -> list[str]:
+    """Split a segment into camelCase parts, plus acronym-merged candidates.
+
+    The bare regex split peels a short leading fragment (e.g. the ``O`` in
+    ``OAuthToken``, or the ``i``/``OS`` in ``iOSDevice``) off into its own
+    piece, which is then dropped for being too short and silently loses a
+    searchable component (``oauth``, ``ios``). Emitting each short fragment
+    merged with its neighbor as an extra candidate keeps those components
+    indexed without discarding the plain split.
+    """
+
+    parts = _CAMEL_SPLIT_RE.findall(segment)
+    merged = list(parts)
+    for index, part in enumerate(parts):
+        if len(part) <= 2 and index + 1 < len(parts):
+            merged.append(part + parts[index + 1])
+    return merged
+
+
+def _expand_token(raw: str) -> set[str]:
+    """Expand one matched word into the original token plus its sub-tokens.
+
+    Indexing both keeps exact-token lookups (e.g. ``budget_learning_loop``)
+    working while letting natural-language queries match snake_case,
+    camelCase, kebab-case, and path-segmented identifiers.
+    """
+
+    result: set[str] = set()
+    base = raw.lower().strip("_./-+")
+    if len(base) > 2:
+        result.add(base)
+    for segment in _TOKEN_SPLIT_RE.split(raw):
+        if not segment:
+            continue
+        seg_lower = segment.lower()
+        if len(seg_lower) > 2:
+            result.add(seg_lower)
+        for part in _camel_parts(segment):
+            part_lower = part.lower()
+            if len(part_lower) > 2:
+                result.add(part_lower)
+    return result
+
+
 def tokens(text: str) -> set[str]:
     stop = {
         "the",
@@ -190,9 +240,12 @@ def tokens(text: str) -> set[str]:
         "www",
         "com",
     }
-    return {
-        m.group(0).lower().strip("_./-+") for m in WORD_RE.finditer(text) if len(m.group(0)) > 2
-    } - stop
+    result: set[str] = set()
+    for m in WORD_RE.finditer(text):
+        raw = m.group(0)
+        if len(raw) > 2:
+            result |= _expand_token(raw)
+    return result - stop
 
 
 def jaccard(left: Iterable[str], right: Iterable[str]) -> float:
