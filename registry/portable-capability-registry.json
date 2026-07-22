@@ -434,9 +434,10 @@
         "examples/synthetic-silver/release-manifest.golden.json",
         "tests/test_synthetic_silver_program.py",
         "tests/test_intelligence_routing.py",
-        "templates/downstream/AGENTS_MANAGED_BLOCK.md"
+        "templates/downstream/AGENTS_MANAGED_BLOCK.md",
+        "src/digital_asset_directory/daemon.py"
       ],
-      "content_digest": "sha256:15f28dd8e6f9e6bfe744b4a2d2f766a99efda97a400f2541bbaef55c36dda747",
+      "content_digest": "sha256:15f6c96528c91b15949d3c0c5ddef23904eecc5e4933d32322b4588f6d1a505d",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
