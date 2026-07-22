@@ -162,6 +162,25 @@ _TOKEN_SPLIT_RE = re.compile(r"[_./\-+#]+")
 _CAMEL_SPLIT_RE = re.compile(r"[A-Z]+(?=[A-Z][a-z])|[A-Z]?[a-z]+|[A-Z]+|[0-9]+")
 
 
+def _camel_parts(segment: str) -> list[str]:
+    """Split a segment into camelCase parts, plus acronym-merged candidates.
+
+    The bare regex split peels a short leading fragment (e.g. the ``O`` in
+    ``OAuthToken``, or the ``i``/``OS`` in ``iOSDevice``) off into its own
+    piece, which is then dropped for being too short and silently loses a
+    searchable component (``oauth``, ``ios``). Emitting each short fragment
+    merged with its neighbor as an extra candidate keeps those components
+    indexed without discarding the plain split.
+    """
+
+    parts = _CAMEL_SPLIT_RE.findall(segment)
+    merged = list(parts)
+    for index, part in enumerate(parts):
+        if len(part) <= 2 and index + 1 < len(parts):
+            merged.append(part + parts[index + 1])
+    return merged
+
+
 def _expand_token(raw: str) -> set[str]:
     """Expand one matched word into the original token plus its sub-tokens.
 
@@ -180,7 +199,7 @@ def _expand_token(raw: str) -> set[str]:
         seg_lower = segment.lower()
         if len(seg_lower) > 2:
             result.add(seg_lower)
-        for part in _CAMEL_SPLIT_RE.findall(segment):
+        for part in _camel_parts(segment):
             part_lower = part.lower()
             if len(part_lower) > 2:
                 result.add(part_lower)
