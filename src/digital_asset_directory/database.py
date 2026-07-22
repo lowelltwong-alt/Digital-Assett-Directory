@@ -377,3 +377,20 @@ class CatalogDB:
             "SELECT * FROM scans WHERE status='complete' ORDER BY started_at DESC LIMIT 1"
         ).fetchone()
         return dict(row) if row else None
+
+    def latest_complete_full_scope_scan(self) -> dict[str, Any] | None:
+        """Most recent complete scan that covered ALL sources (full scope).
+
+        A bounded/partial scan (``--local-only``/``--github-only``/``--max-files``)
+        also records status 'complete', but its graph only covers the sources it
+        scanned. Retention/vacuum that pruned down to such a scan would delete the
+        prior full graph for un-scanned sources. Only scans whose summary recorded
+        ``full_scope: true`` qualify; scans predating that marker (NULL) are
+        conservatively excluded.
+        """
+        row = self.connection.execute(
+            "SELECT * FROM scans WHERE status='complete' "
+            "AND json_extract(summary_json, '$.full_scope') = 1 "
+            "ORDER BY started_at DESC LIMIT 1"
+        ).fetchone()
+        return dict(row) if row else None

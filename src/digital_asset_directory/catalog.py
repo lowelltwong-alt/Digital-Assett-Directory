@@ -292,6 +292,7 @@ def run_scan(
                 "sources": dict(Counter(a.source_id for a in assets)),
                 "errors": errors,
                 "source_files_mutated": False,
+                "full_scope": full_scope,
                 "retention_pruned": retention,
             }
             db.complete_scan(sid, str(summary["status"]), summary)

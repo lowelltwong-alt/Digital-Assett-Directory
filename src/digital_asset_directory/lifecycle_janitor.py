@@ -289,13 +289,13 @@ def plan_catalog_retention(hub_root: Path) -> dict[str, Any]:
         return {"database": str(db_path), "exists": False}
     with CatalogDB(db_path) as db:
         counts = db.table_counts()
-        latest = db.latest_complete_scan()
+        latest = db.latest_complete_full_scope_scan()
     return {
         "database": str(db_path),
         "exists": True,
         "size_bytes": db_path.stat().st_size,
         "table_counts": counts,
-        "latest_complete_scan": (latest or {}).get("scan_id"),
+        "latest_complete_full_scope_scan": (latest or {}).get("scan_id"),
         "prunes_generated_rows": bool(latest and latest.get("scan_id")),
     }
 
@@ -308,19 +308,21 @@ def apply_catalog_retention(hub_root: Path) -> dict[str, Any]:
         return {"database": str(db_path), "exists": False, "skipped": "no_catalog"}
     size_before = db_path.stat().st_size
     with CatalogDB(db_path) as db:
-        latest = db.latest_complete_scan()
+        # Full-scope only: a partial/bounded scan also completes but only covers
+        # the sources it scanned; pruning to it would drop the prior full graph.
+        latest = db.latest_complete_full_scope_scan()
         removed: dict[str, Any] = {}
         if latest and latest.get("scan_id"):
             keep = str(latest["scan_id"])
             removed = db.prune_generated_records(keep)
             removed["stale_running_scans"] = db.prune_stale_running_scans(keep)
         else:
-            removed = {"skipped": "no_complete_scan"}
+            removed = {"skipped": "no_complete_full_scope_scan"}
         db.vacuum()
     size_after = db_path.stat().st_size
     return {
         "database": str(db_path),
-        "latest_complete_scan": (latest or {}).get("scan_id"),
+        "latest_complete_full_scope_scan": (latest or {}).get("scan_id"),
         "removed": removed,
         "size_before": size_before,
         "size_after": size_after,
@@ -444,7 +446,7 @@ def render_janitor_markdown(report: dict[str, Any]) -> str:
         "",
         "## Catalog",
         f"- size_bytes: `{c.get('size_bytes')}`",
-        f"- latest_complete_scan: `{c.get('latest_complete_scan')}`",
+        f"- latest_complete_full_scope_scan: `{c.get('latest_complete_full_scope_scan')}`",
         "",
         "## Authority boundary",
         "",
