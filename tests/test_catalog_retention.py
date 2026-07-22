@@ -132,6 +132,30 @@ def test_vacuum_runs_without_error(tmp_path: Path) -> None:
     db.close()
 
 
+def test_latest_complete_full_scope_scan_excludes_partial(tmp_path: Path) -> None:
+    # Regression for the catalog-vacuum data-loss bug: a bounded scan also records
+    # status 'complete', so keying retention on latest_complete_scan would prune
+    # the full graph down to a partial one. The scope-aware query must skip it.
+    db = CatalogDB(tmp_path / "c.sqlite3")
+    db.start_scan("s_full")
+    db.complete_scan("s_full", "complete", {"scan_id": "s_full", "full_scope": True})
+    db.start_scan("s_partial")
+    db.complete_scan("s_partial", "complete", {"scan_id": "s_partial", "full_scope": False})
+    # Naive query would pick the newer partial scan...
+    assert db.latest_complete_scan()["scan_id"] == "s_partial"
+    # ...the scope-aware query keeps the last full-scope scan.
+    assert db.latest_complete_full_scope_scan()["scan_id"] == "s_full"
+    db.close()
+
+
+def test_latest_complete_full_scope_scan_none_when_only_partial(tmp_path: Path) -> None:
+    db = CatalogDB(tmp_path / "c.sqlite3")
+    db.start_scan("s_partial")
+    db.complete_scan("s_partial", "complete", {"scan_id": "s_partial", "full_scope": False})
+    # No full-scope scan exists -> vacuum must NOT prune (returns None -> vacuum-only).
+    assert db.latest_complete_full_scope_scan() is None
+
+
 # --- P0-1: partial/bounded scans must NOT prune other scans' graph state ---
 
 

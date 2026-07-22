@@ -438,7 +438,7 @@
         "tests/test_intelligence_routing.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:b949ed07c1b33081b82b61fafc3054754ad88b5bc4ec3b59c01680d38e96ca09",
+      "content_digest": "sha256:533bb53c2aa6882a0a1d552f951ff1e56993bda498958133e7e70150bb7df224",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -1508,7 +1508,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:e35adbb7e38a461f1a95f7c2ee366e49dd63c1bbbd229c31c610b884cd600e3f",
+      "content_digest": "sha256:bc981ad615325c2b1dc67d14a263b31ae9ab9156b76efc2f7498de20301a66da",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1589,7 +1589,7 @@
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:e142c8bb8e23fd4afede723e15cfaa9bb56ef747d98797f620cadfae85ff9ff9",
+      "adapter_interface_digest": "sha256:89d36ca98be79efea5bdf85ec95c6e422140bdbff4556e8a56ae1c554296d47d",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -2381,7 +2381,7 @@
           "model_calls"
         ]
       },
-      "adapter_interface_digest": "sha256:800fc3443904e982fcf29266f8244acbc79a841edd6d47505f94e791d84a8662",
+      "adapter_interface_digest": "sha256:1643e3c8f74ddcd5ec7ee460f5003cb481769d54cef6c2ecdd622d31960d6db4",
       "adapter_interface_sources": [
         "src/digital_asset_directory/portfolio_convergence_git.py",
         "schemas/portfolio-convergence-git-producer-receipt.schema.json",
@@ -2507,7 +2507,7 @@
           "workstream_creation"
         ]
       },
-      "adapter_interface_digest": "sha256:245ec1a299d509ce604e6e4bbd93b534783b4566bbe9fb81e4fa053c20b87f33",
+      "adapter_interface_digest": "sha256:52cf14fd810edb8a0242a616e4b4f625a6ab5b58fc161496f127455c21035e18",
       "adapter_interface_sources": [
         "registry/routine-contract-registry.json",
         "schemas/portfolio-capture-candidate.schema.json",
