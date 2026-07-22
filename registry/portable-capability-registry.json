@@ -435,7 +435,7 @@
         "tests/test_intelligence_routing.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:008e6f6eb815f77c60bd075e050da5eb1749b6da4b5176a245cbf02356eba5ea",
+      "content_digest": "sha256:2907f965ef95c8fd1362272a9e8dfd604ebdc42505f2a508397858742c106e47",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -737,7 +737,7 @@
         "assets/agent-skills/full-stack-engineering-agent-family/subagents.yaml",
         "docs/AGENT_FAMILY_RECONCILIATION.md"
       ],
-      "content_digest": "sha256:bf832f5cb7ef42cdde8869c861786ac8a099ae36204d2444f1f47225ee06b36f",
+      "content_digest": "sha256:5a0cdbba3e3c24ba4713ce49d2c4932795d26336fd721b6e6da9f16919a7204c",
       "source_observation_digest": "sha256:5b1df968979dd67fe022d8a159ab7869e4dc1ba661f615c8c488cf39b1a948d1",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
