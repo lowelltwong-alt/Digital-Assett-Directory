@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.15",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.17",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -399,13 +399,18 @@
         "src/digital_asset_directory/agent_session_split_report.py",
         "src/digital_asset_directory/capability_os_cockpit.py",
         "src/digital_asset_directory/ci_module_boundary_github.py",
+        "registry/design-authority.json",
+        "src/digital_asset_directory/catalog.py",
         "src/digital_asset_directory/cli.py",
         "src/digital_asset_directory/contract_check.py",
+        "src/digital_asset_directory/daemon.py",
+        "src/digital_asset_directory/database.py",
         "src/digital_asset_directory/enrollment.py",
         "src/digital_asset_directory/global_personal_skills.py",
         "src/digital_asset_directory/governance.py",
         "src/digital_asset_directory/learning.py",
         "src/digital_asset_directory/learning_yield_report.py",
+        "src/digital_asset_directory/lifecycle_janitor.py",
         "src/digital_asset_directory/mcp_dependency_map.py",
         "src/digital_asset_directory/models.py",
         "src/digital_asset_directory/portability_control.py",
@@ -413,6 +418,7 @@
         "src/digital_asset_directory/portfolio_cockpit.py",
         "src/digital_asset_directory/routine_health.py",
         "src/digital_asset_directory/validation.py",
+        "src/digital_asset_directory/utils.py",
         "schemas/agent-skill-library.schema.json",
         "schemas/subagent-pack.schema.json",
         "src/digital_asset_directory/dad_library.py",
@@ -435,7 +441,7 @@
         "tests/test_intelligence_routing.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:2907f965ef95c8fd1362272a9e8dfd604ebdc42505f2a508397858742c106e47",
+      "content_digest": "sha256:b63d16ae35ad9ac8848fc9b0ed02eff5118a2c9dd88a157d5080e94895fe4e47",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -1505,7 +1511,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:0bf1c7af32850591c6a5d38e6bf40dd28299fe558eb97fa0c3a2db21a2f1dc44",
+      "content_digest": "sha256:d4eed9df90b71ea5f27744ef9daab8527bcc90e5d2838c32212b395f7f85c95c",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1586,7 +1592,7 @@
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:681fab10380da40bbf3cd616d4a04c7de2b90045c4b018a3e0e73464fb3b16a8",
+      "adapter_interface_digest": "sha256:e205db5f6ae3e2228b091771e531bcf91a5a5558539c8923ae683a1399c0e44e",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -2378,7 +2384,7 @@
           "model_calls"
         ]
       },
-      "adapter_interface_digest": "sha256:fb195b6b17ada643f200dfcd2ea65be165172d60095afd154134e5bb0468d9a9",
+      "adapter_interface_digest": "sha256:dbd12040838c1e1d648c000ef88bbb97a7926bdf432537c10083e1c4c9df9074",
       "adapter_interface_sources": [
         "src/digital_asset_directory/portfolio_convergence_git.py",
         "schemas/portfolio-convergence-git-producer-receipt.schema.json",
@@ -2504,7 +2510,7 @@
           "workstream_creation"
         ]
       },
-      "adapter_interface_digest": "sha256:3161df1351dcb09427a1888bf212fcfedb64d0d83da3c58cb42ee19500bdf0a1",
+      "adapter_interface_digest": "sha256:792a0357425d31977e699b39918f83b3d32a559d502ea507da023b18dd8bb7dd",
       "adapter_interface_sources": [
         "registry/routine-contract-registry.json",
         "schemas/portfolio-capture-candidate.schema.json",

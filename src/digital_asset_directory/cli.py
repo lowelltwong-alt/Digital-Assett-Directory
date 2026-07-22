@@ -155,6 +155,7 @@ from .agent_session_reaper import (
     DEFAULT_PRESERVATION_POINTER,
     write_agent_session_reaper_report,
 )
+from .lifecycle_janitor import run_janitor_cycle, write_janitor_report
 from .agent_session_split_report import write_agent_session_split_report
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_repo_status, journal_status
 from .lesson_automation_coverage import (
@@ -4758,6 +4759,81 @@ def status(
     config: Optional[Path] = typer.Option(None), hub: Optional[Path] = typer.Option(None)
 ) -> None:
     console.print_json(data=catalog_status(_cfg(config, hub)))
+
+
+@app.command("catalog-vacuum")
+def catalog_vacuum(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Prune per-scan rows down to the latest scan and VACUUM to reclaim space.
+
+    Read-only against source repositories; only rewrites the local catalog DB.
+    ``scan`` already prunes on every run, so this is for one-time reclamation of
+    free pages left by prior bloat.
+    """
+    cfg = _cfg(config, hub)
+    with CatalogDB(cfg.database_path) as db:
+        before = db.table_counts()
+        # Key retention on the latest complete FULL-SCOPE scan. A partial scan
+        # (--local-only/--github-only/--max-files) also records status 'complete'
+        # but only covers the sources it scanned; pruning down to it would delete
+        # the prior full graph for un-scanned sources. If none exists, only
+        # reclaim free pages (never prune to a partial or crashed scan).
+        latest = db.latest_complete_full_scope_scan()
+        removed: dict[str, Any] = {}
+        if latest and latest.get("scan_id"):
+            removed = db.prune_generated_records(str(latest["scan_id"]))
+            removed["stale_running_scans"] = db.prune_stale_running_scans(
+                str(latest["scan_id"])
+            )
+        else:
+            removed = {"skipped": "no_complete_full_scope_scan_only_vacuumed"}
+        db.vacuum()
+        after = db.table_counts()
+    console.print_json(
+        data={
+            "database": str(cfg.database_path),
+            "latest_complete_full_scope_scan": (latest or {}).get("scan_id"),
+            "removed": removed,
+            "counts_before": before,
+            "counts_after": after,
+        }
+    )
+
+
+@app.command("janitor")
+def janitor(
+    apply: bool = typer.Option(
+        False, "--apply", help="Execute config-authorized sweeps; default is a dry-run plan."
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Lifecycle janitor: reap idle sessions, prune orphaned worktrees, run catalog retention.
+
+    Dry-run by default. `--apply` runs the sweeps `config/janitor.yaml` authorizes:
+    catalog retention and `git worktree prune` are safe and on by default; session
+    reaping is opt-in (F2/G5). Cleans only the hub's own state; never mutates
+    scanned source repos or force-removes a worktree with uncommitted work.
+    """
+    cfg = _cfg(config, hub)
+    report = run_janitor_cycle(cfg.repo_root, repository=cfg.repo_root, apply=apply)
+    paths = write_janitor_report(cfg.repo_root, report)
+    actions = report["actions"]
+    console.print_json(
+        data={
+            "applied": report["applied"],
+            "sessions_auto_eligible": len(report["plan"]["sessions"]["auto_eligible"]),
+            "sessions_review_needed": len(report["plan"]["sessions"]["review_needed"]),
+            "sessions_closed": actions.get("session_reap", {}).get("closed_count", 0),
+            "worktrees_prunable": report["plan"]["worktrees"]["prunable_count"],
+            "worktrees_pruned": actions.get("worktree_prune", {}).get("pruned_admin_entries", 0),
+            "catalog_size_bytes": report["plan"]["catalog"].get("size_bytes"),
+            "catalog_reclaimed_bytes": actions.get("catalog_retention", {}).get("reclaimed_bytes", 0),
+            "report": paths,
+        }
+    )
 
 
 def _path_contains_path(parent: Path, child: Path) -> bool:
