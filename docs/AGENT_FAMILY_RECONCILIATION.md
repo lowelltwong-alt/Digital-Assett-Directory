@@ -11,7 +11,7 @@ install, or activation.
 | ML workflow family | `registry/ml-agent-family-registry.json` + `assets/agent-skills/ml-workflow-agent-family/` | Sole ML family authority (`family:ml-workflow` / `skill:ml-workflow-agent-family`) |
 | Technical Product OS | `registry/technical-product-company-os-registry.json` + `skill:technical-product-company-os` | Thin composition / ranking layer over existing families |
 | Knowledge engineering | `registry/knowledge-engineering-family-registry.json` | Specialist pack under data-schema family |
-| Role directory | `processed/agents/subagent-role-directory.json` | Absent; roles live in per-family `subagents.yaml` |
+| Role directory | `processed/agents/subagent-role-directory.json` | Generated, git-ignored candidate projection; role authority stays in per-family `subagents.yaml` |
 
 ## Forbidden duplicate
 
@@ -34,8 +34,10 @@ developer-platform/DevEx, product-intelligence, knowledge-engineering-ops.
    assets. Prefer specialist_pack disposition after three-repo recurrence.
 2. `pack:portable-capability-governance` is referenced on harness-engineering-ops
    but has no matching skill asset yet.
-3. Unified `processed/agents/subagent-role-directory.json` remains absent by
-   design until a governed generator exists.
+Resolved former gap: unified `processed/agents/subagent-role-directory.json`
+now has a governed generator (see the "Declared role directory" section of
+`docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md`). The projection is
+git-ignored candidate output, never tracked reconciliation authority.
 
 ## Thin composition
 
