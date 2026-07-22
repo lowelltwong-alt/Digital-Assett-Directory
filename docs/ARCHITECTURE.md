@@ -91,3 +91,32 @@ Embeddings and external semantic enrichment remain deferred until the relevant p
 ## Scale posture
 
 The graph builder avoids full all-pairs comparison. Candidate pairs are generated through shared tags, capabilities, needs, and outcomes, then capped per asset. This is adequate for thousands of assets; larger corpora should add a dedicated inverted index or vector retrieval layer after evaluation.
+
+## Retention and garbage collection
+
+Assets are keyed by stable `asset_id` and upserted, so they do not multiply
+across scans. The per-scan *generated* records — `edges`, `asset_chunks`,
+`asset_deltas`, `duplicate_clusters`, and open `alerts` — are only valid for the
+scan that produced them. Without retention they accumulated every scan (a
+pre-migration catalog reached 1.6 GB with ~178k perpetually-open alerts before
+this was fixed).
+
+`run_scan` therefore prunes non-latest generated rows, but **only after a
+full-scope scan**: a bounded or partial run (`--local-only`, `--github-only`,
+`--max-files`, or any run where a source errored) updates what it saw without
+pruning the rest of the graph, because it did not regenerate the sources it
+skipped. The scan summary reports the outcome under `retention_pruned`
+(`scope: full|partial`). `asset-dir catalog-vacuum` performs one-time pruning
+plus `VACUUM`; it keys on the latest **complete** scan, never a crashed or
+failed one, so a failed newest scan cannot delete the last good graph.
+
+Human-acknowledged or resolved alerts (`status != open`) are preserved by
+pruning as a safety net.
+
+**Deferred (known limitation):** an alert's identity embeds its `scan_id`, so an
+acknowledgment on one scan's alert does not suppress the identical condition
+re-firing as a new open alert on the next scan. Retention bounds the resulting
+volume (open alerts are pruned to the latest scan), so this is no longer a
+bloat risk, only a UX gap. A future change should drop `scan_id` from alert
+identity (keeping it as a field) so recurrence deduplicates, while still letting
+human status win over regeneration.

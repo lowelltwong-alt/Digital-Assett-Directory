@@ -4760,6 +4760,47 @@ def status(
     console.print_json(data=catalog_status(_cfg(config, hub)))
 
 
+@app.command("catalog-vacuum")
+def catalog_vacuum(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Prune per-scan rows down to the latest scan and VACUUM to reclaim space.
+
+    Read-only against source repositories; only rewrites the local catalog DB.
+    ``scan`` already prunes on every run, so this is for one-time reclamation of
+    free pages left by prior bloat.
+    """
+    cfg = _cfg(config, hub)
+    with CatalogDB(cfg.database_path) as db:
+        before = db.table_counts()
+        # Key retention on the latest complete FULL-SCOPE scan. A partial scan
+        # (--local-only/--github-only/--max-files) also records status 'complete'
+        # but only covers the sources it scanned; pruning down to it would delete
+        # the prior full graph for un-scanned sources. If none exists, only
+        # reclaim free pages (never prune to a partial or crashed scan).
+        latest = db.latest_complete_full_scope_scan()
+        removed: dict[str, Any] = {}
+        if latest and latest.get("scan_id"):
+            removed = db.prune_generated_records(str(latest["scan_id"]))
+            removed["stale_running_scans"] = db.prune_stale_running_scans(
+                str(latest["scan_id"])
+            )
+        else:
+            removed = {"skipped": "no_complete_full_scope_scan_only_vacuumed"}
+        db.vacuum()
+        after = db.table_counts()
+    console.print_json(
+        data={
+            "database": str(cfg.database_path),
+            "latest_complete_full_scope_scan": (latest or {}).get("scan_id"),
+            "removed": removed,
+            "counts_before": before,
+            "counts_after": after,
+        }
+    )
+
+
 def _path_contains_path(parent: Path, child: Path) -> bool:
     try:
         child.resolve().relative_to(parent.resolve())
