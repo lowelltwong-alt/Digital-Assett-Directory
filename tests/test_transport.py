@@ -1001,6 +1001,53 @@ def test_daemon_fingerprint_tracks_graph_surface_registry_inputs(tmp_path: Path)
     assert after_count == before_count
 
 
+def test_daemon_fingerprint_tracks_directory_registry_path_inputs(tmp_path: Path):
+    hub = tmp_path / "hub"
+    registry_dir = hub / "registry"
+    snapshot_dir = registry_dir / "subagent-evaluation-methodologies"
+    snapshot_dir.mkdir(parents=True)
+    snapshot_file = snapshot_dir / "0.1.0.json"
+    snapshot_file.write_text('{"methodology_version": "0.1.0"}\n', encoding="utf-8")
+    (registry_dir / "graph-surface-registry.json").write_text(
+        json.dumps(
+            {
+                "surfaces": [
+                    {
+                        "surface_id": "synthetic-directory-surface",
+                        "builder": {
+                            "availability": "wired",
+                            "module": "digital_asset_directory.learning.build_lesson_graph",
+                        },
+                        "source_inputs": [
+                            {
+                                "kind": "registry_path",
+                                "ref": "registry/subagent-evaluation-methodologies",
+                                "required": True,
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    before, before_count = daemon_mod._cycle_input_fingerprint(
+        hub, mail_repos=[], exception_repos=[], journal_repo=None
+    )
+    # A versioned methodology snapshot directory changing content (new file,
+    # same directory size/mtime granularity) must still wake an idle daemon.
+    (snapshot_dir / "0.2.0.json").write_text(
+        '{"methodology_version": "0.2.0"}\n', encoding="utf-8"
+    )
+    after, after_count = daemon_mod._cycle_input_fingerprint(
+        hub, mail_repos=[], exception_repos=[], journal_repo=None
+    )
+
+    assert after != before
+    assert after_count == before_count
+
+
 def test_daemon_exception_lake_reports_skip_without_lake(tmp_path: Path):
     hub = tmp_path / "hub"
     hub.mkdir()

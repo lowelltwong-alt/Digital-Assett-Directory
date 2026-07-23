@@ -31,7 +31,7 @@ from .exceptions_lake import (
 )
 from .graph_inference import write_inference_outputs
 from .logos_write_guard import assert_dad_write_allowed
-from .graph_surfaces import graph_surface_status, load_graph_surface_registry
+from .graph_surfaces import _hash_surface_input, graph_surface_status, load_graph_surface_registry
 from .lifecycle_janitor import run_janitor_cycle, write_janitor_report
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_status
 from .learning import build_lesson_graph
@@ -226,7 +226,15 @@ def _graph_surface_input_fingerprint_rows(hub_root: Path) -> list[tuple[Any, ...
             ref = str(source_input.get("ref", ""))
             if not ref:
                 continue
-            row = _fingerprint_row(owner, ref, hub_root / ref)
+            path = hub_root / ref
+            if path.is_dir():
+                # _fingerprint_row's sha256_file() raises on a directory and the
+                # row is dropped; hash contents recursively (as graph-surface
+                # freshness already does) so a versioned snapshot changing under
+                # this directory still wakes an otherwise-idle daemon.
+                rows.append((owner, ref, "dir", _hash_surface_input(path)))
+                continue
+            row = _fingerprint_row(owner, ref, path)
             if row is not None:
                 rows.append(row)
     return rows
