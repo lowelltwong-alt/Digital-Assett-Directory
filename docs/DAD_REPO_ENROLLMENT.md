@@ -175,8 +175,58 @@ asset-dir enroll apply --repo <path-or-id> --approval-id <id>
 asset-dir enroll update-plan --repo all --wave <id>
 asset-dir enroll update-apply --repo <path-or-id> --approval-id <id>
 asset-dir enroll status --repo all
+asset-dir enroll cancel --repo <path-or-id>            # pre-apply, audit-only
+asset-dir enroll unenroll --repo <path-or-id> --approval-id <id>   # rollback
 ```
 
 Plan commands write central candidate reports under `processed/enrollment/`.
 Apply commands append central audit records and fail closed when policy or
 approval is missing.
+
+## Configuration source of authority
+
+Enrollment policies live in the local config file. `resolve_config_path` picks
+it in this order, so an isolated worktree resolves the canonical config without
+copying private configuration in:
+
+1. an explicit `--config <file>`;
+2. `<repo>/config/sources.local.yaml` if present (the live checkout's canonical
+   file; it is gitignored, so it never appears in a fresh worktree);
+3. a governed user-level pointer — the `DAD_CONFIG` env var, else the
+   `config_path` field in `~/.dad/hub.json`. The pointer only wins when it names
+   an existing readable file; a set-but-missing pointer is ignored with a warning;
+4. `<repo>/config/sources.example.yaml` fallback.
+
+Record the pointer once per machine and inspect resolution with:
+
+```text
+asset-dir config set-local-pointer --path "<abs path to sources.local.yaml>"
+asset-dir config show
+```
+
+## Enrollment lifecycle
+
+States: `not_enrolled -> planned -> approved -> applying -> partially_applied ->
+enrolled`, plus `publication_pending`, `retired`, `rollback_in_progress`, and
+`rollback_incomplete`. `asset-dir enroll status` reports the current state from
+the append-only audit ledger plus on-disk surfaces.
+
+- **Cancel before apply:** `enroll cancel` records a cancellation in the audit
+  ledger and writes nothing to the target repo.
+- **Rollback / unenroll:** `enroll unenroll` (reviewed approval required) removes
+  DAD-authored config/pointer/map/hook surfaces and strips only the
+  marker-bounded governance blocks from `AGENTS.md`, `CLAUDE.md`,
+  `AI_FRONT_DOOR.md`, and `AI_TABLE_OF_CONTENTS.md`, restoring the surrounding
+  repo-authored content. It never deletes repo-owned material (mailbox rows,
+  asset memory, learning events) or source-owned exception/fix-outcome paths.
+- **Idempotent + resumable:** re-running `unenroll` on an already-removed repo is
+  a no-op that reports `already_removed`. If a removal partially fails the audit
+  records `rollback_incomplete` so a resume re-run finishes.
+- **Historical evidence preserved:** retirement removes managed surfaces but the
+  append-only `processed/enrollment/audit.jsonl` retains the full history.
+
+A writability precheck runs before the preflight decision-trace write: if the
+ledger target is not writable, preflight still returns its context pack with a
+legible recovery instruction instead of a bare `PermissionError`.
+
+See `DAD_ENROLLMENT_OPERATOR_RUNBOOK.md` for the step-by-step operator flow.

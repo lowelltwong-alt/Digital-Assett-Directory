@@ -13,11 +13,17 @@ from digital_asset_directory.cli import app
 from digital_asset_directory.config import AppConfig, EnrollmentRepoPolicy, Settings
 from digital_asset_directory.enrollment import (
     APPROVED_RELATIVE_PATHS,
+    DAD_MANAGED_REMOVABLE_FILES,
     REPO_LOCAL_ONLY_PATHS,
     apply_enrollment,
     build_enrollment_plan,
+    cancel_enrollment,
+    discover_enrollment_candidates,
+    enrollment_lifecycle_state,
     enrollment_status,
+    nested_visibility_conflicts,
     select_enrollment_policies,
+    unenroll_enrollment,
 )
 from digital_asset_directory.mail_center import compose_mail
 from digital_asset_directory.surface_versions import (
@@ -761,3 +767,174 @@ def test_non_main_branch_blocks_enrollment_unless_policy_allows_it(tmp_path: Pat
     allowed = _policy(repo, allow_non_main_branch=True)
     result = apply_enrollment(hub, allowed, approval_id="APPROVED-1")
     assert result["changed_count"] > 0
+
+
+# ---------------------------------------------------------------------------
+# Enrollment reliability: writability, nested visibility, interrupted apply,
+# idempotent resume, cancel/rollback, dev-env doctor.
+# ---------------------------------------------------------------------------
+
+
+def test_preflight_unwritable_decision_ledger_warns_without_raising(tmp_path, monkeypatch):
+    from digital_asset_directory import dad_library as L
+
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    repo.mkdir()
+
+    # Writable: the trace is recorded and the ledger exists.
+    pack = L.compile_context_pack(hub, repo, session_id="s1", task="t")
+    ledger = L.central_usage_path(hub, L.DECISION_TRACE_LEDGER)
+    assert pack["decision_trace_recorded"] is True
+    assert ledger.exists()
+
+    # Unwritable: orientation still returns a pack with a legible recovery
+    # warning, does not raise, and does not create the ledger.
+    hub2 = tmp_path / "hub2"
+    hub2.mkdir()
+    monkeypatch.setattr(L, "probe_writable", lambda p: (False, "RECOVERY: cannot write here"))
+    pack2 = L.compile_context_pack(hub2, repo, session_id="s2", task="t")
+    ledger2 = L.central_usage_path(hub2, L.DECISION_TRACE_LEDGER)
+    assert pack2["decision_trace_recorded"] is False
+    assert pack2["decision_trace_recovery"] == "RECOVERY: cannot write here"
+    assert not ledger2.exists()
+    assert any("decision trace not recorded" in w for w in pack2["warnings"])
+
+
+def test_nested_child_repo_conflicting_visibility_warns_and_child_wins(tmp_path):
+    parent = tmp_path / "Law Firm Sim"
+    child = parent / "Albert-Simulation-Core-Private"
+    child.mkdir(parents=True)
+    parent_policy = _policy(parent, "law-firm-sim", visibility="public", public_facing=True)
+    child_policy = _policy(child, "albert-core", visibility="private", public_facing=False)
+    cfg = _cfg(tmp_path / "hub", [parent_policy, child_policy])
+
+    conflicts = nested_visibility_conflicts(cfg.enrollment_repos)
+    assert len(conflicts) == 1
+    row = conflicts[0]
+    assert row["ancestor_repo_id"] == "law-firm-sim"
+    assert row["child_repo_id"] == "albert-core"
+    assert row["child_visibility"] == "private"
+
+    # Discovery surfaces the same warning as candidate evidence.
+    discovered = discover_enrollment_candidates(cfg)
+    assert discovered["nested_visibility_conflicts"] == conflicts
+
+    # Most specific configured path wins: selecting the child path returns the
+    # child policy, never the public parent.
+    selected = select_enrollment_policies([str(child)], cfg)
+    assert selected[0].id == "albert-core"
+    assert selected[0].public_facing is False
+
+
+def test_interrupted_apply_records_failure_then_idempotent_resume(tmp_path, monkeypatch):
+    import digital_asset_directory.enrollment as E
+
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    repo.mkdir()
+    _copy_capture_registry(hub)
+    policy = _policy(repo)
+
+    # Interrupt apply partway through writing managed surfaces.
+    original = E._write_managed_block
+    calls = {"n": 0}
+
+    def boom(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise ValueError("simulated interruption")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(E, "_write_managed_block", boom)
+    with pytest.raises(ValueError, match="simulated interruption"):
+        apply_enrollment(hub, policy, approval_id="APPROVED-1")
+
+    audit = (hub / "processed" / "enrollment" / "audit.jsonl").read_text().splitlines()
+    events = [json.loads(line)["event_type"] for line in audit if line.strip()]
+    assert "failed" in events
+    assert enrollment_lifecycle_state(hub, policy) == "partially_applied"
+
+    # Resume: a clean re-apply completes and a second re-apply is idempotent.
+    monkeypatch.setattr(E, "_write_managed_block", original)
+    result = apply_enrollment(hub, policy, approval_id="APPROVED-1")
+    assert result["changed_count"] > 0
+    assert enrollment_lifecycle_state(hub, policy) == "enrolled"
+    again = apply_enrollment(hub, policy, approval_id="APPROVED-1")
+    assert again["changed_count"] == 0  # idempotent
+
+
+def test_cancel_writes_no_target_files(tmp_path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    repo.mkdir()
+    policy = _policy(repo)
+
+    before = _all_files(repo)
+    result = cancel_enrollment(hub, policy, reason="paused by human")
+    assert result["cancelled"] is True
+    assert _all_files(repo) == before  # no target writes
+    audit = (hub / "processed" / "enrollment" / "audit.jsonl").read_text()
+    assert "cancelled" in audit
+
+
+def test_unenroll_removes_managed_surfaces_preserves_repo_owned_and_is_idempotent(tmp_path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    repo.mkdir()
+    _copy_capture_registry(hub)
+    # Repo-owned content that must survive rollback.
+    (repo / "AGENTS.md").write_text("# Repo Rules\n\nKeep this.\n", encoding="utf-8")
+    policy = _policy(repo, local_paths_allowed=True)
+
+    apply_enrollment(hub, policy, approval_id="APPROVED-1")
+    # A repo-owned mail row and a source-owned exception outbox must be preserved.
+    (repo / ".digital-asset" / "mail" / "outbox.jsonl").write_text('{"m":"repo"}\n', encoding="utf-8")
+    exc_dir = repo / ".digital-asset" / "exceptions"
+    exc_dir.mkdir(parents=True, exist_ok=True)
+    (exc_dir / "outbox.jsonl").write_text('{"m":"source-owned"}\n', encoding="utf-8")
+
+    result = unenroll_enrollment(hub, policy, approval_id="APPROVED-1")
+    assert result["lifecycle_state"] == "retired"
+    assert not result["errors"]
+    # DAD-managed config/pointer surfaces are gone.
+    for rel in DAD_MANAGED_REMOVABLE_FILES:
+        assert not (repo / rel).exists(), rel
+    # Marker blocks stripped, repo-owned prose preserved.
+    agents = (repo / "AGENTS.md").read_text()
+    assert "Keep this." in agents
+    assert "DIGITAL_ASSET_DIRECTORY_GOVERNANCE" not in agents
+    # Repo-owned + source-owned data preserved.
+    assert (repo / ".digital-asset" / "mail" / "outbox.jsonl").read_text().strip() == '{"m":"repo"}'
+    assert (exc_dir / "outbox.jsonl").read_text().strip() == '{"m":"source-owned"}'
+    assert enrollment_lifecycle_state(hub, policy) == "retired"
+
+    # Idempotent re-run: no-op reporting already_removed.
+    rerun = unenroll_enrollment(hub, policy, approval_id="APPROVED-1")
+    assert rerun["already_removed"] is True
+    assert not rerun["removed_paths"]
+
+    # Rollback requires a reviewed approval id.
+    with pytest.raises(ValueError, match="Approval ID"):
+        unenroll_enrollment(hub, policy, approval_id="WRONG")
+
+
+def test_dev_env_check_reports_missing_dependencies_with_recovery(monkeypatch):
+    from digital_asset_directory import dev_env
+
+    status = dev_environment_status = dev_env.dev_environment_status()
+    assert status["recovery_command"] == 'python -m pip install -e ".[dev]"'
+    assert status["schema_version"] == "dad.dev_env.v1"
+
+    # Simulate a .venv without pytest: ok=False with an explicit recovery.
+    real = dev_env._importable
+    monkeypatch.setattr(dev_env, "_importable", lambda m: False if m == "pytest" else real(m))
+    missing = dev_env.dev_environment_status()
+    assert missing["can_run_pytest"] is False
+    assert missing["ok"] is False
+    assert "pytest" in missing["dev_modules_missing"]
+    assert any("dev" in line for line in missing["recovery"])
