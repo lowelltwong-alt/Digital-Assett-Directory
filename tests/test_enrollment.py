@@ -938,3 +938,53 @@ def test_dev_env_check_reports_missing_dependencies_with_recovery(monkeypatch):
     assert missing["ok"] is False
     assert "pytest" in missing["dev_modules_missing"]
     assert any("dev" in line for line in missing["recovery"])
+
+
+def test_unenroll_preserves_source_owned_colliding_files(tmp_path):
+    # A repo that was never enrolled but ships its own .ai-assets.json and
+    # pre-push hook must not have those destroyed by rollback (P1 review).
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    repo.mkdir()
+    (repo / ".ai-assets.json").write_text('{"my":"own coding assets, not DAD"}\n', encoding="utf-8")
+    (repo / ".githooks").mkdir()
+    (repo / ".githooks" / "pre-push").write_text("#!/bin/sh\necho my own hook\n", encoding="utf-8")
+    policy = _policy(repo, local_paths_allowed=True)
+
+    result = unenroll_enrollment(hub, policy, approval_id="APPROVED-1")
+
+    # Source-owned files are preserved, reported as foreign, never removed.
+    assert (repo / ".ai-assets.json").read_text().strip() == '{"my":"own coding assets, not DAD"}'
+    assert (repo / ".githooks" / "pre-push").read_text().strip().endswith("my own hook")
+    assert ".ai-assets.json" in result["preserved_foreign_paths"]
+    assert ".githooks/pre-push" in result["preserved_foreign_paths"]
+    assert result["removed_paths"] == []
+
+
+def test_apply_records_failed_on_oserror_and_reports_partially_applied(tmp_path, monkeypatch):
+    import digital_asset_directory.enrollment as E
+
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    repo.mkdir()
+    _copy_capture_registry(hub)
+    policy = _policy(repo)
+
+    # Fail with an OSError after the contract has been written but before all
+    # managed surfaces are done (P1 review: must not report a false 'enrolled').
+    def boom(*args, **kwargs):
+        raise OSError("simulated permission/file-lock failure")
+
+    monkeypatch.setattr(E, "_write_managed_block", boom)
+    with pytest.raises(OSError, match="simulated permission"):
+        apply_enrollment(hub, policy, approval_id="APPROVED-1")
+
+    audit = (hub / "processed" / "enrollment" / "audit.jsonl").read_text().splitlines()
+    events = [json.loads(line) for line in audit if line.strip()]
+    assert any(e["event_type"] == "failed" and "OSError" in e.get("reason", "") for e in events)
+    # Contract was written before the failure, so the resolver must report the
+    # partial state, not a false green.
+    assert (repo / ".digital-asset" / "dad-integration.json").exists()
+    assert enrollment_lifecycle_state(hub, policy) == "partially_applied"

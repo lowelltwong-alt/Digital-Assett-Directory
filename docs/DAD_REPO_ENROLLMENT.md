@@ -219,6 +219,9 @@ the append-only audit ledger plus on-disk surfaces.
   `AI_FRONT_DOOR.md`, and `AI_TABLE_OF_CONTENTS.md`, restoring the surrounding
   repo-authored content. It never deletes repo-owned material (mailbox rows,
   asset memory, learning events) or source-owned exception/fix-outcome paths.
+  A removable path is deleted only when its content carries a DAD signature, so
+  a repo's own `.ai-assets.json` or `.githooks/pre-push` that DAD never wrote is
+  preserved and reported under `preserved_foreign_paths`.
 - **Idempotent + resumable:** re-running `unenroll` on an already-removed repo is
   a no-op that reports `already_removed`. If a removal partially fails the audit
   records `rollback_incomplete` so a resume re-run finishes.

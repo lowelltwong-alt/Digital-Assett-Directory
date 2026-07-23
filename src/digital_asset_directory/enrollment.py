@@ -1317,7 +1317,11 @@ def apply_enrollment(
 
     try:
         changed_paths = _apply_payloads(policy, hub_root, approval_id, update=update)
-    except ValueError as exc:
+    except (ValueError, OSError) as exc:
+        # A filesystem failure (permission/file-lock) mid-write can leave the
+        # contract on disk before a later surface fails. Record a `failed` audit
+        # so the lifecycle resolver reports partially_applied, never a false
+        # `enrolled`. ValueError covers guard/validation failures.
         _append_audit(
             hub_root,
             {
@@ -1326,7 +1330,7 @@ def apply_enrollment(
                 "repo_id": policy.id,
                 "repo_ref": _repo_ref(policy),
                 "approval_id": approval_id,
-                "reason": str(exc),
+                "reason": f"{type(exc).__name__}: {exc}",
             },
         )
         raise
@@ -1498,11 +1502,42 @@ def _unenroll_approval_error(
     return None
 
 
+def _is_dad_owned_surface(rel: str, path: Path) -> bool:
+    """Return True only when a removable file is recognizably DAD-authored.
+
+    Guards against destroying source-owned config: a repo can legitimately ship
+    its own ``.ai-assets.json`` or ``.githooks/pre-push`` that DAD never wrote.
+    We delete a path during unenroll only when its content carries a DAD
+    signature, never on filename/location alone.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    if rel.endswith((".githooks/pre-push", ".githooks/pre-push.ps1")) or rel in {
+        ".githooks/pre-push",
+        ".githooks/pre-push.ps1",
+    }:
+        return "enforce_postflight.py" in text and "DAD" in text
+    # JSON/YAML pointer and map surfaces all carry a DAD hub ref / pointer type /
+    # authority boundary that a source-owned file would not.
+    markers = (
+        "dad://hub/Digital-Assett-Directory",
+        "dad://repo/",
+        '"pointer_type": "dad_',
+        "pointer_type: dad_",
+        "DAD enrollment installs or updates",  # AUTHORITY_BOUNDARY text
+        "dad_hub_ref",
+    )
+    return any(marker in text for marker in markers)
+
+
 def _remove_managed_surfaces(policy: EnrollmentRepoPolicy) -> dict[str, Any]:
     repo_root = policy.path.resolve()
     removed: list[str] = []
     already_absent: list[str] = []
     blocks_stripped: list[str] = []
+    preserved_foreign: list[str] = []
     errors: list[str] = []
 
     for rel in DAD_MANAGED_REMOVABLE_FILES:
@@ -1512,6 +1547,11 @@ def _remove_managed_surfaces(policy: EnrollmentRepoPolicy) -> dict[str, Any]:
             errors.append(f"{rel}: {exc}")
             continue
         if path.exists():
+            if not _is_dad_owned_surface(rel, path):
+                # Source-owned file that collides with a DAD-managed path; never
+                # delete repo-owned content during rollback.
+                preserved_foreign.append(rel)
+                continue
             try:
                 path.unlink()
                 removed.append(rel)
@@ -1544,6 +1584,7 @@ def _remove_managed_surfaces(policy: EnrollmentRepoPolicy) -> dict[str, Any]:
         "removed": removed,
         "already_absent": already_absent,
         "blocks_stripped": blocks_stripped,
+        "preserved_foreign": preserved_foreign,
         "errors": errors,
     }
 
@@ -1611,6 +1652,7 @@ def unenroll_enrollment(
             "removed_paths": result["removed"],
             "blocks_stripped": result["blocks_stripped"],
             "already_absent": result["already_absent"],
+            "preserved_foreign_paths": result["preserved_foreign"],
             "errors": result["errors"],
             "already_removed": already_removed,
             "preserved_paths": UNENROLL_PRESERVED_PATHS,
@@ -1625,6 +1667,7 @@ def unenroll_enrollment(
         "removed_paths": result["removed"],
         "blocks_stripped": result["blocks_stripped"],
         "already_absent": result["already_absent"],
+        "preserved_foreign_paths": result["preserved_foreign"],
         "errors": result["errors"],
         "preserved_paths": UNENROLL_PRESERVED_PATHS,
         "repo_local_only_boundary": REPO_LOCAL_ONLY_BOUNDARY,
