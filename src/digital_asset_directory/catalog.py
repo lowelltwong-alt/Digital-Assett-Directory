@@ -244,7 +244,33 @@ def run_scan(
             db.replace_scan_identity_records(sid, chunks, duplicate_clusters, deltas)
             db.upsert_synergies(synergies)
             db.upsert_triggers(triggers)
-            db.upsert_alerts(alerts)
+            db.replace_scan_alerts(sid, alerts)
+            # Retention: per-scan generated rows (edges/chunks/deltas/clusters and
+            # open alerts) are only valid for the latest scan. Without this, every
+            # scan appended a new graph generation and the catalog grew without
+            # bound (a stranded pre-migration catalog reached 1.6 GB / ~178k alerts
+            # this way). Assets persist via stable-id upsert.
+            #
+            # Only prune after a FULL-SCOPE scan. A bounded/partial scan
+            # (--local-only, --github-only, --max-files, or a scan where a source
+            # errored) produces only a subset of the graph; pruning then would
+            # delete valid edges/alerts belonging to sources that were not
+            # scanned this run. Assets are never pruned, so a partial scan still
+            # updates what it saw without destroying the rest of the graph.
+            full_scope = local and github and max_files is None and not errors
+            if full_scope:
+                retention = db.prune_generated_records(sid)
+                retention["stale_running_scans"] = db.prune_stale_running_scans(sid)
+                retention["scope"] = "full"
+            else:
+                retention = {
+                    "scope": "partial",
+                    "skipped": "prune_skipped_partial_scan",
+                    "local": local,
+                    "github": github,
+                    "max_files": max_files,
+                    "source_errors": len(errors),
+                }
             summary: dict[str, Any] = {
                 "scan_id": sid,
                 "started_at": started,
@@ -266,6 +292,8 @@ def run_scan(
                 "sources": dict(Counter(a.source_id for a in assets)),
                 "errors": errors,
                 "source_files_mutated": False,
+                "full_scope": full_scope,
+                "retention_pruned": retention,
             }
             db.complete_scan(sid, str(summary["status"]), summary)
             _append_scan_audit(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,6 +70,22 @@ def test_reconciliation_doc_and_thin_composition_exist() -> None:
     assert ("skill:technical-product-company-os", "family:platform-cloud-sre") in composition
 
 
-def test_no_subagent_role_directory_required_yet() -> None:
-    assert not (ROOT / "processed/agents/subagent-role-directory.json").is_file()
+def test_subagent_role_directory_is_untracked_generated_candidate() -> None:
+    # The governed generator ships the directory as git-ignored runtime output
+    # (docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md, "Declared role
+    # directory"), so reconciliation must hold with or without the file and it
+    # must never become tracked canon; role authority stays in per-family
+    # subagents.yaml.
     assert "subagent-role-directory.json" in RECON.read_text(encoding="utf-8")
+    relative = "processed/agents/subagent-role-directory.json"
+    tracked = subprocess.run(
+        ["git", "-C", str(ROOT), "ls-files", "--error-unmatch", relative],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert tracked.returncode != 0, f"{relative} must stay git-ignored generated output"
+    directory_path = ROOT / relative
+    if directory_path.is_file():
+        payload = _load(directory_path)
+        assert payload["schema_version"] == "dad.subagent.role_directory.v1"

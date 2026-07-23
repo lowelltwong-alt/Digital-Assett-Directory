@@ -14,7 +14,8 @@
     "secrets_are_excluded_or_redacted",
     "roadmap_completion_requires_acceptance_evidence",
     "lessons_and_handoffs_are_mandatory_for_material_ai_work",
-    "external_code_requires_license_security_and_compatibility_review"
+    "external_code_requires_license_security_and_compatibility_review",
+    "every_gate_that_requires_a_clean_resource_ships_a_janitor_that_keeps_it_clean"
   ],
   "non_goals": [
     "automatic_source_rewriting",
