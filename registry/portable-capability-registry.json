@@ -444,7 +444,7 @@
         "src/digital_asset_directory/dev_env.py",
         "schemas/repo-enrollment-contract.schema.json"
       ],
-      "content_digest": "sha256:8e5e6729b42edf88852197bac1a44665520f5997683830c6d946a6be4e042c86",
+      "content_digest": "sha256:a4e3b5be1a0721b2969c5828b7caa761a446293cc31344c582f5e5f92034bdea",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
