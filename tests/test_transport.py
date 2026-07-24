@@ -820,10 +820,12 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         "mail_follow_through_audit",
         "events_collect",
         "exceptions_collect",
+        "exception_lake_reports",
         "lesson_graph_rebuild",
         "logos_llos_read_only_audit",
         "subagent_improvement_review",
         "graph_inference",
+        "subagent_capability_graph_rebuild",
         "transport_audit",
         "weekly_asset_coverage",
         "lifecycle_janitor",
@@ -832,6 +834,13 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         "heartbeat",
         "journal_checkpoint",
     ]
+    assert first["graphs"]["subagent_capability_graph"]["status"] == "skipped"
+    assert (
+        first["graphs"]["subagent_capability_graph"]["reason"]
+        == "subagent_evaluation_inputs_incomplete"
+    )
+    assert first["exception_lake_reports"]["status"] == "skipped"
+    assert first["exception_lake_reports"]["reason"] == "exception_lake_absent"
     assert Path(first["daily_review_queue"]["markdown_path"]).exists()
     assert first["graph_surface_status"]["schema_version"] == "dad.graph_surface.status.v1"
     assert "graph_surfaces" in first["daily_review_queue"]["report"]
@@ -911,6 +920,170 @@ def test_daemon_fingerprint_hashes_small_load_bearing_controls(tmp_path: Path):
 
     assert after != before
     assert after_count == count
+
+
+def test_daemon_rebuilds_subagent_capability_graph_when_inputs_present(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = tmp_path / "hub"
+    raw = hub / "raw" / "agent-evaluations"
+    raw.mkdir(parents=True)
+    for name in (
+        "role-profile-revisions.jsonl",
+        "execution-attempts.jsonl",
+        "attempt-evaluations.jsonl",
+    ):
+        (raw / name).write_text('{"synthetic":true}\n', encoding="utf-8")
+
+    calls: list[Path] = []
+
+    def fake_build(hub_root: Path) -> dict[str, Any]:
+        calls.append(hub_root)
+        return {"graph_path": "synthetic", "counts": {"node_count": 0}}
+
+    monkeypatch.setattr(daemon_mod, "build_subagent_capability_graph", fake_build)
+    result = daemon_mod._run_subagent_capability_graph(hub)
+
+    assert calls == [hub]
+    assert result["status"] == "ok"
+    assert result["step"] == "subagent_capability_graph"
+
+
+def test_daemon_skips_subagent_capability_graph_without_inputs(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    result = daemon_mod._run_subagent_capability_graph(hub)
+    assert result["status"] == "skipped"
+    assert result["reason"] == "subagent_evaluation_inputs_incomplete"
+
+
+def test_daemon_fingerprint_tracks_graph_surface_registry_inputs(tmp_path: Path):
+    hub = tmp_path / "hub"
+    registry_dir = hub / "registry"
+    registry_dir.mkdir(parents=True)
+    tracked = registry_dir / "graph-edge-registry.json"
+    tracked.write_text('{"edge_types": ["a"]}\n', encoding="utf-8")
+    (registry_dir / "graph-surface-registry.json").write_text(
+        json.dumps(
+            {
+                "surfaces": [
+                    {
+                        "surface_id": "synthetic-surface",
+                        "builder": {
+                            "availability": "wired",
+                            "module": "digital_asset_directory.learning.build_lesson_graph",
+                        },
+                        "source_inputs": [
+                            {
+                                "kind": "registry_path",
+                                "ref": "registry/graph-edge-registry.json",
+                                "required": True,
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    before, before_count = daemon_mod._cycle_input_fingerprint(
+        hub, mail_repos=[], exception_repos=[], journal_repo=None
+    )
+    # builder_source row + registry_path row are both tracked.
+    assert before_count >= 2
+    tracked.write_text('{"edge_types": ["a", "b"]}\n', encoding="utf-8")
+    after, after_count = daemon_mod._cycle_input_fingerprint(
+        hub, mail_repos=[], exception_repos=[], journal_repo=None
+    )
+
+    assert after != before
+    assert after_count == before_count
+
+
+def test_daemon_fingerprint_tracks_directory_registry_path_inputs(tmp_path: Path):
+    hub = tmp_path / "hub"
+    registry_dir = hub / "registry"
+    snapshot_dir = registry_dir / "subagent-evaluation-methodologies"
+    snapshot_dir.mkdir(parents=True)
+    snapshot_file = snapshot_dir / "0.1.0.json"
+    snapshot_file.write_text('{"methodology_version": "0.1.0"}\n', encoding="utf-8")
+    (registry_dir / "graph-surface-registry.json").write_text(
+        json.dumps(
+            {
+                "surfaces": [
+                    {
+                        "surface_id": "synthetic-directory-surface",
+                        "builder": {
+                            "availability": "wired",
+                            "module": "digital_asset_directory.learning.build_lesson_graph",
+                        },
+                        "source_inputs": [
+                            {
+                                "kind": "registry_path",
+                                "ref": "registry/subagent-evaluation-methodologies",
+                                "required": True,
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    before, before_count = daemon_mod._cycle_input_fingerprint(
+        hub, mail_repos=[], exception_repos=[], journal_repo=None
+    )
+    # A versioned methodology snapshot directory changing content (new file,
+    # same directory size/mtime granularity) must still wake an idle daemon.
+    (snapshot_dir / "0.2.0.json").write_text(
+        '{"methodology_version": "0.2.0"}\n', encoding="utf-8"
+    )
+    after, after_count = daemon_mod._cycle_input_fingerprint(
+        hub, mail_repos=[], exception_repos=[], journal_repo=None
+    )
+
+    assert after != before
+    assert after_count == before_count
+
+
+def test_daemon_exception_lake_reports_skip_without_lake(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    result = daemon_mod._run_exception_lake_reports(hub)
+    assert result["status"] == "skipped"
+    assert result["reason"] == "exception_lake_absent"
+
+
+def test_daemon_exception_lake_reports_run_when_lake_present(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    lake = daemon_mod.exception_data_path(hub, daemon_mod.LAKE_PATH)
+    lake.parent.mkdir(parents=True, exist_ok=True)
+    lake.write_text('{"event_id":"e1","event_type":"x"}\n', encoding="utf-8")
+
+    calls: list[str] = []
+
+    def make_stub(name: str):
+        def _stub(hub_root: Path, **_kwargs: Any) -> dict[str, Any]:
+            calls.append(name)
+            return {"report": name}
+
+        return _stub
+
+    monkeypatch.setattr(
+        daemon_mod,
+        "_EXCEPTION_LAKE_REPORT_BUILDERS",
+        tuple((name, make_stub(name)) for name, _ in daemon_mod._EXCEPTION_LAKE_REPORT_BUILDERS),
+    )
+    result = daemon_mod._run_exception_lake_reports(hub)
+
+    assert result["status"] == "ok"
+    assert len(calls) == 5
+    assert all(step["status"] == "ok" for step in result["reports"].values())
 
 
 def test_daemon_fingerprint_tracks_logos_control_mirror_inputs(tmp_path: Path):
