@@ -33,6 +33,7 @@ from digital_asset_directory.exception_capture import (
     write_phase6_machine_evidence_summary,
 )
 from digital_asset_directory.journal import (
+    JOURNAL_ENGINE_VERSION,
     checkpoint_journal,
     ingest_remote_outbox,
     journal_repo_status,
@@ -2037,7 +2038,7 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
     upgraded_manifest = json.loads(
         (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
     )
-    assert upgraded_manifest["journal_engine_version"] == "1.2.0"
+    assert upgraded_manifest["journal_engine_version"] == JOURNAL_ENGINE_VERSION
 
     (journal_repo / "journal_checkpoint_manifest.json").write_text(
         "{not-json\n", encoding="utf-8"
@@ -2063,7 +2064,7 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
     recovered_manifest = json.loads(
         (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
     )
-    assert recovered_manifest["journal_engine_version"] == "1.2.0"
+    assert recovered_manifest["journal_engine_version"] == JOURNAL_ENGINE_VERSION
 
     (journal_repo / "journal_checkpoint_manifest.json").write_text(
         "{}\n", encoding="utf-8"
@@ -2137,7 +2138,7 @@ def test_journal_incremental_checkpoint_reuses_verified_files_and_reconciles_del
         (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
     )
     assert first_manifest["file_index_version"] == "1.0.0"
-    assert first_manifest["journal_engine_version"] == "1.2.0"
+    assert first_manifest["journal_engine_version"] == JOURNAL_ENGINE_VERSION
     assert len(first_manifest["file_index"]) == first_manifest["verified_file_count"]
 
     with inbox.open("a", encoding="utf-8") as handle:
