@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 import jsonschema
+import pytest
 
 from digital_asset_directory.agent_session_split_report import (
     build_agent_session_split_report,
@@ -33,7 +34,7 @@ def _write_session(path: Path, **fields: object) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
-def _hub_with_data_root(tmp_path: Path) -> Path:
+def _hub_with_data_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     hub = tmp_path / "hub"
     data_root = tmp_path / "data-root"
     hub.mkdir()
@@ -42,12 +43,14 @@ def _hub_with_data_root(tmp_path: Path) -> Path:
         json.dumps({"hub_ref": str(hub.resolve())}),
         encoding="utf-8",
     )
-    os.environ["DAD_DATA_ROOT"] = str(data_root)
+    monkeypatch.setenv("DAD_DATA_ROOT", str(data_root))
     return hub
 
 
-def test_split_report_classifies_agree_disagree_and_only(tmp_path: Path) -> None:
-    hub = _hub_with_data_root(tmp_path)
+def test_split_report_classifies_agree_disagree_and_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = _hub_with_data_root(tmp_path, monkeypatch)
     legacy = hub / "state" / "agent_sessions"
     canonical = Path(os.environ["DAD_DATA_ROOT"]) / "state" / "agent_sessions"
     _write_session(legacy / "agree.json", status="closed", closed_at="2026-07-20T13:00:00+00:00")
@@ -81,18 +84,22 @@ def test_split_report_classifies_agree_disagree_and_only(tmp_path: Path) -> None
     jsonschema.validate(report, schema)
 
 
-def test_same_location_reports_absent_split(tmp_path: Path) -> None:
+def test_same_location_reports_absent_split(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     hub = tmp_path / "hub"
     hub.mkdir()
-    os.environ.pop("DAD_DATA_ROOT", None)
+    monkeypatch.delenv("DAD_DATA_ROOT", raising=False)
     _write_session(hub / "state" / "agent_sessions" / "one.json")
     report = build_agent_session_split_report(hub)
     assert report["data_plane"]["same_location"] is True
     assert report["summary"]["split_evidence"] == "absent"
 
 
-def test_one_sided_orphan_is_present_split_evidence(tmp_path: Path) -> None:
-    hub = _hub_with_data_root(tmp_path)
+def test_one_sided_orphan_is_present_split_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = _hub_with_data_root(tmp_path, monkeypatch)
     legacy = hub / "state" / "agent_sessions"
     _write_session(legacy / "orphan.json", status="open")
     report = build_agent_session_split_report(hub)
@@ -101,8 +108,10 @@ def test_one_sided_orphan_is_present_split_evidence(tmp_path: Path) -> None:
     assert report["summary"]["split_evidence"] == "present"
 
 
-def test_write_report_does_not_mutate_sessions(tmp_path: Path) -> None:
-    hub = _hub_with_data_root(tmp_path)
+def test_write_report_does_not_mutate_sessions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = _hub_with_data_root(tmp_path, monkeypatch)
     legacy = hub / "state" / "agent_sessions" / "keep.json"
     _write_session(legacy, status="open")
     before = legacy.read_text(encoding="utf-8")
@@ -113,8 +122,10 @@ def test_write_report_does_not_mutate_sessions(tmp_path: Path) -> None:
     assert legacy.read_text(encoding="utf-8") == before
 
 
-def test_canonical_write_path_uses_data_root(tmp_path: Path) -> None:
-    hub = _hub_with_data_root(tmp_path)
+def test_canonical_write_path_uses_data_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = _hub_with_data_root(tmp_path, monkeypatch)
     path = canonical_agent_session_path(hub, "abc")
     assert str(path).replace("\\", "/").endswith("state/agent_sessions/abc.json")
     assert Path(os.environ["DAD_DATA_ROOT"]) in path.parents

@@ -21,6 +21,24 @@ def _bounded_fallback_tmp_name(node_id: str) -> str:
 
 
 
+@pytest.fixture(autouse=True)
+def _restore_dad_data_root():
+    """Restore DAD_DATA_ROOT after every test.
+
+    A test that leaks an override redirects resolve_data_root() for the rest
+    of the pytest process: later tests that validate the live repo fall back
+    to stale legacy paths and fail order-dependently.
+    """
+    before = os.environ.get("DAD_DATA_ROOT")
+    try:
+        yield
+    finally:
+        if before is None:
+            os.environ.pop("DAD_DATA_ROOT", None)
+        else:
+            os.environ["DAD_DATA_ROOT"] = before
+
+
 @pytest.fixture
 def tmp_path(request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Use an ordinary directory when pytest's ACL-managed temp root is denied.
