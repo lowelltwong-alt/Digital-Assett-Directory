@@ -39,7 +39,7 @@ def _write_session(path: Path, *, mtime: float | None = None, **fields: object) 
         os.utime(path, (mtime, mtime))
 
 
-def _hub_with_data_root(tmp_path: Path) -> Path:
+def _hub_with_data_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     hub = tmp_path / "hub"
     data_root = tmp_path / "data-root"
     hub.mkdir()
@@ -48,7 +48,7 @@ def _hub_with_data_root(tmp_path: Path) -> Path:
         json.dumps({"hub_ref": str(hub.resolve())}),
         encoding="utf-8",
     )
-    os.environ["DAD_DATA_ROOT"] = str(data_root)
+    monkeypatch.setenv("DAD_DATA_ROOT", str(data_root))
     return hub
 
 
@@ -70,8 +70,10 @@ def test_proposed_summary_is_nonblank() -> None:
     assert text.strip()
 
 
-def test_dry_run_classifies_idle_live_exception_and_keep(tmp_path: Path) -> None:
-    hub = _hub_with_data_root(tmp_path)
+def test_dry_run_classifies_idle_live_exception_and_keep(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = _hub_with_data_root(tmp_path, monkeypatch)
     sessions = Path(os.environ["DAD_DATA_ROOT"]) / "state" / "agent_sessions"
     now = datetime(2026, 7, 20, 18, 0, tzinfo=timezone.utc)
     stale = (now - timedelta(hours=10)).timestamp()
@@ -135,8 +137,10 @@ def test_dry_run_classifies_idle_live_exception_and_keep(tmp_path: Path) -> None
     jsonschema.validate(report, schema)
 
 
-def test_write_report_does_not_mutate_sessions(tmp_path: Path) -> None:
-    hub = _hub_with_data_root(tmp_path)
+def test_write_report_does_not_mutate_sessions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = _hub_with_data_root(tmp_path, monkeypatch)
     sessions = Path(os.environ["DAD_DATA_ROOT"]) / "state" / "agent_sessions"
     path = sessions / "open.json"
     stale = time.time() - 10 * 3600
@@ -151,8 +155,10 @@ def test_write_report_does_not_mutate_sessions(tmp_path: Path) -> None:
     assert result["report"]["apply_authorized"] is False
 
 
-def test_repo_filter_excludes_other_repositories(tmp_path: Path) -> None:
-    hub = _hub_with_data_root(tmp_path)
+def test_repo_filter_excludes_other_repositories(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = _hub_with_data_root(tmp_path, monkeypatch)
     sessions = Path(os.environ["DAD_DATA_ROOT"]) / "state" / "agent_sessions"
     now = datetime(2026, 7, 20, 18, 0, tzinfo=timezone.utc)
     stale = (now - timedelta(hours=10)).timestamp()
@@ -173,7 +179,9 @@ def test_routine_contract_disabled() -> None:
     assert evaluate_contract(ROOT, contract)["status"] == "disabled"
 
 
-def test_idle_hours_must_be_positive(tmp_path: Path) -> None:
-    hub = _hub_with_data_root(tmp_path)
+def test_idle_hours_must_be_positive(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = _hub_with_data_root(tmp_path, monkeypatch)
     with pytest.raises(ValueError):
         build_agent_session_reaper_report(hub, idle_live_hours=0)

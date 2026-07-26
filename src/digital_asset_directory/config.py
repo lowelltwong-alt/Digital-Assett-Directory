@@ -13,6 +13,7 @@ from .utils import atomic_write_text, find_repo_root
 
 HUB_ENV_NAMES = ("DAD_HUB", "DAD_HUB_PATH")
 HUB_LOCATOR_RELATIVE_PATH = Path(".dad") / "hub.json"
+CONFIG_ENV_NAME = "DAD_CONFIG"
 
 
 @dataclass
@@ -128,11 +129,138 @@ class AppConfig:
     enrollment_repos: list[EnrollmentRepoPolicy] = field(default_factory=list)
 
 
-def resolve_config_path(repo_root: Path, requested: Path | None = None) -> Path:
+def read_config_pointer(
+    *,
+    environ: dict[str, str] | None = None,
+    locator: Path | None = None,
+) -> dict[str, Any]:
+    """Resolve the governed user-level local-config pointer.
+
+    Precedence: the ``DAD_CONFIG`` env var, then the ``config_path`` field in
+    ``~/.dad/hub.json``. The pointer only "wins" when it names an existing
+    readable file; a set-but-missing/unreadable pointer is reported with an
+    ``error`` so callers can warn instead of silently splitting authority.
+    Returns ``{source, value, path, exists, usable, error}``.
+    """
+    env = environ if environ is not None else os.environ
+    raw = str(env.get(CONFIG_ENV_NAME, "") or "").strip()
+    source = CONFIG_ENV_NAME
+    if not raw:
+        locator_path = locator or hub_locator_path()
+        source = "user_locator"
+        if locator_path.exists():
+            try:
+                payload = json.loads(locator_path.read_text(encoding="utf-8-sig"))
+            except json.JSONDecodeError as exc:
+                return {
+                    "source": "user_locator",
+                    "value": "",
+                    "path": "",
+                    "exists": False,
+                    "usable": False,
+                    "error": f"invalid hub locator JSON: {exc}",
+                }
+            if isinstance(payload, dict):
+                raw = str(payload.get("config_path") or "").strip()
+    if not raw:
+        return {"source": "", "value": "", "path": "", "exists": False, "usable": False, "error": ""}
+    resolved = _expand_path(raw)
+    exists = resolved.exists() and resolved.is_file()
+    return {
+        "source": source,
+        "value": raw,
+        "path": str(resolved),
+        "exists": exists,
+        "usable": exists,
+        "error": "" if exists else f"configured local-config pointer does not name a readable file: {resolved}",
+    }
+
+
+def resolve_config_path(
+    repo_root: Path,
+    requested: Path | None = None,
+    *,
+    environ: dict[str, str] | None = None,
+    locator: Path | None = None,
+) -> Path:
     if requested:
         return requested if requested.is_absolute() else repo_root / requested
     local = repo_root / "config" / "sources.local.yaml"
-    return local if local.exists() else repo_root / "config" / "sources.example.yaml"
+    if local.exists():
+        return local
+    pointer = read_config_pointer(environ=environ, locator=locator)
+    if pointer["usable"]:
+        return Path(pointer["path"])
+    return repo_root / "config" / "sources.example.yaml"
+
+
+def write_config_pointer(config_path: Path, locator: Path | None = None) -> dict[str, Any]:
+    """Record a canonical local-config pointer in ``~/.dad/hub.json``.
+
+    This only writes the user-level locator (never a repo file) and refuses a
+    pointer that does not name an existing readable file, so isolated worktrees
+    can resolve the canonical config without copying private config in.
+    """
+    resolved = config_path.expanduser().resolve()
+    if not resolved.exists() or not resolved.is_file():
+        raise ValueError(f"Refusing to record a local-config pointer to a missing file: {resolved}")
+    locator_path = locator or hub_locator_path()
+    payload: dict[str, Any] = {}
+    if locator_path.exists():
+        try:
+            existing = json.loads(locator_path.read_text(encoding="utf-8-sig"))
+            if isinstance(existing, dict):
+                payload = existing
+        except json.JSONDecodeError:
+            payload = {}
+    payload.setdefault("schema_version", "dad.hub-locator.v1")
+    payload["config_path"] = str(resolved)
+    locator_path.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write_text(locator_path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    return {"path": str(locator_path), "config_path": str(resolved), "written": True}
+
+
+def describe_config_resolution(
+    repo_root: Path,
+    requested: Path | None = None,
+    *,
+    environ: dict[str, str] | None = None,
+    locator: Path | None = None,
+) -> dict[str, Any]:
+    """Explain which config file wins and why (for ``asset-dir config show``)."""
+    root = repo_root.resolve()
+    local = root / "config" / "sources.local.yaml"
+    example = root / "config" / "sources.example.yaml"
+    pointer = read_config_pointer(environ=environ, locator=locator)
+    resolved = resolve_config_path(root, requested, environ=environ, locator=locator)
+    if requested is not None:
+        source = "explicit_--config"
+    elif local.exists():
+        source = "repo_sources_local"
+    elif pointer["usable"]:
+        source = f"user_pointer:{pointer['source']}"
+    else:
+        source = "repo_sources_example"
+    warnings: list[str] = []
+    if pointer["value"] and not pointer["usable"] and not local.exists():
+        warnings.append(pointer["error"])
+    return {
+        "resolved_path": str(resolved),
+        "resolved_exists": resolved.exists(),
+        "source": source,
+        "precedence": [
+            {"source": "explicit_--config", "path": str(requested) if requested else "", "active": requested is not None},
+            {"source": "repo_sources_local", "path": str(local), "active": requested is None and local.exists()},
+            {
+                "source": f"user_pointer:{pointer['source'] or 'unset'}",
+                "path": pointer["path"],
+                "active": requested is None and not local.exists() and pointer["usable"],
+            },
+            {"source": "repo_sources_example", "path": str(example), "active": source == "repo_sources_example"},
+        ],
+        "pointer": pointer,
+        "warnings": warnings,
+    }
 
 
 def is_dad_hub_root(path: Path) -> bool:

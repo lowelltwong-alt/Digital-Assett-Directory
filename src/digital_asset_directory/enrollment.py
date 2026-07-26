@@ -276,6 +276,56 @@ def select_enrollment_policies(
     return selected
 
 
+def nested_visibility_conflicts(
+    policies: Sequence[EnrollmentRepoPolicy],
+) -> list[dict[str, Any]]:
+    """Warn when a configured policy path is an ancestor of another configured
+    policy path with different visibility/public_facing.
+
+    This is warning-only candidate evidence: it never reclassifies a repo. It
+    exists so a parent-folder policy cannot silently misclassify a nested child
+    repository whose exact policy is the authority for that path.
+    """
+    resolved: list[tuple[Path, EnrollmentRepoPolicy]] = []
+    for policy in policies:
+        if not policy.enrollment_enabled:
+            continue
+        try:
+            resolved.append((policy.path.resolve(), policy))
+        except OSError:
+            resolved.append((policy.path, policy))
+    conflicts: list[dict[str, Any]] = []
+    for ancestor_path, ancestor in resolved:
+        for child_path, child in resolved:
+            if ancestor is child or ancestor_path == child_path:
+                continue
+            if not child_path.is_relative_to(ancestor_path):
+                continue
+            if (
+                ancestor.visibility == child.visibility
+                and ancestor.public_facing == child.public_facing
+            ):
+                continue
+            conflicts.append(
+                {
+                    "ancestor_repo_id": ancestor.id,
+                    "ancestor_path": _normalize_path(ancestor_path),
+                    "ancestor_visibility": ancestor.visibility,
+                    "ancestor_public_facing": ancestor.public_facing,
+                    "child_repo_id": child.id,
+                    "child_path": _normalize_path(child_path),
+                    "child_visibility": child.visibility,
+                    "child_public_facing": child.public_facing,
+                    "resolution": (
+                        "The most specific configured path wins; the nested repo keeps "
+                        "its own exact policy. Review that the child visibility is correct "
+                        "and that the ancestor policy does not intend to cover this path."
+                    ),
+                }
+            )
+    return conflicts
+
+
 def discover_enrollment_candidates(cfg: AppConfig) -> dict[str, Any]:
     configured = {_normalize_path(policy.path): policy for policy in cfg.enrollment_repos}
     discovered: dict[str, Path] = {_normalize_path(cfg.repo_root): cfg.repo_root}
@@ -315,6 +365,7 @@ def discover_enrollment_candidates(cfg: AppConfig) -> dict[str, Any]:
         )
     return {
         "candidates": rows,
+        "nested_visibility_conflicts": nested_visibility_conflicts(cfg.enrollment_repos),
         "authority_boundary": (
             "Discovery is read-only. Add reviewed enrollment.repos policy and a "
             "reviewed wave before planning or applying enrollment."
@@ -390,6 +441,7 @@ def build_enrollment_plan(
         "operation": "update" if update else "enroll",
         "item_count": len(items),
         "items": items,
+        "nested_visibility_conflicts": nested_visibility_conflicts(policies),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
     plan_dir = hub_root / ENROLLMENT_DIR / "plans"
@@ -1265,7 +1317,11 @@ def apply_enrollment(
 
     try:
         changed_paths = _apply_payloads(policy, hub_root, approval_id, update=update)
-    except ValueError as exc:
+    except (ValueError, OSError) as exc:
+        # A filesystem failure (permission/file-lock) mid-write can leave the
+        # contract on disk before a later surface fails. Record a `failed` audit
+        # so the lifecycle resolver reports partially_applied, never a false
+        # `enrolled`. ValueError covers guard/validation failures.
         _append_audit(
             hub_root,
             {
@@ -1274,7 +1330,7 @@ def apply_enrollment(
                 "repo_id": policy.id,
                 "repo_ref": _repo_ref(policy),
                 "approval_id": approval_id,
-                "reason": str(exc),
+                "reason": f"{type(exc).__name__}: {exc}",
             },
         )
         raise
@@ -1314,8 +1370,341 @@ def apply_enrollment(
     }
 
 
+# ---------------------------------------------------------------------------
+# Enrollment lifecycle: cancel, unenroll/rollback, and state resolution
+# ---------------------------------------------------------------------------
+
+# Documented lifecycle states. `cancel` and `unenroll` are implemented; the
+# remaining states are surfaced by `enrollment_lifecycle_state` and the operator
+# runbook (docs/DAD_ENROLLMENT_OPERATOR_RUNBOOK.md).
+ENROLLMENT_LIFECYCLE_STATES = [
+    "not_enrolled",
+    "planned",
+    "approved",
+    "applying",
+    "partially_applied",
+    "enrolled",
+    "publication_pending",
+    "retired",
+    "rollback_in_progress",
+    "rollback_incomplete",
+]
+
+# DAD-authored config/pointer/map/hook surfaces that unenroll removes. Mailbox
+# JSONL, asset-memory, learning events, and REPO_LOCAL_ONLY_PATHS are repo-owned
+# data and are intentionally preserved.
+DAD_MANAGED_REMOVABLE_FILES = [
+    ".digital-asset/dad-integration.json",
+    ".digital-asset/context-map.json",
+    ".digital-asset/governance-map.yaml",
+    ".digital-asset/data-map.yaml",
+    ".digital-asset/skills/checkout.json",
+    ".ai-assets.json",
+    ".githooks/pre-push",
+    ".githooks/pre-push.ps1",
+]
+
+DAD_MANAGED_DOC_BLOCKS = [
+    ("AGENTS.md", GOVERNANCE_BEGIN, GOVERNANCE_END),
+    ("CLAUDE.md", CLAUDE_BEGIN, CLAUDE_END),
+    ("AI_FRONT_DOOR.md", ENROLLMENT_BEGIN, ENROLLMENT_END),
+    ("AI_TABLE_OF_CONTENTS.md", TOC_BEGIN, TOC_END),
+]
+
+UNENROLL_PRESERVED_PATHS = [
+    ".digital-asset/mail/inbox.jsonl",
+    ".digital-asset/mail/outbox.jsonl",
+    ".digital-asset/mail/archive.jsonl",
+    ".digital-asset/mail/adoption.jsonl",
+    ".digital-asset/mail/README.md",
+    ".digital-asset/mail/.gitignore",
+    ".digital-asset/assets/index.jsonl",
+    ".digital-asset/assets/adoption.jsonl",
+    ".digital-asset/assets/README.md",
+    ".digital-asset/learning/events.jsonl",
+    *REPO_LOCAL_ONLY_PATHS,
+]
+
+
+def _strip_managed_block(existing: str, begin: str, end: str) -> tuple[str, bool]:
+    """Remove only the marker-bounded region, restoring surrounding repo content."""
+    if begin not in existing or end not in existing:
+        return existing, False
+    prefix, rest = existing.split(begin, 1)
+    _, suffix = rest.split(end, 1)
+    combined = (prefix.rstrip("\n") + "\n" + suffix.lstrip("\n")).strip("\n")
+    return (combined + "\n" if combined else ""), True
+
+
+def _read_audit_events(hub_root: Path, repo_id: str) -> list[dict[str, Any]]:
+    audit_path = hub_root.resolve() / AUDIT_PATH
+    if not audit_path.exists():
+        return []
+    events: list[dict[str, Any]] = []
+    for line in audit_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict) and row.get("repo_id") == repo_id:
+            events.append(row)
+    return events
+
+
+def cancel_enrollment(
+    hub_root: Path, policy: EnrollmentRepoPolicy, *, reason: str = ""
+) -> dict[str, Any]:
+    """Cancel a planned-but-not-applied enrollment.
+
+    Records a cancellation in the append-only audit ledger and writes nothing to
+    the target repo. Safe and idempotent: run before apply to stop the wave.
+    """
+    hub_root = hub_root.resolve()
+    contract_exists = (
+        policy.path.resolve() / ".digital-asset" / "dad-integration.json"
+    ).exists()
+    _append_audit(
+        hub_root,
+        {
+            "event_type": "cancelled",
+            "operation": "enroll",
+            "repo_id": policy.id,
+            "repo_ref": _repo_ref(policy),
+            "reason": reason or "enrollment cancelled before apply",
+            "contract_present_at_cancel": contract_exists,
+        },
+    )
+    return {
+        "repo_id": policy.id,
+        "repo_ref": _repo_ref(policy),
+        "operation": "cancel",
+        "cancelled": True,
+        "contract_present": contract_exists,
+        "note": (
+            "Cancellation recorded in audit; no target files were written. If a "
+            "contract is already present, use enroll unenroll to remove surfaces."
+        ),
+        "lifecycle_state": "retired" if not contract_exists else "enrolled",
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+
+def _unenroll_approval_error(
+    policy: EnrollmentRepoPolicy, approval_id: str
+) -> str | None:
+    if not policy.enrollment_enabled:
+        return f"Enrollment is disabled for repo policy: {policy.id}"
+    if approval_id not in policy.approved_approval_ids:
+        return f"Approval ID is not reviewed for repo policy {policy.id}: {approval_id}"
+    return None
+
+
+def _is_dad_owned_surface(rel: str, path: Path) -> bool:
+    """Return True only when a removable file is recognizably DAD-authored.
+
+    Guards against destroying source-owned config: a repo can legitimately ship
+    its own ``.ai-assets.json`` or ``.githooks/pre-push`` that DAD never wrote.
+    We delete a path during unenroll only when its content carries a DAD
+    signature, never on filename/location alone.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    if rel.endswith((".githooks/pre-push", ".githooks/pre-push.ps1")) or rel in {
+        ".githooks/pre-push",
+        ".githooks/pre-push.ps1",
+    }:
+        return "enforce_postflight.py" in text and "DAD" in text
+    # JSON/YAML pointer and map surfaces all carry a DAD hub ref / pointer type /
+    # authority boundary that a source-owned file would not.
+    markers = (
+        "dad://hub/Digital-Assett-Directory",
+        "dad://repo/",
+        '"pointer_type": "dad_',
+        "pointer_type: dad_",
+        "DAD enrollment installs or updates",  # AUTHORITY_BOUNDARY text
+        "dad_hub_ref",
+    )
+    return any(marker in text for marker in markers)
+
+
+def _remove_managed_surfaces(policy: EnrollmentRepoPolicy) -> dict[str, Any]:
+    repo_root = policy.path.resolve()
+    removed: list[str] = []
+    already_absent: list[str] = []
+    blocks_stripped: list[str] = []
+    preserved_foreign: list[str] = []
+    errors: list[str] = []
+
+    for rel in DAD_MANAGED_REMOVABLE_FILES:
+        try:
+            path = _target_path(repo_root, rel)
+        except ValueError as exc:
+            errors.append(f"{rel}: {exc}")
+            continue
+        if path.exists():
+            if not _is_dad_owned_surface(rel, path):
+                # Source-owned file that collides with a DAD-managed path; never
+                # delete repo-owned content during rollback.
+                preserved_foreign.append(rel)
+                continue
+            try:
+                path.unlink()
+                removed.append(rel)
+            except OSError as exc:
+                errors.append(f"{rel}: {exc}")
+        else:
+            already_absent.append(rel)
+
+    for rel, begin, end in DAD_MANAGED_DOC_BLOCKS:
+        try:
+            path = _target_path(repo_root, rel)
+        except ValueError as exc:
+            errors.append(f"{rel}: {exc}")
+            continue
+        if not path.exists():
+            already_absent.append(rel)
+            continue
+        try:
+            existing = path.read_text(encoding="utf-8")
+            new_text, changed = _strip_managed_block(existing, begin, end)
+            if changed:
+                atomic_write_text(path, new_text)
+                blocks_stripped.append(rel)
+            else:
+                already_absent.append(rel)
+        except OSError as exc:
+            errors.append(f"{rel}: {exc}")
+
+    return {
+        "removed": removed,
+        "already_absent": already_absent,
+        "blocks_stripped": blocks_stripped,
+        "preserved_foreign": preserved_foreign,
+        "errors": errors,
+    }
+
+
+def unenroll_enrollment(
+    hub_root: Path, policy: EnrollmentRepoPolicy, *, approval_id: str
+) -> dict[str, Any]:
+    """Remove DAD-managed surfaces from a repo (rollback), preserving repo-owned
+    material and historical audit evidence.
+
+    Idempotent and resumable: a re-run over an already-removed repo is a no-op
+    that reports ``already_removed``. On partial failure the audit records
+    ``rollback_incomplete`` so a resume re-run can finish.
+    """
+    hub_root = hub_root.resolve()
+    error = _unenroll_approval_error(policy, approval_id)
+    if error:
+        _append_audit(
+            hub_root,
+            {
+                "event_type": "blocked",
+                "operation": "unenroll",
+                "repo_id": policy.id,
+                "repo_ref": _repo_ref(policy),
+                "approval_id": approval_id,
+                "reason": error,
+            },
+        )
+        raise ValueError(error)
+
+    repo_root = policy.path.resolve()
+    if not repo_root.exists() or not repo_root.is_dir():
+        raise ValueError(f"Unenroll target repo does not exist: {policy.id}")
+
+    _append_audit(
+        hub_root,
+        {
+            "event_type": "rollback_in_progress",
+            "operation": "unenroll",
+            "repo_id": policy.id,
+            "repo_ref": _repo_ref(policy),
+            "approval_id": approval_id,
+            "preserved_paths": UNENROLL_PRESERVED_PATHS,
+        },
+    )
+
+    result = _remove_managed_surfaces(policy)
+    changed_any = bool(result["removed"] or result["blocks_stripped"])
+    if result["errors"]:
+        event_type = "rollback_incomplete"
+        lifecycle_state = "rollback_incomplete"
+    else:
+        event_type = "unenrolled"
+        lifecycle_state = "retired"
+    already_removed = not changed_any and not result["errors"]
+
+    _append_audit(
+        hub_root,
+        {
+            "event_type": event_type,
+            "operation": "unenroll",
+            "repo_id": policy.id,
+            "repo_ref": _repo_ref(policy),
+            "approval_id": approval_id,
+            "removed_paths": result["removed"],
+            "blocks_stripped": result["blocks_stripped"],
+            "already_absent": result["already_absent"],
+            "preserved_foreign_paths": result["preserved_foreign"],
+            "errors": result["errors"],
+            "already_removed": already_removed,
+            "preserved_paths": UNENROLL_PRESERVED_PATHS,
+        },
+    )
+    return {
+        "repo_id": policy.id,
+        "repo_ref": _repo_ref(policy),
+        "operation": "unenroll",
+        "lifecycle_state": lifecycle_state,
+        "already_removed": already_removed,
+        "removed_paths": result["removed"],
+        "blocks_stripped": result["blocks_stripped"],
+        "already_absent": result["already_absent"],
+        "preserved_foreign_paths": result["preserved_foreign"],
+        "errors": result["errors"],
+        "preserved_paths": UNENROLL_PRESERVED_PATHS,
+        "repo_local_only_boundary": REPO_LOCAL_ONLY_BOUNDARY,
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+
+def enrollment_lifecycle_state(
+    hub_root: Path, policy: EnrollmentRepoPolicy
+) -> str:
+    """Resolve the current lifecycle state from on-disk surfaces + audit history."""
+    contract_exists = (
+        policy.path.resolve() / ".digital-asset" / "dad-integration.json"
+    ).exists()
+    events = _read_audit_events(hub_root, policy.id)
+    last = events[-1]["event_type"] if events else ""
+    if contract_exists:
+        if last == "failed":
+            return "partially_applied"
+        return "enrolled"
+    # No contract on disk.
+    if last == "rollback_in_progress":
+        return "rollback_in_progress"
+    if last == "rollback_incomplete":
+        return "rollback_incomplete"
+    if last in {"unenrolled", "cancelled"} or any(
+        row["event_type"] in {"applied", "updated"} for row in events
+    ):
+        return "retired"
+    return "not_enrolled"
+
+
 def enrollment_status(
-    policy: EnrollmentRepoPolicy, *, stale_hours: int = 24
+    policy: EnrollmentRepoPolicy,
+    *,
+    stale_hours: int = 24,
+    hub_root: Path | None = None,
 ) -> dict[str, Any]:
     # Status needs mail freshness, but planning and policy selection do not.
     from .mail_center import mail_digest_status
@@ -1382,11 +1771,17 @@ def enrollment_status(
             f"expected {row['expected_surface_version']}"
         )
     enabled_planes = contract.get("enabled_control_planes", []) if contract else []
+    lifecycle_state = (
+        enrollment_lifecycle_state(hub_root, policy)
+        if hub_root is not None
+        else ("enrolled" if contract is not None else "not_enrolled")
+    )
     return {
         "repo_id": policy.id,
         "repo_ref": _repo_ref(policy),
         "configured": True,
         "enrolled": contract is not None,
+        "lifecycle_state": lifecycle_state,
         "contract_version": contract_version,
         "update_available": contract_version != ENROLLMENT_VERSION or bool(errors),
         "policy_wave": policy.wave,
@@ -1410,11 +1805,18 @@ def enrollment_status(
 
 
 def enrollment_status_all(
-    policies: Sequence[EnrollmentRepoPolicy], *, stale_hours: int = 24
+    policies: Sequence[EnrollmentRepoPolicy],
+    *,
+    stale_hours: int = 24,
+    hub_root: Path | None = None,
 ) -> dict[str, Any]:
-    rows = [enrollment_status(policy, stale_hours=stale_hours) for policy in policies]
+    rows = [
+        enrollment_status(policy, stale_hours=stale_hours, hub_root=hub_root)
+        for policy in policies
+    ]
     return {
         "repo_count": len(rows),
         "rows": rows,
+        "nested_visibility_conflicts": nested_visibility_conflicts(policies),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
