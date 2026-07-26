@@ -127,6 +127,37 @@ def append_jsonl(path: Path, value: Any) -> None:
         handle.write(json_dumps(value) + "\n")
 
 
+def probe_writable(path: Path) -> tuple[bool, str]:
+    """Check early whether ``path`` (a file target) can actually be written.
+
+    Returns ``(ok, recovery_instruction)``. On failure the instruction names the
+    directory and the underlying reason and points at the usual recovery (a
+    writable hub / an initialized ``DAD_DATA_ROOT`` / adjusted permissions), so
+    callers can degrade gracefully instead of surfacing a bare ``PermissionError``
+    from deep inside a write. This never mutates the target file: it only creates
+    the parent directory and writes/removes a throwaway probe file beside it.
+    """
+    target = Path(path)
+    parent = target.parent
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp_name = tempfile.mkstemp(prefix=f".{target.name}.probe.", dir=str(parent))
+        os.close(fd)
+        os.unlink(tmp_name)
+        return True, ""
+    except OSError as exc:
+        return (
+            False,
+            (
+                f"DAD cannot write to {parent} ({exc.__class__.__name__}: {exc}). "
+                "Recovery: run this command from a writable DAD hub/worktree, point "
+                "at one with --hub, initialize a writable DAD_DATA_ROOT (asset-dir "
+                "data status), or fix the directory permissions. If a sandbox blocks "
+                "this path, re-run with write access to it."
+            ),
+        )
+
+
 def write_json(path: Path, value: Any, *, allow_direct_fallback: bool = False) -> None:
     atomic_write_text(
         path,

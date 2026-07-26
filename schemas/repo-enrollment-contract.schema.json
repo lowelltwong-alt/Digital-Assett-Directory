@@ -60,7 +60,7 @@
         "wave": {"type": "string"},
         "approval_id": {"type": "string", "minLength": 1},
         "installed_at": {"type": "string", "minLength": 1},
-        "last_operation": {"enum": ["enroll", "update"]},
+        "last_operation": {"enum": ["enroll", "update", "unenroll", "rollback"]},
         "normal_write_boundary": {"const": ".digital-asset/mail/**"},
         "one_time_full_governance_install": {"type": "boolean"}
       },
