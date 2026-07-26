@@ -44,10 +44,13 @@ from .catalog import catalog_status, run_scan
 from .ci_release_scope import write_ci_release_artifact_scope_outputs
 from .config import (
     GitHubSource,
+    describe_config_resolution,
     describe_hub_resolution,
     hub_locator_path,
     load_config,
     load_github_repositories_file,
+    resolve_hub_root,
+    write_config_pointer,
     write_hub_locator,
 )
 from .context_pack import build_context_pack, write_context_pack
@@ -90,9 +93,11 @@ from .daemon import (
 from .enrollment import (
     apply_enrollment,
     build_enrollment_plan,
+    cancel_enrollment,
     discover_enrollment_candidates,
     enrollment_status_all,
     select_enrollment_policies,
+    unenroll_enrollment,
 )
 from .event_pipeline import (
     build_event_record,
@@ -577,6 +582,8 @@ event_app = typer.Typer(no_args_is_help=True)
 app.add_typer(event_app, name="events")
 enroll_app = typer.Typer(no_args_is_help=True)
 app.add_typer(enroll_app, name="enroll")
+config_app = typer.Typer(no_args_is_help=True)
+app.add_typer(config_app, name="config")
 dad_app = typer.Typer(no_args_is_help=True)
 app.add_typer(dad_app, name="dad")
 usage_app = typer.Typer(no_args_is_help=True)
@@ -7211,10 +7218,10 @@ def enroll_status(
     config: Optional[Path] = typer.Option(None),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
-    """Show enrollment contract and daily/weekly freshness status."""
+    """Show enrollment contract, lifecycle state, and daily/weekly freshness."""
     cfg = _cfg(config, hub)
     policies = cfg.enrollment_repos if repo == ["all"] else _select_enrollment(repo, cfg)
-    console.print_json(data=enrollment_status_all(policies))
+    console.print_json(data=enrollment_status_all(policies, hub_root=cfg.repo_root))
 
 
 @enroll_app.command("surface-status")
@@ -7233,6 +7240,87 @@ def enroll_surface_status(
             wave=wave,
         )
     )
+
+
+@enroll_app.command("cancel")
+def enroll_cancel(
+    repo: str = typer.Option(..., "--repo"),
+    reason: str = typer.Option("", "--reason"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Cancel a planned-but-not-applied enrollment (audit-only, no target writes)."""
+    cfg = _cfg(config, hub)
+    policy = _select_enrollment([repo], cfg)[0]
+    console.print_json(data=cancel_enrollment(cfg.repo_root, policy, reason=reason))
+
+
+@enroll_app.command("unenroll")
+def enroll_unenroll(
+    repo: str = typer.Option(..., "--repo"),
+    approval_id: str = typer.Option(..., "--approval-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Remove DAD-managed surfaces from a repo (rollback); preserves repo-owned data.
+
+    Idempotent and resumable. Never deletes repo-owned material or
+    source-owned exception/fix-outcome paths.
+    """
+    cfg = _cfg(config, hub)
+    policy = _select_enrollment([repo], cfg)[0]
+    try:
+        result = unenroll_enrollment(cfg.repo_root, policy, approval_id=approval_id)
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@app.command("dev-env")
+def dev_env_check() -> None:
+    """Report whether this interpreter can run the test suite; print recovery.
+
+    Never installs packages. Detects the 'No module named pytest' failure mode
+    (a .venv created without the dev extras) and prints the exact recovery.
+    """
+    from .dev_env import dev_environment_status
+
+    status = dev_environment_status()
+    console.print_json(data=status)
+    if not status["ok"]:
+        raise typer.Exit(1)
+
+
+@config_app.command("show")
+def config_show(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Explain which local config file wins and why (precedence + pointer)."""
+    try:
+        root = resolve_hub_root(hub)
+    except FileNotFoundError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=describe_config_resolution(root, config))
+
+
+@config_app.command("set-local-pointer")
+def config_set_local_pointer(
+    path: Path = typer.Option(..., "--path", help="Canonical sources.local.yaml to point at."),
+) -> None:
+    """Record a user-level pointer to the canonical local config in ~/.dad/hub.json.
+
+    Lets isolated worktrees resolve the live local config without copying
+    private configuration in. Writes only the user-level locator.
+    """
+    try:
+        result = write_config_pointer(path)
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 @dad_app.command("needs")

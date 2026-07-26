@@ -16,7 +16,16 @@ from .ids import stable_id
 from .intelligence_routing import recommend_start_tiers
 from .rust_bridge.dad_scan_core import validate_repo_inventory_probe_summary
 from .transport import data_path
-from .utils import append_jsonl, atomic_write_text, json_dumps, sha256_bytes, sha256_file, sha256_text_file_lf, utc_now
+from .utils import (
+    append_jsonl,
+    atomic_write_text,
+    json_dumps,
+    probe_writable,
+    sha256_bytes,
+    sha256_file,
+    sha256_text_file_lf,
+    utc_now,
+)
 
 NEEDS_REGISTRY = Path("registry") / "dad-needs-registry.json"
 OFFERINGS_REGISTRY = Path("registry") / "dad-offerings-registry.json"
@@ -939,7 +948,19 @@ def compile_context_pack(
         "registry_hashes": registry_hashes,
         "outcomes": [],
     }
-    append_jsonl(central_usage_path(hub_root, DECISION_TRACE_LEDGER), trace)
+    ledger_path = central_usage_path(hub_root, DECISION_TRACE_LEDGER)
+    writable, recovery = probe_writable(ledger_path)
+    if writable:
+        append_jsonl(ledger_path, trace)
+        pack["decision_trace_recorded"] = True
+        pack["decision_trace_recovery"] = ""
+    else:
+        # Orientation must not hard-fail on a telemetry write. Skip the append,
+        # but surface an early, legible recovery instruction (problem: a bare
+        # PermissionError deep in the writer with no guidance).
+        warnings.append(f"decision trace not recorded: {recovery}")
+        pack["decision_trace_recorded"] = False
+        pack["decision_trace_recovery"] = recovery
     return pack
 
 

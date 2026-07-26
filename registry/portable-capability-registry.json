@@ -439,9 +439,12 @@
         "examples/synthetic-silver/release-manifest.golden.json",
         "tests/test_synthetic_silver_program.py",
         "tests/test_intelligence_routing.py",
-        "templates/downstream/AGENTS_MANAGED_BLOCK.md"
+        "templates/downstream/AGENTS_MANAGED_BLOCK.md",
+        "src/digital_asset_directory/config.py",
+        "src/digital_asset_directory/dev_env.py",
+        "schemas/repo-enrollment-contract.schema.json"
       ],
-      "content_digest": "sha256:39bcb0baafeee279390c1e6d930f50fa4ec13ee584b4790a2d64c3af2fb74d51",
+      "content_digest": "sha256:1eba47dc7e3685909438209b23bd1da8130756d58ab2134949998984460f08c2",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -1511,7 +1514,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:d4eed9df90b71ea5f27744ef9daab8527bcc90e5d2838c32212b395f7f85c95c",
+      "content_digest": "sha256:a2a9bb582f21f2de5153b1411d856716e4050ae0f84e65c611822f0746d05e6f",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1592,7 +1595,7 @@
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:e205db5f6ae3e2228b091771e531bcf91a5a5558539c8923ae683a1399c0e44e",
+      "adapter_interface_digest": "sha256:a1b3f906a494fc8d4b3e8b5ac33e0fc6530b94b2fb374a130eba8fb2198872d5",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -2384,7 +2387,7 @@
           "model_calls"
         ]
       },
-      "adapter_interface_digest": "sha256:dbd12040838c1e1d648c000ef88bbb97a7926bdf432537c10083e1c4c9df9074",
+      "adapter_interface_digest": "sha256:07f7d9d9c0c55271cb4c1e2637354fd703146760e8bfbdab8a6a32cce6875738",
       "adapter_interface_sources": [
         "src/digital_asset_directory/portfolio_convergence_git.py",
         "schemas/portfolio-convergence-git-producer-receipt.schema.json",
@@ -2510,7 +2513,7 @@
           "workstream_creation"
         ]
       },
-      "adapter_interface_digest": "sha256:792a0357425d31977e699b39918f83b3d32a559d502ea507da023b18dd8bb7dd",
+      "adapter_interface_digest": "sha256:33fd1730190a907870bfc0b7658cb7e6281dd4bd78e73139b3f6db26f7ee0b64",
       "adapter_interface_sources": [
         "registry/routine-contract-registry.json",
         "schemas/portfolio-capture-candidate.schema.json",
