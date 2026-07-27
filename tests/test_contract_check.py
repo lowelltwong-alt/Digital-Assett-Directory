@@ -356,11 +356,13 @@ def test_cli_uses_effective_policy_mode_for_base_resolution_errors(
     )
 
     assert result.exit_code == expected_exit
-    assert "--base" in result.output
+    # Rich may wrap the message at different terminal widths.
+    normalized_output = " ".join(result.output.split())
+    assert "--base" in normalized_output
     if policy_mode == "warn":
-        assert "not blocking in effective warn mode" in result.output
+        assert "not blocking in effective warn mode" in normalized_output
     else:
-        assert "failed to run in enforce mode" in result.output
+        assert "failed to run in enforce mode" in normalized_output
 
 
 @pytest.mark.parametrize(
@@ -423,7 +425,9 @@ def test_cli_explicit_warn_does_not_block_when_policy_cannot_be_loaded(
     )
 
     assert result.exit_code == 0
-    assert "not blocking in effective warn mode" in result.output
+    # Rich may wrap the message at different terminal widths.
+    normalized_output = " ".join(result.output.split())
+    assert "not blocking in effective warn mode" in normalized_output
 
 
 def test_shipped_policy_validates_against_schema() -> None:
