@@ -1056,7 +1056,13 @@ direct APIs; runtime-specific APIs or hooks are fallback adapters only.
 """
 
 
-def _hook_text(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
+def posix_pre_push_hook_text() -> str:
+    """POSIX pre-push hook body for consumer repos.
+
+    Deliberately contains no absolute hub path: the hub is resolved at run time
+    from ``DAD_HUB``/``DAD_HUB_PATH`` or the user-home ``~/.dad/hub.json``
+    locator so consumer repos (including public ones) never embed local paths.
+    """
     hub_line = 'DAD_HUB="${DAD_HUB:-${DAD_HUB_PATH:-}}"'
     locator = (
         'if [ -z "$DAD_HUB" ] && [ -f "$HOME/.dad/hub.json" ]; then\n'
@@ -1083,7 +1089,13 @@ def _hook_text(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
     )
 
 
-def _ps_hook_text(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
+def powershell_pre_push_hook_text() -> str:
+    """PowerShell pre-push hook body for consumer repos.
+
+    Same indirection contract as :func:`posix_pre_push_hook_text`: resolve the
+    hub from ``$env:DAD_HUB``/``$env:DAD_HUB_PATH`` or ``~/.dad/hub.json``;
+    never embed an absolute local hub path in generated consumer surfaces.
+    """
     hub_line = "$DadHub = if ($env:DAD_HUB) { $env:DAD_HUB } else { $env:DAD_HUB_PATH }"
     locator = (
         "if (-not $DadHub) {\n"
@@ -1236,7 +1248,7 @@ def _apply_payloads(
         changed.append("AI_TABLE_OF_CONTENTS.md")
 
     hook = _target_path(repo_root, ".githooks/pre-push")
-    if _write_text_if_changed(hook, _hook_text(hub_root, policy)):
+    if _write_text_if_changed(hook, posix_pre_push_hook_text()):
         changed.append(".githooks/pre-push")
     try:
         hook.chmod(0o755)
@@ -1244,7 +1256,7 @@ def _apply_payloads(
         pass
     if _write_text_if_changed(
         _target_path(repo_root, ".githooks/pre-push.ps1"),
-        _ps_hook_text(hub_root, policy),
+        powershell_pre_push_hook_text(),
     ):
         changed.append(".githooks/pre-push.ps1")
     return changed

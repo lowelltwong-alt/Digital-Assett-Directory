@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 import subprocess
 import yaml
 
+from .enrollment import posix_pre_push_hook_text, powershell_pre_push_hook_text
 from .learning import git_changed_files, open_sessions
 from .logos_write_guard import assert_dad_write_allowed
 from .mail_center import mail_gitignore_text, mail_readme_text
@@ -13,16 +13,27 @@ from .utils import atomic_write_text
 BEGIN = "<!-- BEGIN DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->"
 END = "<!-- END DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->"
 
+# How generated consumer surfaces reference the hub. Never embed a resolved
+# absolute hub path in files written into consumer repos: some of them become
+# public, and the hub is a private local checkout. `${DAD_HUB}` resolves via
+# the DAD_HUB / DAD_HUB_PATH environment variables or the user-home
+# `~/.dad/hub.json` locator (see config.HUB_ENV_NAMES and read_hub_locator).
+HUB_INDIRECTION = "${DAD_HUB}"
+HUB_RESOLUTION_NOTE = (
+    "resolved by `--hub`, the `DAD_HUB` or `DAD_HUB_PATH` environment "
+    "variable, or `~/.dad/hub.json`"
+)
 
-def _managed_block(hub: Path) -> str:
+
+def _managed_block() -> str:
     return f"""{BEGIN}
 ## Digital Asset Directory learning contract
 
-Central hub: `{hub}`
+Central hub: `{HUB_INDIRECTION}` {HUB_RESOLUTION_NOTE}.
 
 Before material AI-assisted work:
 1. Read this repository's own front door and authority surfaces.
-2. Run: `asset-dir agent preflight --repo . --agent <agent> --task \"<task>\" --hub \"{hub}\"`
+2. Run: `asset-dir agent preflight --repo . --agent <agent> --task \"<task>\"`
 3. State scope, allowed/forbidden paths, validation plan, and stop conditions.
 4. For load-bearing decisions that affect shared contracts, schemas, CI/hooks, governance,
    scoring/ranking, roadmap gates, source-boundary rules, dependencies, migrations, or
@@ -51,7 +62,7 @@ only and must not become the sole authority for DAD governance.
 
 Before reporting completion or pushing material changes:
 1. Run appropriate tests and report exact outcomes.
-2. Run `asset-dir agent postflight --session <SESSION_ID> --repo . --summary \"<summary>\" --hub \"{hub}\"`.
+2. Run `asset-dir agent postflight --session <SESSION_ID> --repo . --summary \"<summary>\"`.
 3. Capture lessons, discoveries, failures, reusable patterns, missing capabilities, risks, and unknowns.
 
 If work is PR-ready, an actual PR is open, or a branch is intentionally left after
@@ -73,7 +84,7 @@ def install_governance(target_repo: Path, hub_root: Path, force: bool = False) -
     changed: list[Path] = []
     agents = target_repo / "AGENTS.md"
     existing = agents.read_text(encoding="utf-8") if agents.exists() else "# Agent Instructions\n\n"
-    block = _managed_block(hub_root)
+    block = _managed_block()
     if BEGIN in existing and END in existing:
         prefix, rest = existing.split(BEGIN, 1)
         _, suffix = rest.split(END, 1)
@@ -99,7 +110,11 @@ def install_governance(target_repo: Path, hub_root: Path, force: bool = False) -
     config = target_repo / ".digital-asset-directory.yml"
     payload = {
         "version": "0.1.0",
-        "hub_path": str(hub_root),
+        # Indirection, not a resolved path: DAD never reads this field back for
+        # hub resolution (config.describe_hub_resolution uses --hub, the
+        # DAD_HUB/DAD_HUB_PATH environment variables, then ~/.dad/hub.json);
+        # any reader routed through config._expand_path expands ${DAD_HUB}.
+        "hub_path": HUB_INDIRECTION,
         "lessons_required": True,
         "handoff_required": True,
         "enforcement": "pre_push",
@@ -138,13 +153,7 @@ def install_governance(target_repo: Path, hub_root: Path, force: bool = False) -
     hook_dir = target_repo / ".githooks"
     hook_dir.mkdir(exist_ok=True)
     hook = hook_dir / "pre-push"
-    hook_text = (
-        "#!/usr/bin/env sh\n"
-        "set -eu\n"
-        f'HUB="{str(hub_root).replace(os.sep, "/")}"\n'
-        'python "$HUB/scripts/enforce_postflight.py" --hub "$HUB" --repo "$(pwd)"\n'
-    )
-    atomic_write_text(hook, hook_text)
+    atomic_write_text(hook, posix_pre_push_hook_text())
     try:
         hook.chmod(0o755)
     except OSError:
@@ -152,16 +161,13 @@ def install_governance(target_repo: Path, hub_root: Path, force: bool = False) -
     changed.append(hook)
 
     ps_hook = hook_dir / "pre-push.ps1"
-    atomic_write_text(
-        ps_hook,
-        f"$ErrorActionPreference='Stop'\npython '{hub_root / 'scripts' / 'enforce_postflight.py'}' --hub '{hub_root}' --repo (Get-Location).Path\n",
-    )
+    atomic_write_text(ps_hook, powershell_pre_push_hook_text())
     changed.append(ps_hook)
 
     instructions = target_repo / "DIGITAL_ASSET_DIRECTORY_HANDOFF.md"
     atomic_write_text(
         instructions,
-        f"# Digital Asset Directory Handoff\n\nCentral hub: `{hub_root}`\n\nEnable the versioned hook for this clone:\n\n```powershell\ngit config core.hooksPath .githooks\n```\n\nUse the preflight/postflight commands in `AGENTS.md`.\n",
+        f"# Digital Asset Directory Handoff\n\nCentral hub: `{HUB_INDIRECTION}` {HUB_RESOLUTION_NOTE}.\n\nEnable the versioned hook for this clone:\n\n```powershell\ngit config core.hooksPath .githooks\n```\n\nUse the preflight/postflight commands in `AGENTS.md`.\n",
     )
     changed.append(instructions)
     return changed
@@ -213,7 +219,8 @@ def scaffold_new_repo(target_repo: Path, hub_root: Path, name: str | None = None
         atomic_write_text(
             readme,
             f"# {project_name}\n\n"
-            f"Connected to the Digital Asset Directory hub at `{hub_root}`.\n\n"
+            f"Connected to the Digital Asset Directory hub at `{HUB_INDIRECTION}` "
+            f"({HUB_RESOLUTION_NOTE}).\n\n"
             "Before material AI work run the hub preflight; before reporting completion run "
             "the postflight. See `AGENTS.md` and `DIGITAL_ASSET_DIRECTORY_HANDOFF.md`.\n",
         )
