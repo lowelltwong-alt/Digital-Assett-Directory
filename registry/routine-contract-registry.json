@@ -21,7 +21,11 @@
       "enabled": true,
       "owner": "dad-maintainer",
       "description": "Daily DAD daemon cycle (asset-dir daemon run-cycle).",
-      "artifact": {"root": "data", "path": "processed/reports/daemon-heartbeat.json", "parse_json": true},
+      "artifact": {
+        "root": "data",
+        "path": "processed/reports/daemon-heartbeat.json",
+        "parse_json": true
+      },
       "freshness_hours": 26,
       "consumer": "agent preflight daemon_status; daily review",
       "kill_criteria": "Retire only if the daemon is replaced by a newer scheduler surface.",
@@ -33,7 +37,10 @@
       "enabled": true,
       "owner": "dad-maintainer",
       "description": "Daily review queue emitted by the daemon cycle.",
-      "artifact": {"root": "data", "path": "processed/reports/daily_review_queue.md"},
+      "artifact": {
+        "root": "data",
+        "path": "processed/reports/daily_review_queue.md"
+      },
       "freshness_hours": 26,
       "consumer": "human daily review; cockpit attention feed"
     },
@@ -43,7 +50,11 @@
       "enabled": true,
       "owner": "dad-maintainer",
       "description": "Daily mail digest check for the hub repo mailbox.",
-      "artifact": {"root": "repo", "path": ".digital-asset/mail/last_checked.json", "parse_json": true},
+      "artifact": {
+        "root": "repo",
+        "path": ".digital-asset/mail/last_checked.json",
+        "parse_json": true
+      },
       "freshness_hours": 24,
       "consumer": "agent preflight mail_digest_status",
       "notes": "Stale here matches the recurring 'mail digest is stale' preflight warning."
@@ -54,7 +65,10 @@
       "enabled": false,
       "owner": "lowell",
       "description": "Weekly skill-need orphan radar (user-level Claude scheduled task).",
-      "artifact": {"root": "repo", "path": "processed/skill-radar/skill-radar-report-*.md"},
+      "artifact": {
+        "root": "repo",
+        "path": "processed/skill-radar/skill-radar-report-*.md"
+      },
       "freshness_hours": 192,
       "dependency_paths": [
         "assets/agent-skills/skill-need-orphan-radar/scripts/skill_orphan_radar.py"
@@ -69,10 +83,16 @@
       "enabled": true,
       "owner": "dad-maintainer",
       "description": "asset-dir orphan-radar run wrapper around the sibling orphan-radar executable.",
-      "artifact": {"root": "repo", "path": "raw/events/orphan-radar-*/adapter_run.json", "parse_json": true},
+      "artifact": {
+        "root": "repo",
+        "path": "raw/events/orphan-radar-*/adapter_run.json",
+        "parse_json": true
+      },
       "freshness_hours": null,
-      "dependency_commands": ["orphan-radar"],
-      "consumer": "none registered — output currently flows nowhere (C2/task_589b16b9)",
+      "dependency_commands": [
+        "orphan-radar"
+      ],
+      "consumer": "none registered \u2014 output currently flows nowhere (C2/task_589b16b9)",
       "notes": "Known silent-failure wrapper (handoff item C2). never_ran or dead here is expected until the wrapper fix lands."
     },
     {
@@ -81,7 +101,11 @@
       "enabled": true,
       "owner": "dad-maintainer",
       "description": "Weekly asset coverage sweep gated by weekly_asset_coverage_due.",
-      "artifact": {"root": "data", "path": "processed/reports/weekly_asset_coverage.json", "parse_json": true},
+      "artifact": {
+        "root": "data",
+        "path": "processed/reports/weekly_asset_coverage.json",
+        "parse_json": true
+      },
       "freshness_hours": 192,
       "consumer": "weekly review; coverage cycle log"
     },
@@ -91,7 +115,10 @@
       "enabled": false,
       "owner": "lowell",
       "description": "Bounded report-only structuring of an explicitly supplied local drop file (asset-dir os capture-inbox).",
-      "artifact": {"root": "data", "path": "processed/reports/portfolio_os/structured-captures.jsonl"},
+      "artifact": {
+        "root": "data",
+        "path": "processed/reports/portfolio_os/structured-captures.jsonl"
+      },
       "freshness_hours": 26,
       "dependency_paths": [
         "src/digital_asset_directory/portfolio_capture_core.py",
@@ -107,7 +134,11 @@
       "enabled": true,
       "owner": "dad-maintainer",
       "description": "Bounded zero-model branch/worktree convergence candidate report (asset-dir os convergence-radar).",
-      "artifact": {"root": "data", "path": "processed/reports/portfolio_os/convergence-radar.json", "parse_json": true},
+      "artifact": {
+        "root": "data",
+        "path": "processed/reports/portfolio_os/convergence-radar.json",
+        "parse_json": true
+      },
       "freshness_hours": null,
       "consumer": "operational cockpit convergence view; human branch/worktree review",
       "kill_criteria": "Retire or redesign if bounded operator review shows persistent false-positive overload or if a replacement preserves the report-only authority boundary.",
@@ -119,7 +150,11 @@
       "enabled": false,
       "owner": "lowell",
       "description": "Monthly report-only learning-loop yield projection (asset-dir agent yield-report).",
-      "artifact": {"root": "data", "path": "processed/reports/learning_loop_yield.json", "parse_json": true},
+      "artifact": {
+        "root": "data",
+        "path": "processed/reports/learning_loop_yield.json",
+        "parse_json": true
+      },
       "freshness_hours": null,
       "dependency_paths": [
         "src/digital_asset_directory/learning_yield_report.py",
@@ -135,7 +170,11 @@
       "enabled": false,
       "owner": "lowell",
       "description": "Dry-run compare of legacy vs data-root agent sessions (asset-dir agent session-split-report).",
-      "artifact": {"root": "data", "path": "processed/reports/agent_session_split.json", "parse_json": true},
+      "artifact": {
+        "root": "data",
+        "path": "processed/reports/agent_session_split.json",
+        "parse_json": true
+      },
       "freshness_hours": null,
       "dependency_paths": [
         "src/digital_asset_directory/agent_session_split_report.py",
@@ -151,7 +190,11 @@
       "enabled": false,
       "owner": "lowell",
       "description": "Dry-run classify of stale open agent sessions (asset-dir agent reaper --dry-run).",
-      "artifact": {"root": "data", "path": "processed/reports/agent_session_reaper.json", "parse_json": true},
+      "artifact": {
+        "root": "data",
+        "path": "processed/reports/agent_session_reaper.json",
+        "parse_json": true
+      },
       "freshness_hours": null,
       "dependency_paths": [
         "src/digital_asset_directory/agent_session_reaper.py",
@@ -160,6 +203,24 @@
       "consumer": "human lifecycle review; F2 reaper apply gate evidence",
       "kill_criteria": "Retire or redesign if dry-run false-positive closes dominate operator review or if apply is approved under a successor routine.",
       "notes": "Dormant registration only. --dry-run is mandatory; apply/close is out of scope until named human approval (F2/G5)."
+    },
+    {
+      "routine_id": "dad-pointer-liveness-audit",
+      "kind": "cli_on_demand",
+      "enabled": true,
+      "owner": "dad-maintainer",
+      "description": "Weekly pointer-liveness audit of the hub default branch (asset-dir pointer-liveness --mode both --out <data>/processed/reports/pointer_liveness.json). The 2026-07-10 orchestration strand was created by a checkpoint flow, not a push, so push-time validate_repo coverage alone fires late.",
+      "artifact": {
+        "root": "data",
+        "path": "processed/reports/pointer_liveness.json",
+        "parse_json": true
+      },
+      "freshness_hours": 168,
+      "dependency_paths": [
+        "src/digital_asset_directory/pointer_liveness.py"
+      ],
+      "consumer": "validate_repo push-time gate; weekly human review of stranded pointers",
+      "notes": "CAP-2 cadence leg (POINTER_LIVENESS_AND_BRANCH_DISPOSITION_HANDOFF section 3)."
     }
   ]
 }

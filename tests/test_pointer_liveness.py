@@ -13,6 +13,7 @@ import digital_asset_directory.cli as cli
 from digital_asset_directory.pointer_liveness import (
     ISSUE_MISSING_DEFAULT_BRANCH,
     ISSUE_MISSING_WORKTREE,
+    ISSUE_NOT_IN_VALIDATED_TREE,
     ISSUE_UNPARSEABLE,
     ISSUE_UNTRACKED,
     validate_pointer_liveness,
@@ -175,3 +176,97 @@ def test_pointer_liveness_cli_exit_codes(tmp_path: Path, monkeypatch: pytest.Mon
 
     assert result.exit_code == 2
     assert ISSUE_MISSING_DEFAULT_BRANCH in result.output
+
+
+def test_auto_mode_no_false_positive_on_feature_branch(tmp_path: Path):
+    """A feature branch adding a file AND its registry pointer in the same
+    commit is correct work: pointer and target travel together and merge
+    together. auto mode must not error on it (the muting trap)."""
+    repo = _init_repo(tmp_path, route_after=[])
+    _git(repo, "checkout", "-b", "feat/new-surface")
+    doc = repo / "docs" / "NEW_SURFACE.md"
+    doc.parent.mkdir()
+    doc.write_text("new surface\n", encoding="utf-8")
+    (repo / "registry" / "ai-navigation-registry.json").write_text(
+        _navigation_registry(["docs/NEW_SURFACE.md"]), encoding="utf-8"
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "add surface and pointer together")
+
+    result = validate_pointer_liveness(repo, mode="auto")
+
+    assert result["valid"], result["errors"]
+    assert result["tree_ref"] == "HEAD"
+
+
+def test_auto_mode_flags_committed_pointer_to_untracked_target(tmp_path: Path):
+    """The day-one leading indicator survives on feature branches in auto
+    mode: a committed pointer whose target exists on disk but was never
+    committed is exactly how the stranding incident began."""
+    repo = _init_repo(tmp_path, route_after=[])
+    _git(repo, "checkout", "-b", "feat/forgot-to-commit")
+    (repo / "registry" / "ai-navigation-registry.json").write_text(
+        _navigation_registry(["orchestration/TASK_BOARD.jsonl"]), encoding="utf-8"
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "pointer only")
+    board = repo / "orchestration" / "TASK_BOARD.jsonl"
+    board.parent.mkdir()
+    board.write_text('{"task_id":"T-0001"}\n', encoding="utf-8")
+
+    result = validate_pointer_liveness(repo, mode="auto")
+
+    assert not result["valid"]
+    assert ISSUE_UNTRACKED in result["issue_codes"]
+
+
+def test_auto_mode_same_tree_catch_on_feature_branch(tmp_path: Path):
+    """Committed pointer, target absent everywhere: auto mode off the default
+    branch reports the same-tree code, not the default-branch code."""
+    repo = _init_repo(tmp_path, route_after=[])
+    _git(repo, "checkout", "-b", "feat/dangling")
+    (repo / "registry" / "ai-navigation-registry.json").write_text(
+        _navigation_registry(["missing/POINTED_AT.md"]), encoding="utf-8"
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "dangling pointer")
+
+    result = validate_pointer_liveness(repo, mode="auto")
+
+    assert not result["valid"]
+    assert ISSUE_NOT_IN_VALIDATED_TREE in result["issue_codes"]
+    assert ISSUE_MISSING_DEFAULT_BRANCH not in result["issue_codes"]
+
+
+def test_auto_mode_on_default_branch_behaves_like_both(tmp_path: Path):
+    """On the default branch auto keeps the incident semantics and headline
+    code: main's surfaces must be self-consistent on main."""
+    repo = _init_repo(tmp_path, route_after=["orchestration/TASK_BOARD.jsonl"])
+    _git(repo, "checkout", "-b", "codex/preserve-x")
+    board = repo / "orchestration" / "TASK_BOARD.jsonl"
+    board.parent.mkdir()
+    board.write_text('{"task_id":"T-0001"}\n', encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "checkpoint")
+    _git(repo, "checkout", "main")
+
+    result = validate_pointer_liveness(repo, mode="auto")
+
+    assert not result["valid"]
+    assert ISSUE_MISSING_DEFAULT_BRANCH in result["issue_codes"]
+    assert result["tree_ref"] == "refs/heads/main"
+
+
+def test_pointer_liveness_cli_out_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    repo = _init_repo(tmp_path, route_after=[])
+    monkeypatch.setattr(cli, "_cfg", lambda **_kwargs: SimpleNamespace(repo_root=repo))
+    out = tmp_path / "reports" / "pointer_liveness.json"
+
+    result = CliRunner().invoke(
+        cli.app, ["pointer-liveness", "--mode", "auto", "--out", str(out)]
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["valid"] is True
+    assert payload["mode"] == "auto"

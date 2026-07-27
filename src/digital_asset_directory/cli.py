@@ -5843,13 +5843,23 @@ def templates_validate(hub: Optional[Path] = typer.Option(None)) -> None:
 def pointer_liveness_command(
     mode: str = typer.Option(
         "both", help=f"One of {', '.join(POINTER_MODES)}. default-branch mode catches "
-        "pointers that resolve locally but are invisible to every other clone."
+        "pointers that resolve locally but are invisible to every other clone; "
+        "auto uses same-tree comparison off the default branch."
+    ),
+    out: Optional[Path] = typer.Option(
+        None,
+        "--out",
+        help="Also write the JSON report to this path (cadence artifact for the "
+        "dad-pointer-liveness-audit routine contract).",
     ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Validate that declared navigation/registry pointers resolve in the worktree and on the default branch."""
     cfg = _cfg(hub=hub)
     result = validate_pointer_liveness(cfg.repo_root, mode=mode)
+    if out is not None:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     console.print_json(data=result)
     if not result["valid"]:
         raise typer.Exit(2)

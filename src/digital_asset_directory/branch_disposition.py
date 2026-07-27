@@ -74,6 +74,7 @@ DEFAULT_FUTURE_SKEW_SECONDS = 86_400
 
 ISSUE_STRANDED = "branch_stranded_undispositioned"
 ISSUE_INTEGRATE_PENDING = "branch_integrate_pending"
+ISSUE_DISPOSITION_STALE = "branch_disposition_stale"
 ISSUE_ACTIVE_OVERDUE = "branch_active_review_overdue"
 ISSUE_ACTIVE_UNDATED = "branch_disposition_review_after_missing"
 ISSUE_REASON_MISSING = "branch_disposition_reason_missing"
@@ -374,6 +375,23 @@ def check_branch_dispositions(
         else:
             disposition = str(row.get("disposition"))
             finding["disposition"] = disposition
+            recorded_commit = str(row.get("commit") or "").strip().lower()
+            if recorded_commit and not candidate["commit"].lower().startswith(
+                recorded_commit
+            ):
+                # The commit field is load-bearing: a disposition applies to the
+                # recorded tip, not to a branch name in perpetuity. Without this
+                # rule, "tombstone once, keep committing to it" hides new work
+                # indefinitely — the original stranding incident with paperwork.
+                finding["status"] = ISSUE_DISPOSITION_STALE
+                errors.append(
+                    f"{ISSUE_DISPOSITION_STALE}: {detail} - tip "
+                    f"{candidate['commit'][:10]} no longer matches the recorded "
+                    f"decision commit {recorded_commit[:10]}; re-decide its disposition"
+                )
+                issue_codes.add(ISSUE_DISPOSITION_STALE)
+                findings.append(finding)
+                continue
             if disposition == "integrate":
                 finding["status"] = ISSUE_INTEGRATE_PENDING
                 errors.append(

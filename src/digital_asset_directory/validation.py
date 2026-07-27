@@ -2787,7 +2787,10 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
     try:
         from .pointer_liveness import validate_pointer_liveness
 
-        pointer_result = validate_pointer_liveness(repo_root, mode="both")
+        # "auto": both-mode on the default branch; same-tree comparison on any
+        # other branch so a feature branch adding a file and its pointer
+        # together never false-positives (see POINTER_MODES in pointer_liveness).
+        pointer_result = validate_pointer_liveness(repo_root, mode="auto")
         errors.extend(pointer_result["errors"])
         warnings.extend(pointer_result["warnings"])
         checked.append(

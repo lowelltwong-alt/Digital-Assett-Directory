@@ -352,7 +352,7 @@
         "kind": "python_symbol_sha256",
         "path": "src/digital_asset_directory/validation.py",
         "symbol": "validate_repo",
-        "sha256": "sha256:0ba6f19268366b1fef073b011d0440af00ec5cf0c503bbd951105d87b4f288db"
+        "sha256": "sha256:ec75239adbc1fd10f966990a0dc68d3e6c7ab07ced6119f2c478af08f114e42d"
       }
     },
     {

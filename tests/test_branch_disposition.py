@@ -16,6 +16,7 @@ import digital_asset_directory.pointer_liveness as pointer_liveness_mod
 from digital_asset_directory.branch_disposition import (
     ISSUE_ACTIVE_OVERDUE,
     ISSUE_ACTIVE_UNDATED,
+    ISSUE_DISPOSITION_STALE,
     ISSUE_INTEGRATE_PENDING,
     ISSUE_REASON_MISSING,
     ISSUE_STRANDED,
@@ -233,3 +234,71 @@ def test_branch_disposition_cli_exit_codes(tmp_path: Path, monkeypatch: pytest.M
 
     assert result.exit_code == 2
     assert ISSUE_STRANDED in result.output
+
+
+def _tip_sha(repo: Path, ref: str) -> str:
+    out = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", ref],
+        check=True,
+        capture_output=True,
+        text=True,
+        env={**os.environ, **_GIT_ENV},
+    )
+    return out.stdout.strip()
+
+
+def test_disposition_goes_stale_when_tip_moves(tmp_path: Path):
+    """The commit field is load-bearing: a disposition applies to the recorded
+    tip. New commits on a tombstoned branch re-raise the finding — otherwise
+    'tombstone once, keep committing' hides new work, which is the original
+    incident with paperwork."""
+    repo = _repo_with_stale_preserve_branch(tmp_path)
+    decided_tip = _tip_sha(repo, INCIDENT_BRANCH)
+    _write_disposition(
+        repo,
+        {
+            "branch": INCIDENT_BRANCH,
+            "commit": decided_tip,
+            "disposition": "tombstone",
+            "reason": "quarantined checkpoint; content superseded",
+            "decided_by": "Fixture Human",
+            "decided_at": "2026-07-26",
+        },
+    )
+    clean = check_branch_dispositions(repo, now=NOW)
+    assert clean["valid"], clean["errors"]
+
+    _git(repo, "checkout", INCIDENT_BRANCH)
+    extra = repo / "orchestration" / "EXTRA.md"
+    extra.write_text("new work after the decision\n", encoding="utf-8")
+    # Add only the new file: `add -A` would sweep the (deliberately untracked)
+    # disposition registry into the branch commit and lose it on checkout.
+    _git(repo, "add", "orchestration/EXTRA.md")
+    _git(repo, "commit", "-m", "more work after tombstone", commit_date=STALE_DATE)
+    _git(repo, "checkout", "main")
+
+    result = check_branch_dispositions(repo, now=NOW)
+
+    assert not result["valid"]
+    assert ISSUE_DISPOSITION_STALE in result["issue_codes"]
+    assert any(ISSUE_DISPOSITION_STALE in error for error in result["errors"])
+
+
+def test_disposition_short_commit_prefix_matches(tmp_path: Path):
+    repo = _repo_with_stale_preserve_branch(tmp_path)
+    decided_tip = _tip_sha(repo, INCIDENT_BRANCH)
+    _write_disposition(
+        repo,
+        {
+            "branch": INCIDENT_BRANCH,
+            "commit": decided_tip[:7],
+            "disposition": "tombstone",
+            "reason": "quarantined checkpoint; content superseded",
+            "decided_by": "Fixture Human",
+            "decided_at": "2026-07-26",
+        },
+    )
+
+    result = check_branch_dispositions(repo, now=NOW)
+
+    assert result["valid"], result["errors"]

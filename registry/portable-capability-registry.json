@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.23",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.25",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -451,7 +451,7 @@
         "tests/test_learning_yield_report.py",
         "tests/test_synthetic_silver_program.py"
       ],
-      "content_digest": "sha256:784c0b59e13ecfaf51b94bfebdf3a238b167528ab78ffbca6b6ac1d4ef59d574",
+      "content_digest": "sha256:9029dac213f1f39fb7a2c703bdbea79b86c18efb433acf69d14a164f3e293036",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -1467,7 +1467,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-personal-project-management-ops",
-      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.15",
+      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.16",
       "artifact_id": "skill:personal-project-management-ops",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -1521,7 +1521,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:7b8e08d85b6735e29562b4e056fbbdb60f8ce3629c2e72545d6d5e83e76b89c6",
+      "content_digest": "sha256:875ae4d6db665b3559d43973f91cf75b2053c6c001802bd9f2190d6f58d54c22",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1589,20 +1589,20 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:adapter-intent-continuity-codex-host",
-      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.16",
+      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.17",
       "artifact_id": "adapter:intent-continuity-codex-host",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
       "source_authority": "config/intent-continuity-shadow-hooks.json",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.15",
+      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.16",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "target_capability_predicate": {
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:d1de4acade3acb07651f16f7dfc0ee6f6dee4d47742ee66a2012434d5a8fa37b",
+      "adapter_interface_digest": "sha256:c902e84022ab0290d9cb515f0afb7af0a906299cccf57e86ecb4a29bcb7c2769",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -2375,7 +2375,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:runtime-adapter-git-convergence-readonly",
-      "revision_id": "portability-card-revision:runtime-adapter-git-convergence-readonly:0.2.1",
+      "revision_id": "portability-card-revision:runtime-adapter-git-convergence-readonly:0.2.2",
       "artifact_id": "runtime-adapter:git-convergence-readonly",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
@@ -2394,7 +2394,7 @@
           "model_calls"
         ]
       },
-      "adapter_interface_digest": "sha256:81e7a22f1b73d41ccfe28d1fa59c80287ee9bcc49eb88351f73c3f9d2fb6c6f3",
+      "adapter_interface_digest": "sha256:2a26f616faab8c67e01df11b00f0d2825ecab063b22beaa35177022c2c2a09a4",
       "adapter_interface_sources": [
         "src/digital_asset_directory/portfolio_convergence_git.py",
         "schemas/portfolio-convergence-git-producer-receipt.schema.json",
@@ -2499,7 +2499,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:runtime-adapter-local-file-capture-inbox",
-      "revision_id": "portability-card-revision:runtime-adapter-local-file-capture-inbox:0.1.0",
+      "revision_id": "portability-card-revision:runtime-adapter-local-file-capture-inbox:0.1.1",
       "artifact_id": "runtime-adapter:local-file-capture-inbox",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
@@ -2520,7 +2520,7 @@
           "workstream_creation"
         ]
       },
-      "adapter_interface_digest": "sha256:344db7e491f8af14c35a17dc72392480fb377622509f7ad5c8698e4d496d4d81",
+      "adapter_interface_digest": "sha256:3c4441fcf4f0ee878fdaba77e0671216e81e30999747bf289c5ee1fe48909ca3",
       "adapter_interface_sources": [
         "registry/routine-contract-registry.json",
         "schemas/portfolio-capture-candidate.schema.json",

@@ -65,10 +65,18 @@ from .transport import ALL_RUNTIME_DATA_PATHS
 
 ISSUE_MISSING_WORKTREE = "pointer_target_missing_in_worktree"
 ISSUE_MISSING_DEFAULT_BRANCH = "pointer_target_missing_on_default_branch"
+ISSUE_NOT_IN_VALIDATED_TREE = "pointer_target_not_in_validated_tree"
 ISSUE_UNTRACKED = "pointer_target_untracked"
 ISSUE_UNPARSEABLE = "pointer_registry_unparseable"
 
-POINTER_MODES = ("worktree", "default-branch", "both")
+# "auto" is the validate_repo default: on the default branch it behaves like
+# "both"; on any other branch the tree comparison runs against HEAD's own tree
+# (same-tree semantics) instead of the default branch. Rationale: a feature
+# branch that adds a file and its registry pointer in the same commit is
+# correct work and must not fail — pointer and target travel together and
+# merge together. Checking such a branch against the default branch would
+# error on every legitimate addition and get this validator muted.
+POINTER_MODES = ("worktree", "default-branch", "both", "auto")
 
 _DATA_PLANE_PREFIXES = tuple(
     sorted({value.split("/", 1)[0] + "/" for value in ALL_RUNTIME_DATA_PATHS.values()})
@@ -442,10 +450,12 @@ def validate_pointer_liveness(
         else:
             skipped[reason] = skipped.get(reason, 0) + 1
 
-    want_worktree = mode in {"worktree", "both"}
-    want_default_branch = mode in {"default-branch", "both"}
+    want_worktree = mode in {"worktree", "both", "auto"}
+    want_default_branch = mode in {"default-branch", "both", "auto"}
 
     resolved_default_branch: str | None = None
+    tree_ref: str | None = None
+    missing_tree_code = ISSUE_MISSING_DEFAULT_BRANCH
     tree_files: set[str] = set()
     tree_dirs: set[str] = set()
     index_files: set[str] = set()
@@ -465,6 +475,24 @@ def validate_pointer_liveness(
             )
             want_default_branch = False
         else:
+            tree_ref = f"refs/heads/{resolved_default_branch}"
+            if mode == "auto":
+                try:
+                    head_code, head_out = _read_only_git(
+                        repo_root,
+                        ("symbolic-ref", "--short", "HEAD"),
+                        settings=settings,
+                        counter=counter,
+                    )
+                except (OSError, _GitObservationError):
+                    head_code, head_out = 1, ""
+                current_branch = head_out.strip() if head_code == 0 else None
+                if current_branch != resolved_default_branch:
+                    # Same-tree semantics off the default branch (see
+                    # POINTER_MODES note): validate this commit's registry
+                    # against this commit's own tree.
+                    tree_ref = "HEAD"
+                    missing_tree_code = ISSUE_NOT_IN_VALIDATED_TREE
             try:
                 code, out = _read_only_git(
                     repo_root,
@@ -473,7 +501,7 @@ def validate_pointer_liveness(
                         "-r",
                         "--name-only",
                         "-z",
-                        f"refs/heads/{resolved_default_branch}",
+                        tree_ref,
                     ),
                     settings=settings,
                     counter=counter,
@@ -522,9 +550,9 @@ def validate_pointer_liveness(
                     _tree_has(tree_files, tree_dirs, candidate) for candidate in candidates
                 ):
                     errors.append(
-                        f"{ISSUE_MISSING_DEFAULT_BRANCH}: {surface} {field} -> {ref}"
+                        f"{missing_tree_code}: {surface} {field} -> {ref}"
                     )
-                    issue_codes.add(ISSUE_MISSING_DEFAULT_BRANCH)
+                    issue_codes.add(missing_tree_code)
                 continue
             if _tree_has(tree_files, tree_dirs, ref):
                 continue
@@ -535,14 +563,15 @@ def validate_pointer_liveness(
                 issue_codes.add(ISSUE_UNTRACKED)
             else:
                 errors.append(
-                    f"{ISSUE_MISSING_DEFAULT_BRANCH}: {surface} {field} -> {ref}"
+                    f"{missing_tree_code}: {surface} {field} -> {ref}"
                 )
-                issue_codes.add(ISSUE_MISSING_DEFAULT_BRANCH)
+                issue_codes.add(missing_tree_code)
 
     return {
         "valid": not errors,
         "mode": mode,
         "default_branch": resolved_default_branch,
+        "tree_ref": tree_ref,
         "errors": errors,
         "warnings": warnings,
         "issue_codes": sorted(issue_codes),
