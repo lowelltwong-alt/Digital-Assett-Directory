@@ -14,10 +14,10 @@ from `main` instead of stranded on a preserve branch. Recovery of *content* is n
 
 | File | What it is | Status |
 |---|---|---|
-| `D17-dad-cross-repo-write-scope.md` | DAD cross-repo write scope decision record | **OPEN — needs owner decision** |
+| `D17-dad-cross-repo-write-scope.md` | DAD cross-repo write scope decision record | **RESOLVED 2026-07-10** — branch+PR scope, `agent_auto`, KILL_SWITCH.flag revocation. Note: no live TASK_BOARD exists on `main`, so the granted dispatch mode is currently inert |
 | `D18-sim-harness-home.md` | Home for `lawfirm-os-sim-harness` (gates marathon Wave 8; must not be pre-empted by Wave 3) | **OPEN — needs owner decision** |
-| `D19-stale-intake-copy-A-disposition.md` | Disposition of the stale intake snapshot A | **OPEN — needs owner decision** |
-| `D20-checker-fleet-and-pairings.md` | Checker pairing matrix | **OPEN — needs owner decision** |
+| `D19-stale-intake-copy-A-disposition.md` | Disposition of the stale intake snapshot A | **RESOLVED 2026-07-27** — A archived to `LawFirm-os-intake.ARCHIVED-2026-06-23-snapshot`; the long-standing file lock cleared |
+| `D20-checker-fleet-and-pairings.md` | Checker pairing matrix | **RESOLVED 2026-07-09** — fleet confirmed, pairings recorded (checker never same family as worker) |
 | `ARCHITECTURE_PACKET.md` | Orchestration architecture reference (v1.0, 2026-07-09) | Historical reference; parts may be superseded by the daemon/cockpit/portfolio-execution machinery that landed after 2026-07-10 |
 | `START_HERE.md` | Original orchestration entry point | Historical reference |
 
