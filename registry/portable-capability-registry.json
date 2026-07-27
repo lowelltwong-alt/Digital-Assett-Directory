@@ -1434,7 +1434,7 @@
       "owner": "DAD and Lowell",
       "status": "schema_validated",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "core_revision_id": "portability-card-revision:ci-module-boundary-governance:0.1.0",
+      "core_revision_id": "portability-card-revision:ci-module-boundary-governance:0.1.1",
       "target_capability_predicate": {
         "provider": "github-actions",
         "required_status": "always_starting_aggregator"
