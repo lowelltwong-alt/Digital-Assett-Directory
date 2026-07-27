@@ -47,7 +47,8 @@ Current seed rules are:
 - software work should search asset-use pay-forward evidence;
 - load-bearing decisions need risk-tier review;
 - software and repo work uses the checklist tree;
-- AI entrypoints and TOCs need deterministic routing rows.
+- AI entrypoints and TOCs need deterministic routing rows;
+- numeric agent ratings require calibration context.
 
 ## Temp Fixture Copy Rule
 
@@ -209,6 +210,28 @@ Use `docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md` and
 `templates/ai-table-of-contents.template.md` when building this pattern
 elsewhere. This rule is not for trivial typo edits or tiny scratch repos with no
 persistent AI navigation need.
+
+## Numeric Agent Rating Calibration Rule
+
+A task-verification PASS or FAIL describes one attempt against a locked contract. It is
+not, by itself, a numeric agent capability score. Likewise, artifact metrics such as test
+counts, coverage, latency, and parity do not become agent ratings merely because an agent
+produced them.
+
+Before assigning or interpreting a numeric agent or subagent rating, bind the value to:
+
+- a pinned evaluation profile and methodology, including versions and content hashes;
+- the exact execution attempt or declared comparison scope;
+- task difficulty or a genuinely comparable cohort;
+- criterion-level outcomes with evidence and counterevidence;
+- evaluator identity, relationship, verification status, and independence-integrity evidence;
+- confidence, uncertainty, limitations, missing evidence, and a non-generalization boundary.
+
+If any required calibration evidence is missing, leave the numeric value null and record
+`unscored` with status `insufficient_evidence`. Do not substitute zero, a guessed number,
+task PASS, reviewer agreement, or an aggregate average. Ordinary deterministic PASS/FAIL
+and artifact metrics remain valid verification evidence; this rule only prevents them from
+being inflated into unsupported capability precision.
 
 ## Promotion Rule
 

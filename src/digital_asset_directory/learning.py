@@ -1040,7 +1040,7 @@ def recommended_review_lanes(task: str, paths: list[str] | None = None) -> list[
             "lane_id": "review-lane:learning-loop-completion",
             "mode": mode,
             "purpose": "Find and close incomplete learning loops, escalating effort only for uncertainty, conflict, or high leverage.",
-            "capture": "Record completed loops, incomplete loops, agent ratings, and the smallest next action.",
+            "capture": "Record completed loops, incomplete loops, applicable criterion-level subagent outcomes (or unscored/insufficient_evidence when calibration evidence is incomplete), and the smallest next action.",
             "required_for": "every material build, refactor, investigation, or cross-repo task",
         },
         {

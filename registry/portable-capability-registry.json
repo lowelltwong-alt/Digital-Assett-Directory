@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.25",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.26",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -451,7 +451,7 @@
         "tests/test_learning_yield_report.py",
         "tests/test_synthetic_silver_program.py"
       ],
-      "content_digest": "sha256:9029dac213f1f39fb7a2c703bdbea79b86c18efb433acf69d14a164f3e293036",
+      "content_digest": "sha256:06b324ff6dcb846ce7389af8bbb04df9acbf2de313b46b44c4848239dda52028",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -1253,7 +1253,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:ci-module-boundary-governance",
-      "revision_id": "portability-card-revision:ci-module-boundary-governance:0.1.0",
+      "revision_id": "portability-card-revision:ci-module-boundary-governance:0.1.1",
       "artifact_id": "skill:dad-ci-module-boundary-governance",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -1275,7 +1275,7 @@
         "templates/ci-module-boundary/multi-repo-law-firm-os/family-module-boundaries.yaml",
         "assets/coding-harnesses/ci-module-boundary-governance/tests-or-evals/scenarios.yaml"
       ],
-      "content_digest": "sha256:649022d67f7f41d290e55b82c78f9a051fe91da0897cf5f23395782d4b67e86a",
+      "content_digest": "sha256:56a7fa3626e3a2bcb4e8a86664592b598d7153cb4262e770569f445d6e4a1bb6",
       "source_observation_digest": "sha256:6fa79a984581c86ca50c8f4bf75a5db18fcd07f086e37e62e430b54e5dbc957d",
       "contract_digests": {
         "input": "sha256:01298fbb37ec7f2fc1f46541873ea2f100f0a88510cbb71c50da9df0f8d126c9",
@@ -1434,7 +1434,7 @@
       "owner": "DAD and Lowell",
       "status": "schema_validated",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "core_revision_id": "portability-card-revision:ci-module-boundary-governance:0.1.0",
+      "core_revision_id": "portability-card-revision:ci-module-boundary-governance:0.1.1",
       "target_capability_predicate": {
         "provider": "github-actions",
         "required_status": "always_starting_aggregator"

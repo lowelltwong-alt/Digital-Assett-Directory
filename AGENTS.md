@@ -145,8 +145,13 @@ learning sentinel and prompt screener at low effort and escalate only on
 uncertainty or high leverage. Capture explicit reusable decisions and failure
 lessons that are absent from final artifacts, but never store raw transcripts,
 hidden chain-of-thought, secrets, private payloads, or inferred private
-reasoning. Dedupe all outputs, route only privacy-safe candidates through
-allowed DAD channels, and rate every reused or created subagent after use.
+reasoning. Dedupe all outputs and route only privacy-safe candidates through
+allowed DAD channels. For every reused or created subagent, record
+criterion-level post-use outcomes. Assign or interpret a numeric rating only
+under a pinned evaluation profile and methodology with task difficulty or a
+comparable cohort, independent evaluator relationship/integrity, and
+uncertainty/limitations; otherwise record `unscored`/`insufficient_evidence`.
+A task-verification PASS is attempt evidence, not a capability score.
 
 ## Operating rules
 

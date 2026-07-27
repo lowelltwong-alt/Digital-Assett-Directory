@@ -48,6 +48,30 @@
       "risk_tier": "high",
       "value_ref": "schemas/intent-continuity-host-readiness.schema.json",
       "value_type": "object"
+    },
+    {
+      "affected_refs": [
+        "AGENTS.md",
+        "docs/DETERMINISTIC_LEARNING_RULES.md",
+        "registry/portable-capability-registry.json",
+        "src/digital_asset_directory/learning.py",
+        "tests/test_database_learning.py"
+      ],
+      "current_value_hash": "sha256:b685390fcc5f30c745cc7c38babb6d95da23a708f20046ef616608f298152492",
+      "dependency_refs": [
+        "docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md",
+        "registry/subagent-evaluation-methodology.json",
+        "registry/subagent-evaluation-profile-registry.json",
+        "roadmap/evidence/subagent-self-grade-integrity-kernel.md"
+      ],
+      "key_id": "agent-rating-calibration-evidence-gate",
+      "label": "Numeric agent ratings require calibration evidence or remain unscored",
+      "notes": "Human-approved deterministic preflight rule. A task-verification PASS is bounded attempt evidence, not a capability score. Missing profile, methodology, task-difficulty or comparable-cohort, criterion, evaluator-integrity, or uncertainty evidence requires an unscored/insufficient_evidence disposition.",
+      "owner": "DAD and Lowell",
+      "review_status": "reviewed",
+      "risk_tier": "high",
+      "value_ref": "registry/learning-rule-registry.json",
+      "value_type": "object"
     }
   ],
   "registry_id": "dad:key-values",

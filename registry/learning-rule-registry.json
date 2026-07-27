@@ -653,6 +653,79 @@
       ],
       "enforcement_level": "require_ack",
       "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:numeric-agent-ratings-require-calibration-context",
+      "title": "Numeric agent ratings require calibration context",
+      "summary": "A numeric agent or subagent rating is bounded evaluation evidence, not a task-verification result or general capability claim; assign or interpret one only with a pinned evaluation contract, comparable task context, criterion outcomes, evaluator-integrity evidence, and explicit uncertainty.",
+      "trigger_terms": [
+        "numeric agent rating",
+        "numerical agent rating",
+        "agent rating",
+        "agent score",
+        "agent performance rating",
+        "agent performance score",
+        "agent capability rating",
+        "agent capability score",
+        "rate the agent",
+        "rate this agent",
+        "score the agent",
+        "score this agent",
+        "rating for the agent",
+        "score for the agent",
+        "subagent rating",
+        "subagent score",
+        "subagent performance rating",
+        "subagent performance score",
+        "subagent capability rating",
+        "subagent capability score",
+        "rate the subagent",
+        "rate this subagent",
+        "score the subagent",
+        "score this subagent",
+        "rating for the subagent",
+        "score for the subagent",
+        "sub-agent rating",
+        "sub-agent score"
+      ],
+      "trigger_path_patterns": [],
+      "context_tags": [
+        "calibration",
+        "score_methodology",
+        "load_bearing_decision",
+        "human_gate"
+      ],
+      "applies_when": [
+        "A task proposes, assigns, calculates, compares, summarizes, interprets, or relies on a numeric rating, score, or grade for an agent or subagent execution attempt, role revision, or capability.",
+        "A numeric agent or subagent value could influence reuse, routing, promotion, consolidation, improvement, or a capability claim."
+      ],
+      "does_not_apply_when": [
+        "An ordinary deterministic test, check, or validator reports PASS or FAIL for the task artifact and does not convert that result into a numeric agent or capability score.",
+        "A task-verification result records whether one attempt satisfied a locked contract without assigning, comparing, or generalizing an agent capability rating.",
+        "The task reports an artifact metric such as test count, coverage, latency, or exact parity without treating it as an agent rating."
+      ],
+      "required_actions": [
+        "Label task-verification PASS or FAIL separately from capability scoring; a passing task is criterion evidence for one attempt, not an agent capability score or reusable profile rating.",
+        "Pin the evaluation profile ID, version, and content hash and the methodology ID, version, and content hash, and bind the value to the exact execution attempt or declared comparison scope.",
+        "Record task difficulty or complexity with its basis, or identify a genuinely comparable cohort with task family, difficulty, repository or context, and counterexamples; do not compare across unrelated domains.",
+        "Record criterion-level outcomes with status, evidence, and counterevidence rather than relying on an aggregate alone.",
+        "Record evaluator identity, relationship to the attempt, verification status, and available independence-integrity evidence, including common lineage, blindness, domain qualification, or their absence.",
+        "Record confidence or uncertainty, material limitations, missing evidence, and the boundary beyond which the rating must not be generalized.",
+        "If any required calibration evidence is missing, leave the numeric value null and label the result unscored with status insufficient_evidence; do not substitute zero, a guessed number, task PASS, evaluator agreement, or an aggregate average."
+      ],
+      "danger_if_ignored": "A number can turn one easy-task pass, parent or self review, shared-lineage agreement, or incomplete evidence into false capability precision, unsupported comparison, and unsafe routing or promotion pressure.",
+      "evidence": [
+        "docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md",
+        "registry/subagent-evaluation-methodology.json",
+        "registry/subagent-evaluation-methodologies/0.1.0.json",
+        "registry/subagent-evaluation-profile-registry.json",
+        "schemas/subagent-attempt-evaluation.schema.json",
+        "schemas/subagent-execution-attempt.schema.json",
+        "roadmap/evidence/subagent-self-grade-integrity-kernel.md"
+      ],
+      "enforcement_level": "require_ack",
+      "review_status": "reviewed"
     }
   ],
   "rule": "Reviewed learning rules are deterministic preflight and midflight routing aids. They constrain agent behavior but do not promote generated observations to source truth."
