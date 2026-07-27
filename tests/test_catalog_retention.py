@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from digital_asset_directory import database
 from digital_asset_directory.catalog import run_scan
 from digital_asset_directory.config import load_config
 from digital_asset_directory.database import CatalogDB
@@ -145,6 +146,25 @@ def test_latest_complete_full_scope_scan_excludes_partial(tmp_path: Path) -> Non
     assert db.latest_complete_scan()["scan_id"] == "s_partial"
     # ...the scope-aware query keeps the last full-scope scan.
     assert db.latest_complete_full_scope_scan()["scan_id"] == "s_full"
+    db.close()
+
+
+def test_latest_scan_queries_break_timestamp_ties_by_insertion_order(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Windows system-clock granularity (~15.6ms) can stamp consecutive scans
+    # with identical started_at values; 'latest' must then mean last-inserted,
+    # not whichever row SQLite happens to scan first.
+    monkeypatch.setattr(database, "utc_now", lambda: _TS)
+    db = CatalogDB(tmp_path / "c.sqlite3")
+    db.start_scan("s_older")
+    db.complete_scan("s_older", "complete", {"scan_id": "s_older", "full_scope": True})
+    db.start_scan("s_newer")
+    db.complete_scan("s_newer", "complete", {"scan_id": "s_newer", "full_scope": True})
+    assert db.latest_scan()["scan_id"] == "s_newer"
+    assert db.latest_complete_scan()["scan_id"] == "s_newer"
+    assert db.latest_complete_full_scope_scan()["scan_id"] == "s_newer"
     db.close()
 
 

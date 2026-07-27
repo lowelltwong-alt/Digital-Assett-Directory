@@ -360,9 +360,12 @@ class CatalogDB:
             )
         ]
 
+    # Windows system-clock granularity (~15.6ms) can stamp consecutive scans
+    # with identical started_at values, so every latest-* query tie-breaks on
+    # rowid (insertion order) to stay deterministic.
     def latest_scan(self) -> dict[str, Any] | None:
         row = self.connection.execute(
-            "SELECT * FROM scans ORDER BY started_at DESC LIMIT 1"
+            "SELECT * FROM scans ORDER BY started_at DESC, rowid DESC LIMIT 1"
         ).fetchone()
         return dict(row) if row else None
 
@@ -374,7 +377,8 @@ class CatalogDB:
         a valid graph to prune everything else down to.
         """
         row = self.connection.execute(
-            "SELECT * FROM scans WHERE status='complete' ORDER BY started_at DESC LIMIT 1"
+            "SELECT * FROM scans WHERE status='complete' "
+            "ORDER BY started_at DESC, rowid DESC LIMIT 1"
         ).fetchone()
         return dict(row) if row else None
 
@@ -391,6 +395,6 @@ class CatalogDB:
         row = self.connection.execute(
             "SELECT * FROM scans WHERE status='complete' "
             "AND json_extract(summary_json, '$.full_scope') = 1 "
-            "ORDER BY started_at DESC LIMIT 1"
+            "ORDER BY started_at DESC, rowid DESC LIMIT 1"
         ).fetchone()
         return dict(row) if row else None
