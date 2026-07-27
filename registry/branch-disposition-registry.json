@@ -2,5 +2,15 @@
   "registry_version": "0.1.0",
   "status": "candidate",
   "authority_boundary": "Disposition rows are human decisions about branch fate. They never merge, delete, push, or rewrite anything; integrate rows keep blocking until the content is actually reachable from the default branch.",
-  "dispositions": []
+  "dispositions": [
+    {
+      "branch": "codex/preserve-parallel-orchestration-20260710",
+      "commit": "4f08594",
+      "disposition": "integrate",
+      "reason": "Orchestration layer (30 files incl. decisions D17-D20 still cited as open gates) was preserved without integration on 2026-07-10; it must land on main. Finding stays raised as branch_integrate_pending until the content is reachable from main via the separate D17-D20 recovery task.",
+      "decided_by": "Lowell",
+      "decided_at": "2026-07-27",
+      "review_after": "2026-08-26"
+    }
+  ]
 }

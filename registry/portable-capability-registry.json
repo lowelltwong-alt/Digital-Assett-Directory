@@ -451,7 +451,7 @@
         "tests/test_learning_yield_report.py",
         "tests/test_synthetic_silver_program.py"
       ],
-      "content_digest": "sha256:7703973c54e45307456747ef2b1ce657a7fb372f48f7b41bfca008ccbfc13beb",
+      "content_digest": "sha256:8afc66170fa6b71904525101628d2fa1674292cdecdc02932444dc73aeb6096d",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
