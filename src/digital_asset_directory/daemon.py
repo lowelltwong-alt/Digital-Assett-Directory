@@ -195,14 +195,15 @@ def _builder_source_path(module_ref: str) -> Path | None:
 
 
 def _graph_surface_input_fingerprint_rows(hub_root: Path) -> list[tuple[Any, ...]]:
-    """Fingerprint the builder sources and registry inputs of registered graph
-    surfaces.
+    """Fingerprint the builder sources, registry inputs, and data-plane inputs
+    of registered graph surfaces.
 
-    Generated surface manifests pin the hash of their builder code and registry
-    inputs. When those drift, the manifests go stale and validation blocks, but
-    the raw-data fingerprint alone would let an idle daemon skip the rebuild. This
-    tracks the same inputs so a code or registry change wakes the daemon to
-    re-pin the surface.
+    Generated surface manifests pin the hash of their builder code, registry
+    inputs, and data-surface inputs. When those drift, the manifests go stale
+    and validation blocks, but the rest of the cycle fingerprint alone would let
+    an idle daemon skip the rebuild. This tracks the same inputs so a code,
+    registry, or data-plane change (for example a lesson append under
+    raw/lessons) wakes the daemon to re-pin the surface.
     """
     rows: list[tuple[Any, ...]] = []
     registry = load_graph_surface_registry(hub_root)
@@ -221,10 +222,28 @@ def _graph_surface_input_fingerprint_rows(hub_root: Path) -> list[tuple[Any, ...
             if row is not None:
                 rows.append(row)
         for source_input in surface.get("source_inputs", []):
-            if not isinstance(source_input, dict) or source_input.get("kind") != "registry_path":
+            if not isinstance(source_input, dict):
                 continue
             ref = str(source_input.get("ref", ""))
             if not ref:
+                continue
+            kind = source_input.get("kind")
+            if kind == "data_surface":
+                # Data-plane inputs resolve through the data root, never
+                # hub-relative, so they are invisible to the rows above.
+                # _hash_surface_input matches the manifest freshness hash,
+                # including its exclusion of the generated lesson index dirs
+                # that non-idle cycles rewrite under raw/lessons; a stat-based
+                # row over those would keep the daemon awake forever.
+                try:
+                    path = data_path(hub_root, ref)
+                except KeyError:
+                    # Unknown logical name; validation reports it, the
+                    # fingerprint just skips it.
+                    continue
+                rows.append((owner, f"data_surface:{ref}", _hash_surface_input(path)))
+                continue
+            if kind != "registry_path":
                 continue
             path = hub_root / ref
             if path.is_dir():

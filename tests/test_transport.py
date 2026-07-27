@@ -1049,6 +1049,112 @@ def test_daemon_fingerprint_tracks_directory_registry_path_inputs(tmp_path: Path
     assert after_count == before_count
 
 
+def test_daemon_fingerprint_tracks_data_surface_inputs(tmp_path: Path):
+    hub = tmp_path / "hub"
+    registry_dir = hub / "registry"
+    registry_dir.mkdir(parents=True)
+    (registry_dir / "graph-surface-registry.json").write_text(
+        json.dumps(
+            {
+                "surfaces": [
+                    {
+                        "surface_id": "synthetic-lesson-surface",
+                        "builder": {
+                            "availability": "wired",
+                            "module": "digital_asset_directory.learning.build_lesson_graph",
+                        },
+                        "source_inputs": [
+                            {"kind": "data_surface", "ref": "raw_lessons", "required": False}
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    before, before_count = daemon_mod._cycle_input_fingerprint(
+        hub, mail_repos=[], exception_repos=[], journal_repo=None
+    )
+    # A lesson append (what every `agent postflight` does) must wake the daemon
+    # even though the path resolves through the data plane, not the hub.
+    lesson = hub / "raw" / "lessons" / "2026-07-27" / "synthetic-lesson.json"
+    lesson.parent.mkdir(parents=True)
+    lesson.write_text('{"lesson_id":"lesson:synthetic"}\n', encoding="utf-8")
+    after, after_count = daemon_mod._cycle_input_fingerprint(
+        hub, mail_repos=[], exception_repos=[], journal_repo=None
+    )
+
+    assert after != before
+    assert after_count == before_count
+
+    # Generated lesson index dirs are rewritten by the rebuild itself; if they
+    # entered the fingerprint, every non-idle cycle would wake the next one.
+    index_row = hub / "raw" / "lessons" / "by-repo" / "synthetic.jsonl"
+    index_row.parent.mkdir(parents=True)
+    index_row.write_text('{"lesson_id":"lesson:synthetic"}\n', encoding="utf-8")
+    indexed, indexed_count = daemon_mod._cycle_input_fingerprint(
+        hub, mail_repos=[], exception_repos=[], journal_repo=None
+    )
+
+    assert indexed == after
+    assert indexed_count == after_count
+
+
+def test_daemon_cycle_wakes_and_rebuilds_after_raw_lesson_append(tmp_path: Path):
+    hub = tmp_path / "hub"
+    registry_dir = hub / "registry"
+    registry_dir.mkdir(parents=True)
+    (registry_dir / "graph-surface-registry.json").write_text(
+        json.dumps(
+            {
+                "surfaces": [
+                    {
+                        "surface_id": "lesson-graph",
+                        "builder": {
+                            "availability": "wired",
+                            "command": "asset-dir lesson graph",
+                            "module": "digital_asset_directory.learning.build_lesson_graph",
+                        },
+                        "source_inputs": [
+                            {"kind": "data_surface", "ref": "raw_lessons", "required": False}
+                        ],
+                        "outputs": {
+                            "manifest_logical_path": "learning/lesson-graph-manifest.json",
+                            "body_logical_path": "learning/lesson-graph.json",
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    first = run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+    second = run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+    assert first.get("idle", False) is False
+    assert second["idle"] is True
+
+    lesson = hub / "raw" / "lessons" / "2026-07-27" / "synthetic-lesson.json"
+    lesson.parent.mkdir(parents=True)
+    lesson.write_text('{"lesson_id":"lesson:synthetic"}\n', encoding="utf-8")
+
+    third = run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+    assert third.get("idle", False) is False
+    assert "lesson_graph_rebuild" in third["cycle_order"]
+    lesson_graph_rows = [
+        surface
+        for surface in third["graph_surface_status"]["surfaces"]
+        if surface["surface_id"] == "lesson-graph"
+    ]
+    assert lesson_graph_rows
+    assert lesson_graph_rows[0]["freshness"]["state"] == "fresh"
+
+    # The rebuild's own writes must not re-wake the daemon.
+    fourth = run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+    assert fourth["idle"] is True
+
+
 def test_daemon_exception_lake_reports_skip_without_lake(tmp_path: Path):
     hub = tmp_path / "hub"
     hub.mkdir()
