@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/branch-disposition-registry.schema.json",
+  "title": "DAD Branch Disposition Registry",
+  "description": "Human-recorded dispositions for stranded branches. A stranded-branch finding stops blocking only when a named human records why; an unexplained tombstone is how the next incident starts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["registry_version", "status", "dispositions"],
+  "properties": {
+    "registry_version": {"type": "string", "minLength": 1},
+    "status": {"type": "string", "minLength": 1},
+    "authority_boundary": {"type": "string"},
+    "dispositions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "branch",
+          "disposition",
+          "reason",
+          "decided_by",
+          "decided_at"
+        ],
+        "properties": {
+          "branch": {"type": "string", "minLength": 1},
+          "commit": {"type": "string", "pattern": "^[0-9a-fA-F]{7,40}$"},
+          "disposition": {"type": "string", "enum": ["integrate", "tombstone", "active"]},
+          "reason": {"type": "string", "minLength": 1},
+          "content_pointer": {
+            "type": "string",
+            "description": "For tombstone: where the content went or why it is quarantined."
+          },
+          "decided_by": {"type": "string", "minLength": 1},
+          "decided_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}"},
+          "review_after": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}"}
+        }
+      }
+    }
+  }
+}

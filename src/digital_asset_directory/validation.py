@@ -2784,6 +2784,36 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         errors.extend(result["errors"])
     except Exception as exc:
         errors.append(f"Invalid template registry: {exc}")
+    try:
+        from .pointer_liveness import validate_pointer_liveness
+
+        # "auto": both-mode on the default branch; same-tree comparison on any
+        # other branch so a feature branch adding a file and its pointer
+        # together never false-positives (see POINTER_MODES in pointer_liveness).
+        pointer_result = validate_pointer_liveness(repo_root, mode="auto")
+        errors.extend(pointer_result["errors"])
+        warnings.extend(pointer_result["warnings"])
+        checked.append(
+            "pointer-liveness:"
+            f"{pointer_result['checked_pointer_count']} pointers/"
+            f"default-branch {pointer_result['default_branch'] or 'unavailable'}"
+        )
+    except Exception as exc:
+        errors.append(f"Pointer liveness validation failed: {type(exc).__name__}: {exc}")
+    try:
+        from .branch_disposition import check_branch_dispositions
+
+        branch_result = check_branch_dispositions(repo_root)
+        errors.extend(branch_result["errors"])
+        warnings.extend(branch_result["warnings"])
+        checked.append(
+            "branch-disposition:"
+            f"{branch_result['scoped_branch_count']} scoped/"
+            f"{branch_result['branch_count']} branches/"
+            f"default-branch {branch_result['default_branch'] or 'unavailable'}"
+        )
+    except Exception as exc:
+        errors.append(f"Branch disposition validation failed: {type(exc).__name__}: {exc}")
     return {
         "valid": not errors,
         "checked_count": len(set(checked)),

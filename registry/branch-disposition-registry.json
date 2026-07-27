@@ -1,0 +1,16 @@
+{
+  "registry_version": "0.1.0",
+  "status": "candidate",
+  "authority_boundary": "Disposition rows are human decisions about branch fate. They never merge, delete, push, or rewrite anything; integrate rows keep blocking until the content is actually reachable from the default branch.",
+  "dispositions": [
+    {
+      "branch": "codex/preserve-parallel-orchestration-20260710",
+      "commit": "4f085940b8e5f529911c58477742dbd42c6c186f",
+      "disposition": "active",
+      "reason": "Orchestration layer (TASK_BOARD bus, coordination protocol, decisions D17-D20, programs P1-P3, specs T-0001..T-0006) parked pending the marathon Wave 0 decision-by-decision recovery. Integrate-vs-tombstone will be decided per record during that recovery, not wholesale.",
+      "decided_by": "Lowell Wong",
+      "decided_at": "2026-07-27",
+      "review_after": "2026-08-09"
+    }
+  ]
+}
