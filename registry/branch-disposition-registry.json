@@ -5,12 +5,12 @@
   "dispositions": [
     {
       "branch": "codex/preserve-parallel-orchestration-20260710",
-      "commit": "4f08594",
-      "disposition": "integrate",
-      "reason": "Orchestration layer (30 files incl. decisions D17-D20 still cited as open gates) was preserved without integration on 2026-07-10; it must land on main. Finding stays raised as branch_integrate_pending until the content is reachable from main via the separate D17-D20 recovery task.",
-      "decided_by": "Lowell",
+      "commit": "4f085940b8e5f529911c58477742dbd42c6c186f",
+      "disposition": "active",
+      "reason": "Orchestration layer (TASK_BOARD bus, coordination protocol, decisions D17-D20, programs P1-P3, specs T-0001..T-0006) parked pending the marathon Wave 0 decision-by-decision recovery. Integrate-vs-tombstone will be decided per record during that recovery, not wholesale.",
+      "decided_by": "Lowell Wong",
       "decided_at": "2026-07-27",
-      "review_after": "2026-08-26"
+      "review_after": "2026-08-09"
     }
   ]
 }
