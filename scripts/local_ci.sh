@@ -61,11 +61,17 @@ fi
 selected_suites="$(python -c 'import json;print(" ".join(sorted(json.load(open("/tmp/dad-ci-selection.json",encoding="utf-8"))["selected_suites"])))' 2>/dev/null || echo "")"
 echo "selected suites: ${selected_suites:-<none>}"
 
-# 2. governance-contracts: catalog validation + roadmap gate
-run "governance-contracts: validate" \
-  python -m digital_asset_directory.cli validate --hub .
-run "governance-contracts: roadmap check" \
-  python -m digital_asset_directory.cli roadmap check --hub . --no-update
+# 2. governance-contracts: catalog validation + roadmap gate.
+#    In --merge-gate mode these run inside the clean clone below instead:
+#    validators such as branch-disposition liveness read LOCAL branch state,
+#    so an in-place run on a many-branch checkout is stricter than CI's fresh
+#    checkout and can fail on hygiene unrelated to the change under review.
+if [ "$MERGE_GATE" != "1" ]; then
+  run "governance-contracts: validate" \
+    python -m digital_asset_directory.cli validate --hub .
+  run "governance-contracts: roadmap check" \
+    python -m digital_asset_directory.cli roadmap check --hub . --no-update
+fi
 
 # 3. python-control-plane: full test suite.
 #    CI runs `python -m pytest` as a HARD gate on a fresh Linux checkout.
@@ -106,6 +112,15 @@ if [ "$MERGE_GATE" = "1" ]; then
       else
         echo ">>> pytest passed in clean clone (CI-equivalent)."
       fi
+      echo; echo "===== governance-contracts in clean clone (merge gate, hard) ====="
+      ( cd "$clone_root/repo" \
+        && PYTHONPATH=src python -m digital_asset_directory.cli validate --hub . )
+      validate_rc=$?
+      [ $validate_rc -ne 0 ] && { echo ">>> FAILED: validate failed in clean clone (exit $validate_rc)."; fail=1; }
+      ( cd "$clone_root/repo" \
+        && PYTHONPATH=src python -m digital_asset_directory.cli roadmap check --hub . --no-update )
+      roadmap_rc=$?
+      [ $roadmap_rc -ne 0 ] && { echo ">>> FAILED: roadmap check failed in clean clone (exit $roadmap_rc)."; fail=1; }
     else
       echo ">>> FAILED: could not clone HEAD for the merge gate."; fail=1
     fi
