@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.19",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.20",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -446,7 +446,7 @@
         "tests/test_learning_yield_report.py",
         "tests/test_synthetic_silver_program.py"
       ],
-      "content_digest": "sha256:2a8e3544e4caa91c04969c3439d99e878dae6a44b8cabd60ae90c5521d34e0dd",
+      "content_digest": "sha256:468339f249c59ddc43b32505307e7b42ba6fd2f5aea50ed0b1548c63e778742e",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
