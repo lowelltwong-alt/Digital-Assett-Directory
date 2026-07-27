@@ -31,6 +31,7 @@ _LOGICAL_PREFIXES = {
     "reports": "central_reports",
     "exceptions": "exceptions",
     "agents": "agents",
+    "identity": "identity_reports",
 }
 
 
