@@ -44,6 +44,8 @@ from .utils import (
 )
 
 JOURNAL_STATUS_NAME = "journal_checkpoint_status.json"
+RESTORE_DRILL_STATUS_NAME = "restore_drill_status.json"
+DEFAULT_JOURNAL_REPO_DIRNAME = "dad-journal"
 REMOTE_OUTBOX_QUARANTINE_NAME = "remote-outbox-quarantine.jsonl"
 VCS_CONTROL_DIR_NAMES = {".git", ".hg", ".svn"}
 CHECKPOINT_COPY_ATTEMPTS = 10
@@ -51,7 +53,7 @@ CHECKPOINT_COPY_CHUNK_SIZE = 1024 * 1024
 SQLITE_CHECKPOINT_SUFFIXES = {".sqlite", ".sqlite3"}
 SQLITE_SIDECAR_SUFFIXES = {".sqlite-wal", ".sqlite-shm", ".sqlite3-wal", ".sqlite3-shm"}
 CHECKPOINT_FILE_INDEX_VERSION = "1.0.0"
-JOURNAL_ENGINE_VERSION = "1.2.0"
+JOURNAL_ENGINE_VERSION = "1.3.0"
 JOURNAL_ENGINE_CAPABILITIES = [
     "verified_incremental_file_index",
     "no_checkout_git_index_transaction",
@@ -61,6 +63,8 @@ JOURNAL_ENGINE_CAPABILITIES = [
     "content_addressed_graph_manifests",
     "bounded_parallel_integrity_verification",
     "compact_transport_readiness_summary",
+    "forced_staging_immune_to_embedded_ignores",
+    "tracked_aware_reuse_gate",
 ]
 JOURNAL_INTEGRITY_MAX_WORKERS = 4
 
@@ -379,6 +383,7 @@ def _build_checkpoint_snapshot(
     status: dict[str, Any],
     *,
     baseline_checkpoint_repo: Path | None = None,
+    tracked_paths: set[str] | None = None,
 ) -> dict[str, Any]:
     baseline = baseline_checkpoint_repo or checkpoint_repo
     target = checkpoint_repo / "data"
@@ -402,7 +407,12 @@ def _build_checkpoint_snapshot(
         baseline_destination = baseline / "data" / relative
         relative_text = relative.as_posix()
         previous_entry = previous_file_index.get(relative_text)
-        if _can_reuse_checkpoint_file(
+        # A baseline working file that is not tracked in HEAD must be re-copied
+        # and staged, or an index/commit divergence survives forever.
+        tracked_in_head = (
+            tracked_paths is None or f"data/{relative_text}" in tracked_paths
+        )
+        if tracked_in_head and _can_reuse_checkpoint_file(
             source,
             baseline_destination,
             previous_entry,
@@ -477,10 +487,22 @@ def _stage_checkpoint_paths(
             raise RuntimeError(
                 "Journal staging blocked because a path-relevant .gitattributes file exists."
             )
+    tracked_result = _run_git_readonly(checkpoint_worktree, ["ls-files", "-z"])
+    if tracked_result["returncode"] != 0:
+        raise RuntimeError(
+            f"Unable to list tracked journal paths: {tracked_result['stderr']}"
+        )
+    tracked_paths = {item for item in tracked_result["stdout"].split("\0") if item}
     expected_staged: set[str] = set()
     for relative_text in normalized:
         candidate = checkpoint_worktree / Path(relative_text)
         baseline = baseline_checkpoint_repo / Path(relative_text)
+        if relative_text not in tracked_paths:
+            # Untracked in HEAD: any present file is a new staging, regardless
+            # of whether an identical stray copy sits in the baseline worktree.
+            if candidate.is_file():
+                expected_staged.add(relative_text)
+            continue
         if candidate.is_file() != baseline.is_file():
             expected_staged.add(relative_text)
             continue
@@ -502,6 +524,9 @@ def _stage_checkpoint_paths(
             str(checkpoint_worktree),
             "add",
             "--all",
+            # Data may legitimately contain .gitignore files; ignore rules that
+            # arrived as data must never drop indexed checkpoint paths.
+            "--force",
             f"--pathspec-from-file={pathspec_file}",
             "--pathspec-file-nul",
         ]
@@ -644,7 +669,8 @@ def _current_journal_branch(journal_repo: Path) -> str | None:
 def _checkpoint_commands(journal_repo: Path, branch: str) -> list[str]:
     return [
         f'git -C "{journal_repo}" config core.longpaths true',
-        f'git -C "{journal_repo}" add data journal_checkpoint_manifest.json',
+        f'git -C "{journal_repo}" config core.autocrlf false',
+        f'git -C "{journal_repo}" add --force data journal_checkpoint_manifest.json',
         f'git -C "{journal_repo}" commit -m "Checkpoint DAD data root"',
         f'git -C "{journal_repo}" push origin {branch}',
     ]
@@ -653,7 +679,16 @@ def _checkpoint_commands(journal_repo: Path, branch: str) -> list[str]:
 def _checkpoint_command_args(journal_repo: Path, branch: str) -> list[list[str]]:
     return [
         ["git", "-C", str(journal_repo), "config", "core.longpaths", "true"],
-        ["git", "-C", str(journal_repo), "add", "data", "journal_checkpoint_manifest.json"],
+        ["git", "-C", str(journal_repo), "config", "core.autocrlf", "false"],
+        [
+            "git",
+            "-C",
+            str(journal_repo),
+            "add",
+            "--force",
+            "data",
+            "journal_checkpoint_manifest.json",
+        ],
         ["git", "-C", str(journal_repo), "commit", "-m", "Checkpoint DAD data root"],
         ["git", "-C", str(journal_repo), "push", "origin", branch],
     ]
@@ -1082,6 +1117,13 @@ def checkpoint_journal(
                     ["git", "-C", str(journal_repo), "config", "core.longpaths", "true"]
                 )
             )
+            # Pin byte-preserving checkouts locally so a system-level
+            # autocrlf=true can never CRLF-convert synced or restored data.
+            status["git_apply_results"].append(
+                _run_git_write(
+                    ["git", "-C", str(journal_repo), "config", "core.autocrlf", "false"]
+                )
+            )
             head = _run_git_readonly(journal_repo, ["rev-parse", "HEAD"])
             if head["returncode"] != 0:
                 status["git_apply_results"].append(
@@ -1121,11 +1163,25 @@ def checkpoint_journal(
                             ["git", "-C", str(checkpoint_worktree), "read-tree", "HEAD"]
                         )
                     )
+                    tracked_result = _run_git_readonly(
+                        checkpoint_worktree, ["ls-files", "-z"]
+                    )
+                    if tracked_result["returncode"] != 0:
+                        raise RuntimeError(
+                            "Unable to list tracked journal paths: "
+                            + tracked_result["stderr"]
+                        )
+                    tracked_paths = {
+                        item
+                        for item in tracked_result["stdout"].split("\0")
+                        if item
+                    }
                     snapshot = _build_checkpoint_snapshot(
                         hub_root,
                         checkpoint_worktree,
                         status,
                         baseline_checkpoint_repo=journal_repo,
+                        tracked_paths=tracked_paths,
                     )
                     status.update(
                         {
@@ -1259,6 +1315,219 @@ def checkpoint_journal(
     status["checkpoint_due"] = False
     atomic_write_text(_journal_status_path(hub_root), json_dumps(status, pretty=True) + "\n")
     return status
+
+
+def default_journal_repo() -> Path | None:
+    """Return the conventional user-level journal repo when it exists locally."""
+
+    candidate = Path.home() / ".dad" / DEFAULT_JOURNAL_REPO_DIRNAME
+    if (candidate / ".git").exists():
+        return candidate
+    return None
+
+
+def _restore_drill_status_path(hub_root: Path) -> Path:
+    return _reports_dir(hub_root) / RESTORE_DRILL_STATUS_NAME
+
+
+def restore_drill_status(hub_root: Path) -> dict[str, Any]:
+    """Read the last restore-drill report, or a never_run placeholder."""
+
+    path = _restore_drill_status_path(hub_root)
+    if not path.is_file():
+        return {"status": "never_run", "report_path": str(path)}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"status": "invalid", "report_path": str(path)}
+    if not isinstance(payload, dict):
+        return {"status": "invalid", "report_path": str(path)}
+    return payload
+
+
+def restore_drill(
+    hub_root: Path,
+    journal_repo: Path | None,
+    *,
+    scratch_root: Path | None = None,
+    keep: bool = False,
+    max_workers: int | None = None,
+) -> dict[str, Any]:
+    """Materialize the committed checkpoint into scratch and prove it restores intact.
+
+    Proves: the committed checkpoint is complete against its file index, every
+    restored file matches its recorded sha256/size, and restored SQLite files
+    open and pass integrity_check. Does not prove the checkpoint is fresh (that
+    is journal status) or that a network clone from the remote works.
+    """
+
+    started = time.perf_counter()
+    report: dict[str, Any] = {
+        "schema_version": "dad.journal.restore_drill.v1",
+        "generated_at": utc_now(),
+        "status": "blocked",
+        "duration_methodology": "wall_seconds_time_perf_counter_single_run",
+        "proves": [
+            "committed_checkpoint_complete_against_file_index",
+            "restored_files_match_recorded_sha256_and_size",
+            "restored_sqlite_files_open_and_pass_integrity_check",
+        ],
+        "does_not_prove": [
+            "checkpoint_freshness_see_journal_status",
+            "remote_clone_from_origin_works",
+        ],
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+    def _finish(payload: dict[str, Any]) -> dict[str, Any]:
+        payload["duration_seconds"] = round(time.perf_counter() - started, 3)
+        payload["report_path"] = str(_restore_drill_status_path(hub_root))
+        atomic_write_text(
+            _restore_drill_status_path(hub_root), json_dumps(payload, pretty=True) + "\n"
+        )
+        return payload
+
+    if journal_repo is None:
+        report["blocked_reason"] = "journal_repo_not_configured"
+        report["narrative"] = [
+            "No backup journal repository was named, so nothing could be restored.",
+        ]
+        return _finish(report)
+    journal_repo = journal_repo.resolve()
+    report["journal_repo"] = str(journal_repo)
+    if not (journal_repo / ".git").exists():
+        report["blocked_reason"] = "journal_repo_not_a_git_repository"
+        report["narrative"] = [
+            f"{journal_repo} is not a Git repository, so no checkpoint history exists there.",
+        ]
+        return _finish(report)
+    head = _run_git_readonly(journal_repo, ["rev-parse", "HEAD"])
+    if head["returncode"] != 0:
+        report["blocked_reason"] = "journal_repo_has_no_commits"
+        report["narrative"] = [
+            "The backup journal has no committed checkpoint yet; run a checkpoint first.",
+        ]
+        return _finish(report)
+    checkpoint_head = head["stdout"]
+    report["checkpoint_head"] = checkpoint_head
+
+    scratch_base = (scratch_root or (Path.home() / ".dad" / "tmp")).resolve()
+    drill_dir = (
+        scratch_base
+        / "restore-drill"
+        / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    )
+    restored_worktree = drill_dir / "restored"
+    drill_dir.mkdir(parents=True, exist_ok=True)
+    report["restored_path"] = str(restored_worktree)
+    report["kept"] = keep
+
+    materialize = _run_git_readonly(
+        journal_repo,
+        [
+            # Byte-preserving checkout: system-level autocrlf=true would CRLF-
+            # convert LF blobs and break hash verification (and a real disaster
+            # recovery); the journal stores exact bytes, never text.
+            "-c",
+            "core.autocrlf=false",
+            "-c",
+            f"core.attributesFile={os.devnull}",
+            "worktree",
+            "add",
+            "--detach",
+            "--force",
+            str(restored_worktree),
+            checkpoint_head,
+        ],
+    )
+    if materialize["returncode"] != 0:
+        report["blocked_reason"] = "worktree_materialization_failed"
+        report["git_error"] = materialize["stderr"]
+        report["narrative"] = [
+            "Git could not materialize the checkpoint into a scratch folder.",
+        ]
+        shutil.rmtree(drill_dir, ignore_errors=True)
+        return _finish(report)
+
+    try:
+        manifest_result = _read_checkpoint_manifest(restored_worktree)
+        manifest = manifest_result.get("manifest", {})
+        if manifest_result.get(
+            "status"
+        ) != "readable" or not _checkpoint_manifest_structure_valid(manifest):
+            report["blocked_reason"] = "checkpoint_manifest_invalid"
+            report["narrative"] = [
+                "The restored checkpoint manifest is missing or malformed; the backup "
+                "cannot be trusted as-is.",
+            ]
+            return _finish(report)
+        report["checkpointed_at"] = str(manifest.get("checkpointed_at") or "")
+
+        integrity = _checkpoint_file_index_integrity(
+            restored_worktree, manifest, max_workers=max_workers
+        )
+        report["integrity"] = integrity
+
+        file_index = _validated_checkpoint_file_index(manifest)
+        restored_bytes = sum(entry["checkpoint_size"] for entry in file_index.values())
+        report["file_count"] = len(file_index)
+        report["restored_bytes"] = restored_bytes
+
+        sqlite_checks: list[dict[str, str]] = []
+        for relative_text in sorted(file_index):
+            if Path(relative_text).suffix.lower() not in SQLITE_CHECKPOINT_SUFFIXES:
+                continue
+            restored_db = restored_worktree / "data" / relative_text
+            row: dict[str, str] = {"relative_path": relative_text}
+            try:
+                source_uri = restored_db.resolve().as_uri() + "?mode=ro"
+                with closing(sqlite3.connect(source_uri, uri=True, timeout=5.0)) as db:
+                    outcome = db.execute("PRAGMA integrity_check").fetchone()
+                row["status"] = (
+                    "ok"
+                    if outcome and str(outcome[0]).lower() == "ok"
+                    else "integrity_check_failed"
+                )
+            except (OSError, sqlite3.Error) as exc:
+                row["status"] = "open_failed"
+                row["error"] = type(exc).__name__
+            sqlite_checks.append(row)
+        report["sqlite_checks"] = sqlite_checks
+
+        sqlite_ok = all(row["status"] == "ok" for row in sqlite_checks)
+        verified = bool(integrity.get("valid")) and sqlite_ok
+        report["status"] = "verified" if verified else "failed"
+        report.pop("blocked_reason", None)
+
+        megabytes = restored_bytes / (1024 * 1024)
+        narrative = [
+            f"Restored {len(file_index)} files ({megabytes:.1f} MB) from the backup "
+            "journal into a scratch folder.",
+        ]
+        if integrity.get("valid"):
+            narrative.append("Every restored file matched its recorded fingerprint.")
+        else:
+            narrative.append(
+                "Some restored files did NOT match the recorded fingerprints; "
+                "this backup cannot be fully trusted."
+            )
+        if sqlite_checks:
+            narrative.append(
+                "Restored database files opened and passed their integrity check."
+                if sqlite_ok
+                else "A restored database file failed its integrity check."
+            )
+        if report["checkpointed_at"]:
+            narrative.append(f"This backup was taken at {report['checkpointed_at']}.")
+        report["narrative"] = narrative
+        return _finish(report)
+    finally:
+        if not keep:
+            _run_git_readonly(
+                journal_repo, ["worktree", "remove", "--force", str(restored_worktree)]
+            )
+            _run_git_readonly(journal_repo, ["worktree", "prune"])
+            shutil.rmtree(drill_dir, ignore_errors=True)
 
 
 def ingest_remote_outbox(hub_root: Path, journal_repo: Path) -> dict[str, Any]:

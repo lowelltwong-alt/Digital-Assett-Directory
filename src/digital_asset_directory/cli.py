@@ -162,7 +162,15 @@ from .agent_session_reaper import (
 )
 from .lifecycle_janitor import run_janitor_cycle, write_janitor_report
 from .agent_session_split_report import write_agent_session_split_report
-from .journal import checkpoint_journal, ingest_remote_outbox, journal_repo_status, journal_status
+from .boot import render_boot_text, run_boot
+from .journal import (
+    checkpoint_journal,
+    default_journal_repo,
+    ingest_remote_outbox,
+    journal_repo_status,
+    journal_status,
+    restore_drill,
+)
 from .lesson_automation_coverage import (
     write_lesson_automation_coverage_outputs,
     write_weekly_asset_coverage_outputs,
@@ -2844,6 +2852,77 @@ def journal_ingest_remote_outbox(
 ) -> None:
     cfg = _cfg(hub=hub)
     console.print_json(data=ingest_remote_outbox(cfg.repo_root, journal_repo))
+
+
+@journal_app.command("restore-drill")
+def journal_restore_drill(
+    journal_repo: Optional[Path] = typer.Option(
+        None, help="Backup journal repo; defaults to ~/.dad/dad-journal when present."
+    ),
+    hub: Optional[Path] = typer.Option(None),
+    scratch_root: Optional[Path] = typer.Option(
+        None, help="Scratch parent for the restored copy; defaults to ~/.dad/tmp."
+    ),
+    keep: bool = typer.Option(
+        False, "--keep", help="Keep the restored scratch worktree for inspection."
+    ),
+    max_workers: Optional[int] = typer.Option(None, min=1, max=16),
+) -> None:
+    """Restore the latest committed backup into scratch and verify every file."""
+
+    cfg = _cfg(hub=hub)
+    result = restore_drill(
+        cfg.repo_root,
+        journal_repo or default_journal_repo(),
+        scratch_root=scratch_root,
+        keep=keep,
+        max_workers=max_workers,
+    )
+    console.print_json(data=result)
+    if result.get("status") != "verified":
+        raise typer.Exit(2)
+
+
+@app.command("up")
+def boot_up(
+    hub: Optional[Path] = typer.Option(None),
+    config: Optional[Path] = typer.Option(None),
+    journal_repo: Optional[Path] = typer.Option(
+        None, help="Backup journal repo; defaults to ~/.dad/dad-journal when present."
+    ),
+    checkpoint: bool = typer.Option(
+        True,
+        "--checkpoint/--no-checkpoint",
+        help="Take a data backup checkpoint when one is due.",
+    ),
+    fast: bool = typer.Option(
+        False, "--fast", help="Skip the cockpit refresh; report freshness only."
+    ),
+    allow_onedrive_data_root: bool = typer.Option(
+        False,
+        "--allow-onedrive-data-root",
+        help="Boot even though the data root is OneDrive-synced (not recommended).",
+    ),
+    as_json: bool = typer.Option(False, "--json", help="Print the raw boot report."),
+) -> None:
+    """Boot DAD for a work session: verify, back up, refresh, and show Today."""
+
+    cfg = _cfg(config, hub)
+    refresher = None if fast else (lambda: _refresh_operational_cockpit_now(cfg))
+    report = run_boot(
+        cfg.repo_root,
+        journal_repo=journal_repo,
+        apply_checkpoint=checkpoint,
+        allow_onedrive=allow_onedrive_data_root,
+        cockpit_refresher=refresher,
+    )
+    if as_json:
+        console.print_json(data=report)
+    else:
+        for line in render_boot_text(report):
+            console.print(line, markup=False, highlight=False)
+    if report.get("status") == "blocked":
+        raise typer.Exit(2)
 
 
 @mcp_app.command("graph-stdio")
