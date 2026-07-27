@@ -520,6 +520,8 @@ from .subagent_evaluations import (
 )
 from .semantic_evolution import write_semantic_evolution_outputs
 from .surface_versions import build_surface_version_status
+from .branch_disposition import check_branch_dispositions
+from .pointer_liveness import POINTER_MODES, validate_pointer_liveness
 from .template_library import validate_template_registry, write_template_library_report
 from .test_parity import run_test_parity
 from .transport import (
@@ -5832,6 +5834,45 @@ def templates_validate(hub: Optional[Path] = typer.Option(None)) -> None:
     """Validate template records without writing reports."""
     cfg = _cfg(hub=hub)
     result = validate_template_registry(cfg.repo_root)
+    console.print_json(data=result)
+    if not result["valid"]:
+        raise typer.Exit(2)
+
+
+@app.command(name="pointer-liveness")
+def pointer_liveness_command(
+    mode: str = typer.Option(
+        "both", help=f"One of {', '.join(POINTER_MODES)}. default-branch mode catches "
+        "pointers that resolve locally but are invisible to every other clone."
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Validate that declared navigation/registry pointers resolve in the worktree and on the default branch."""
+    cfg = _cfg(hub=hub)
+    result = validate_pointer_liveness(cfg.repo_root, mode=mode)
+    console.print_json(data=result)
+    if not result["valid"]:
+        raise typer.Exit(2)
+
+
+@app.command(name="branch-disposition")
+def branch_disposition_command(
+    window_days: int = typer.Option(14, min=1, max=365),
+    include_sensitive_diff: bool = typer.Option(
+        False,
+        "--include-sensitive-diff",
+        help="Widen the error scope to stale unmerged branches touching "
+        "registry/, decisions/, or docs/ (otherwise they are a watchlist warning).",
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Read-only check that stranded preserve/checkpoint branches carry a recorded human disposition."""
+    cfg = _cfg(hub=hub)
+    result = check_branch_dispositions(
+        cfg.repo_root,
+        window_days=window_days,
+        include_sensitive_diff_scope=include_sensitive_diff,
+    )
     console.print_json(data=result)
     if not result["valid"]:
         raise typer.Exit(2)

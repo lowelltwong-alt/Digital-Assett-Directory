@@ -1,0 +1,6 @@
+{
+  "registry_version": "0.1.0",
+  "status": "candidate",
+  "authority_boundary": "Disposition rows are human decisions about branch fate. They never merge, delete, push, or rewrite anything; integrate rows keep blocking until the content is actually reachable from the default branch.",
+  "dispositions": []
+}

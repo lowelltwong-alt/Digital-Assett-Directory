@@ -200,6 +200,7 @@
     "harness_revision": "schemas/harness-revision.schema.json",
     "autonomy_control_event": "schemas/autonomy-control-event.schema.json",
     "capability_os_cockpit": "schemas/capability-os-cockpit.schema.json",
-    "ci_module_boundary": "schemas/ci-module-boundary.schema.json"
+    "ci_module_boundary": "schemas/ci-module-boundary.schema.json",
+    "branch_disposition_registry": "schemas/branch-disposition-registry.schema.json"
   }
 }
