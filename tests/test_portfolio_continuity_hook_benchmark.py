@@ -2,17 +2,25 @@ from __future__ import annotations
 
 from copy import deepcopy
 import inspect
+import json
 from pathlib import Path
 
 import pytest
+import typer
 
+import digital_asset_directory.cli as cli_module
+from digital_asset_directory.cli import portfolio_continuity_benchmark_hook_scale
 from digital_asset_directory.cli import portfolio_continuity_trial_review
+from digital_asset_directory.portfolio_continuity_codex_hook import (
+    CODEX_HOOK_ADAPTER_REVISION_ID,
+)
 from digital_asset_directory.portfolio_continuity_hook_benchmark import (
     HookPerformanceEvidenceError,
     nearest_rank_p95,
+    qualify_hook_scale_evidence,
     run_hook_performance_benchmark,
-    run_hook_scale_harness,
     validate_hook_performance_evidence,
+    validate_hook_scale_collection,
     validate_hook_scale_evidence,
 )
 from digital_asset_directory.portability_control import (
@@ -22,6 +30,95 @@ from digital_asset_directory.portability_control import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _scale_evidence(*, failing_warm_latency: float | None = None) -> dict:
+    results = []
+    for count, index_state in (
+        (0, "warm"),
+        (1_000, "warm"),
+        (10_000, "cold"),
+        (10_000, "warm"),
+    ):
+        sample_count = 5 if index_state == "warm" else 1
+        latency = (
+            failing_warm_latency
+            if failing_warm_latency is not None
+            and count == 0
+            and index_state == "warm"
+            else 25.0
+        )
+        samples = [
+            {
+                "latency_ms": latency,
+                "exit_code": 0,
+                "silent": True,
+                "ledger_event_count": count + 1,
+                "index_event_count": count + 1,
+                "index_valid": True,
+                "index_size_matches": True,
+                "index_digest_matches": True,
+                "index_command_count": count + 1,
+                "failure_marker_count": 0,
+                "persistence_confirmed": True,
+                "full_oracle_valid": True,
+                "timed_out": False,
+            }
+            for _index in range(sample_count)
+        ]
+        latencies = [float(sample["latency_ms"]) for sample in samples]
+        p95 = nearest_rank_p95(latencies)
+        results.append(
+            {
+                "preexisting_event_count": count,
+                "index_state": index_state,
+                "sample_count": sample_count,
+                "latency_ms_samples": latencies,
+                "latency_ms_p95": p95,
+                "samples": samples,
+                "latency_ms": p95,
+                "exit_code": 0,
+                "silent": True,
+                "ledger_event_count": count + 1,
+                "index_event_count": count + 1,
+                "index_valid": True,
+                "index_size_matches": True,
+                "index_digest_matches": True,
+                "index_command_count": count + 1,
+                "failure_marker_count": 0,
+                "persistence_confirmed": True,
+                "full_oracle_valid": True,
+                "timed_out_count": 0,
+            }
+        )
+    material = {
+        "recorded_at": "2026-08-21T00:00:00+00:00",
+        "methodology_id": "methodology:exact-content-index-scale-v1",
+        "adapter_revision_id": CODEX_HOOK_ADAPTER_REVISION_ID,
+        "adapter_interface_digest": runtime_adapter_interface_digest(
+            ROOT, "adapter:intent-continuity-codex-host"
+        ),
+        "warm_latency_budget_ms": 1500.0,
+        "cold_hard_timeout_ms": 5000,
+        "results": results,
+        "source_worktree_unchanged": True,
+        "evidence_integrity": "self_consistent_not_origin_authenticated",
+        "origin_authenticated": False,
+        "supervisor_attestation_required": True,
+        "synthetic_payload": True,
+        "candidate_only": True,
+        "execution_authorized": False,
+        "authority_boundary": (
+            "Hook performance evidence is synthetic, revision-bound candidate "
+            "evidence only and authorizes no effect."
+        ),
+    }
+    return {
+        "schema_version": "dad.intent_continuity_hook_scale_evidence.v1",
+        "measurement_id": "dad:hook-scale:"
+        + canonical_digest(material).split(":", 1)[1],
+        **material,
+    }
 
 
 def test_nearest_rank_p95_methodology_is_explicit() -> None:
@@ -82,9 +179,11 @@ def test_performance_evidence_tampering_and_stale_bindings_fail_closed() -> None
         validate_hook_performance_evidence(ROOT, stale)
 
 
-def test_hook_scale_harness_covers_cold_and_warm_0_1k_10k() -> None:
-    result = run_hook_scale_harness(ROOT)
+def test_hook_scale_contract_covers_repeated_warm_0_1k_10k_and_cold() -> None:
+    result = _scale_evidence()
 
+    assert validate_hook_scale_collection(ROOT, result) == result
+    assert qualify_hook_scale_evidence(ROOT, result) == result
     assert result["source_worktree_unchanged"] is True
     assert [(row["preexisting_event_count"], row["index_state"]) for row in result["results"]] == [
         (0, "warm"),
@@ -95,6 +194,11 @@ def test_hook_scale_harness_covers_cold_and_warm_0_1k_10k() -> None:
     assert all(row["exit_code"] == 0 for row in result["results"])
     assert all(row["silent"] is True for row in result["results"])
     assert all(row["persistence_confirmed"] is True for row in result["results"])
+    assert all(
+        row["sample_count"] >= 5
+        for row in result["results"]
+        if row["index_state"] == "warm"
+    )
     assert all(
         row["latency_ms"] <= result["warm_latency_budget_ms"]
         for row in result["results"]
@@ -109,7 +213,7 @@ def test_hook_scale_harness_covers_cold_and_warm_0_1k_10k() -> None:
         ("index_command_count", 0),
     ):
         tampered = deepcopy(result)
-        tampered["results"][0][field] = value
+        tampered["results"][0]["samples"][0][field] = value
         material = {
             key: item
             for key, item in tampered.items()
@@ -120,3 +224,25 @@ def test_hook_scale_harness_covers_cold_and_warm_0_1k_10k() -> None:
         )
         with pytest.raises(HookPerformanceEvidenceError, match="safely"):
             validate_hook_scale_evidence(ROOT, tampered)
+
+
+def test_failed_scale_evidence_is_written_before_cli_qualification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    evidence = _scale_evidence(failing_warm_latency=1841.977)
+    monkeypatch.setattr(
+        cli_module,
+        "collect_hook_scale_evidence",
+        lambda _repo_root: evidence,
+    )
+    output = tmp_path / "failed-scale-evidence.json"
+
+    with pytest.raises(typer.BadParameter, match="latency boundary"):
+        portfolio_continuity_benchmark_hook_scale(output=output)
+
+    persisted = json.loads(output.read_text(encoding="utf-8"))
+    assert persisted["measurement_id"] == evidence["measurement_id"]
+    assert persisted["results"][0]["latency_ms_p95"] == 1841.977
+    with pytest.raises(HookPerformanceEvidenceError, match="latency boundary"):
+        qualify_hook_scale_evidence(ROOT, persisted)

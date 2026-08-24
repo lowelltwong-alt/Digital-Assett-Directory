@@ -39,14 +39,6 @@ def main() -> int:
     repository_id = ""
     record_failure = None
     try:
-        from digital_asset_directory.config import resolve_hub_root
-        from digital_asset_directory.portfolio_continuity_codex_hook import (
-            ingest_codex_hook,
-            record_codex_hook_failure,
-        )
-
-        record_failure = record_codex_hook_failure
-
         raw = sys.stdin.buffer.read(MAX_HOOK_INPUT_BYTES + 1)
         if len(raw) > MAX_HOOK_INPUT_BYTES:
             return 0
@@ -56,6 +48,14 @@ def main() -> int:
         event_name = payload.get("hook_event_name")
         if not isinstance(event_name, str) or not _runtime_enabled(event_name):
             return 0
+
+        from digital_asset_directory.config import resolve_hub_root
+        from digital_asset_directory.portfolio_continuity_codex_hook import (
+            ingest_codex_hook,
+            record_codex_hook_failure,
+        )
+
+        record_failure = record_codex_hook_failure
         hub_root = resolve_hub_root()
         repository_id = _repository_id()
         ingest_codex_hook(

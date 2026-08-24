@@ -102,9 +102,11 @@ def test_dependency_map_is_current_and_covers_every_required_category() -> None:
     dependency_map = json.loads((ROOT / MAP_PATH).read_text(encoding="utf-8"))
     routes = _mcp_cli_routes(ROOT / "src/digital_asset_directory/cli.py")
 
-    assert status["state"] == "current", status
-    assert status["current_claims_allowed"] is True
-    assert status["issue_codes"] == []
+    assert status["state"] == "degraded", status
+    assert status["current_claims_allowed"] is False
+    assert status["structural_claims_allowed"] is True
+    assert status["installed_host_claims_allowed"] is False
+    assert status["issue_codes"] == ["installed_host_evidence_stale"]
     assert set(routes) == {"graph-stdio"}
     assert routes["graph-stdio"]["function"] == "mcp_graph_stdio"
     assert {node["category"] for node in dependency_map["nodes"]} == set(
@@ -358,6 +360,25 @@ def test_impact_refuses_stale_map_and_refresh_is_review_only(tmp_path: Path) -> 
     assert hashlib.sha256((root / MAP_PATH).read_bytes()).hexdigest() == stable
 
 
+def test_stale_host_observation_is_scoped_to_installed_host_claims() -> None:
+    status = _status(ROOT)
+    assert status["state"] == "degraded"
+    assert status["structural_claims_allowed"] is True
+    assert status["installed_host_claims_allowed"] is False
+    assert mcp_dependency_impact(ROOT, "mcp.node.registry.graph-surfaces")[
+        "claim_state"
+    ] == "current"
+    with pytest.raises(MCPDependencyMapError, match="dependency_map_stale"):
+        mcp_dependency_impact(ROOT, "mcp.node.host-adapter.installed-evidence")
+
+    server = DADGraphMCPServer(ROOT)
+    resource = server.read_resource("dad://mcp/installed-host-status")
+    payload = json.loads(resource["contents"][0]["text"])
+    assert payload["observation_state"] == "stale"
+    assert payload["installed_or_active_claims_allowed"] is False
+    assert payload["issue_codes"] == ["installed_host_evidence_stale"]
+
+
 def test_server_initialize_tool_resource_parity_and_fake_mutation_denial() -> None:
     server = DADGraphMCPServer(ROOT)
     initialized = server.handle_request(
@@ -374,7 +395,9 @@ def test_server_initialize_tool_resource_parity_and_fake_mutation_denial() -> No
         "dad://mcp/installed-host-status",
     }.issubset(resources)
     status = server.call_tool("dad_mcp_dependency_status")["structuredContent"]
-    assert status["state"] == "current"
+    assert status["state"] == "degraded"
+    assert status["structural_claims_allowed"] is True
+    assert status["installed_host_claims_allowed"] is False
     impact = server.call_tool(
         "dad_mcp_dependency_impact",
         {"node_id": "mcp.node.registry.graph-surfaces"},

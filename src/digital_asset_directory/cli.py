@@ -236,8 +236,9 @@ from .portfolio_continuity_runtime import (
 )
 from .portfolio_continuity_search import search_continuity_all_sources
 from .portfolio_continuity_hook_benchmark import (
+    collect_hook_scale_evidence,
+    qualify_hook_scale_evidence,
     run_hook_performance_benchmark,
-    run_hook_scale_harness,
     validate_hook_performance_evidence,
     write_hook_performance_evidence,
     write_hook_scale_evidence,
@@ -12958,8 +12959,9 @@ def portfolio_continuity_benchmark_hook_scale(
 
     repo_root = find_repo_root(Path.cwd()).resolve()
     try:
-        evidence = run_hook_scale_harness(repo_root)
+        evidence = collect_hook_scale_evidence(repo_root)
         write_hook_scale_evidence(output.resolve(), evidence)
+        qualify_hook_scale_evidence(repo_root, evidence)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     console.print_json(data=evidence)

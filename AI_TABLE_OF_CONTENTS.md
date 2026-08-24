@@ -29,6 +29,7 @@ them.
 | `calibration` | Human labels, score review, thresholds, and evidence. |
 | `security_privacy` | Secret, PII, prompt-injection, public-safe, and source-boundary controls. |
 | `roadmap` | Phase gates, roadmap status, and tracked acceptance evidence. |
+| `recovery` | Bounded evidence-first repair, lifecycle recovery, and scale-or-shrink campaigns. |
 | `generated_output` | Ignored processed outputs; useful but not source truth. |
 | `public_safe` | Metadata-only patterns safe for a future public DAD repo. |
 | `cross_repo` | Multi-repo patterns, workflows, and authority boundaries. |
@@ -491,6 +492,7 @@ them.
 
 | Path | What it is | Tags | Use when |
 |---|---|---|---|
+| `docs/campaigns/dad-high-value-recovery/README.md` | Ordered, specification-only recovery campaign that turns the August 2026 DAD audit into gated baseline, enforcement, outcome-integrity, lifecycle-closure, real-task pilot, and scale-or-shrink work. | `roadmap`, `recovery`, `validation`, `learning_loop`, `human_gate` | You need to execute or audit the highest-value DAD recovery sequence without creating another operating system, ledger, queue, dashboard, or implicit execution authority. |
 | `roadmap/roadmap.yaml` | Roadmap phases and gates. | `roadmap`, `authority` | You inspect or change phase expectations. |
 | `roadmap/gate-evidence.json` | Tracked human-gate and validation-command evidence. | `roadmap`, `authority`, `validation` | You decide whether a phase gate is proven. |
 | `roadmap/state.json` | Roadmap state data. | `roadmap` | You inspect computed or recorded roadmap status. |

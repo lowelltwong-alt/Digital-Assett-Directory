@@ -1,0 +1,3576 @@
+{
+  "schema_version": "long_run_campaign.v2",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "revision": "6-execution-control-bridge-candidate-20260823",
+  "title": "DAD High-Value Recovery: evidence, enforcement, outcomes, closure, pilot, and scale-or-shrink",
+  "objective": "Repair DAD's value spine and enforcement, then require comparable real-task evidence for a human scale, narrow, retire, or re-audit decision.",
+  "completion_evidence": [
+    "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/J-600-acceptance.json",
+    "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/signed-human-decision.json",
+    "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/final-postflight-and-worktree-disposition.json"
+  ],
+  "scope": {
+    "included": [
+      "AGENTS.md",
+      ".github/",
+      ".ci/",
+      ".digital-asset/",
+      "config/",
+      "docs/",
+      "processed/reports/",
+      "registry/",
+      "schemas/",
+      "scripts/",
+      "src/",
+      "tests/",
+      "tools/"
+    ],
+    "excluded": [
+      ".git/",
+      "raw/",
+      "private/",
+      "secrets/",
+      "processed/raw/",
+      "roadmap/state.json",
+      "docs/orchestration-recovery/"
+    ]
+  },
+  "source_authority": [
+    {
+      "path": "AGENTS.md",
+      "digest": "sha256:686d11cac8f4f6fc06757ce365b80b34f12ef7c1fd19f2eb7858ee4af7c36742"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/campaign.md",
+      "digest": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/09_RESEARCH_BENCHMARK_AND_DESIGN_PRINCIPLES.md",
+      "digest": "sha256:45bf381c425686fa2eb3bc98194f0a7d0d4a08e3faaac0420e236e842dd79820"
+    },
+    {
+      "path": "docs/SELF_LEARNING_IMPROVEMENT_SYSTEM_PLAN.md",
+      "digest": "sha256:7e9a9dd5f99ad06c1e604dba9f53cde9aa6b7a318fa3e6033d959f43f93080e1"
+    },
+    {
+      "path": "docs/DAD_PORTFOLIO_AI_OPERATING_SYSTEM_PLAN.md",
+      "digest": "sha256:238782f90fe25bb350c8099f4a1b7f29ad18c7a4cdf97a7386d576115ec09b0d"
+    }
+  ],
+  "authority": {
+    "allowed_effects": [
+      "edit only the current job's declared local repository paths after exact launch and lease approval",
+      "run local deterministic checks and read-only inventory",
+      "write privacy-safe generated reports and controller/checker receipts",
+      "append reversible classification overlays while retaining raw observations"
+    ],
+    "prohibited_effects": [
+      "publish, push, merge, release, or deploy",
+      "change GitHub settings without a separate exact human approval",
+      "mutate downstream repositories or enroll pilot repos without exact local approval",
+      "delete, move, prune, reset, clean, or archive branches or worktrees",
+      "access or store secrets, raw conversations, client rows, or private payloads",
+      "activate recurring automation or promote a reusable capability"
+    ],
+    "human_gates": [
+      "initial launch revision and digest",
+      "temporary expansion freeze",
+      "GitHub protection posture and every remote settings change",
+      "legacy outcome retention treatment",
+      "worktree and branch lifecycle effects",
+      "pilot metric, workflows, repositories, privacy, and participation",
+      "scale, narrow, retire, or re-audit decision",
+      "scope expansion, publication, merge, deployment, cleanup, or destructive migration"
+    ]
+  },
+  "execution": {
+    "mode": "specification_only",
+    "execution_authorized": false,
+    "controller_role": "campaign-controller",
+    "state_root": "docs/campaigns/dad-high-value-recovery/state/",
+    "receipt_log": "docs/campaigns/dad-high-value-recovery/state/receipts.jsonl",
+    "authorized_paths": [
+      "docs/campaigns/dad-high-value-recovery/state/",
+      "docs/campaigns/dad-high-value-recovery/checks/evidence/"
+    ],
+    "durability_command": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py",
+    "adapter": {
+      "name": "dad-campaign-codex-shell-inert",
+      "revision": "dad-campaign-codex-shell-adapter:0.2.0-prelaunch"
+    },
+    "readiness_contract": {
+      "schema_version": "dad.campaign.execution_control_binding.v1",
+      "outcomes": [
+        "blocked",
+        "ready-manual"
+      ],
+      "authority_source": "existing Portfolio OS execution-control lease and manual-dispatch projection",
+      "required_authorization_schema": "dad.campaign.execution_authorization.v1",
+      "machine_gates": [
+        "exact current unexpired named-human authorization bound to campaign revision, manifest digest, job, and approved effects",
+        "current source and resolved job-input digests",
+        "accepted direct dependency receipt log digests and PASS rows",
+        "current digest-bound worker, checker, and adapter qualifications",
+        "one current lease, fresh heartbeat, safe supersession, and reconciled reissue",
+        "campaign and job budget headroom",
+        "idempotency and write-conflict rejection",
+        "declared paths, effects, outputs, checkpoint, receipt, evidence, and durability verifier",
+        "repair limit and stop-state enforcement",
+        "dispatch revoke, lease release, and partial-effect reconciliation on shutdown"
+      ],
+      "execution_authorized": false,
+      "dispatch_allowed": false
+    },
+    "intent_continuity_host_readiness": {
+      "campaign_gate": false,
+      "continuity_trial_gate": true,
+      "boundary": "A separate hard gate for a future supervised continuity-hook trial; it neither qualifies nor blocks campaign/J-100 readiness."
+    },
+    "launch_command": "not-authorized",
+    "shutdown_command": "python -m digital_asset_directory.campaign_codex_shell_adapter shutdown --manifest docs/campaigns/dad-high-value-recovery/campaign.json --reason operator-stop",
+    "qualification_command": "python -m digital_asset_directory.campaign_codex_shell_adapter qualify --repo . --manifest docs/campaigns/dad-high-value-recovery/campaign.json --decision-receipt docs/campaigns/dad-high-value-recovery/checks/evidence/decision/human-decision-receipt.json --job J-100",
+    "qualification_evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/prelaunch-revision-6.json",
+    "dry_run_evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/prelaunch-dry-run-revision-6.json",
+    "authorization_receipt": "not-authorized",
+    "independent_launch_review": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/independent-launch-review-revision-6.json"
+  },
+  "specialist_mesh": {
+    "synthetic_world_artifacts": false,
+    "truth_authority": "not-applicable",
+    "capability_matrix_evidence": "not-applicable",
+    "whole_case_audit_gate": "not-applicable",
+    "voice_representation_audit_gate": "not-applicable"
+  },
+  "budgets": {
+    "wall_clock_hours": 2160,
+    "cost_units": 150,
+    "max_attempts_total": 170,
+    "max_parallel_jobs": 1,
+    "max_storage_mb": 512,
+    "max_context_tokens_per_job": 32000,
+    "max_job_minutes": 180,
+    "max_output_mb_per_job": 20
+  },
+  "gold_standards": [
+    {
+      "id": "GS-001",
+      "statement": "Unrelated user changes and source-repository authority are preserved.",
+      "gate_type": "deterministic",
+      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/scope-and-authority-proof.json"
+    },
+    {
+      "id": "GS-002",
+      "statement": "Raw observations remain immutable; corrections and legacy quarantine are overlays.",
+      "gate_type": "deterministic",
+      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/phase-3/raw-zero-write-proof.json"
+    },
+    {
+      "id": "GS-003",
+      "statement": "Missing, stale, skipped, cancelled, failed, contradictory, or unavailable required evidence never renders green.",
+      "gate_type": "deterministic",
+      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/phase-2/false-green-negative-controls.json"
+    },
+    {
+      "id": "GS-004",
+      "statement": "Synthetic and fixture evidence never satisfies the real-task value gate.",
+      "gate_type": "independent",
+      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/synthetic-exclusion-proof.json"
+    },
+    {
+      "id": "GS-005",
+      "statement": "No producer is the sole checker of its material output or value claim.",
+      "gate_type": "independent",
+      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/checker-independence-proof.json"
+    }
+  ],
+  "phases": [
+    {
+      "id": "P1",
+      "title": "Baseline and temporary freeze",
+      "depends_on": [],
+      "waves": [
+        {
+          "id": "P1-W1",
+          "title": "Truthful baseline and governance freeze",
+          "depends_on": [],
+          "subwaves": [
+            {
+              "id": "P1-W1-S1",
+              "title": "Serial baseline and freeze jobs",
+              "depends_on": [],
+              "jobs": [
+                {
+                  "id": "J-100",
+                  "title": "Produce reproducible recovery baseline",
+                  "objective": "Refresh and reconcile every audit dimension without mutation or value claims.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [],
+                  "dependency_digests": {},
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/01_BASELINE_AND_FREEZE.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-100_REPRODUCIBLE_BASELINE.md"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/01_BASELINE_AND_FREEZE.md": "sha256:3e37859df7d52b455e5027fdff540d2742bcb56639e2d91f54978499bc775d55",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-100_REPRODUCIBLE_BASELINE.md": "sha256:bf4c0171653a81c1f278d1f5154c7a6f9618adb88593c98b9eed21254956043a"
+                  },
+                  "outputs": [
+                    "processed/reports/dad-high-value-recovery/baseline.json",
+                    "processed/reports/dad-high-value-recovery/baseline.md",
+                    "processed/reports/dad-high-value-recovery/operational-eligibility-baseline.json"
+                  ],
+                  "allowed_paths": [
+                    "processed/reports/dad-high-value-recovery/baseline.json",
+                    "processed/reports/dad-high-value-recovery/baseline.md",
+                    "processed/reports/dad-high-value-recovery/operational-eligibility-baseline.json"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "bounded-writer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "read-only multi-source inventory",
+                    "deterministic reconciliation",
+                    "privacy-safe reporting"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/bounded-writer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-100:r1",
+                  "lease_minutes": 90,
+                  "heartbeat_minutes": 15,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-100.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-100.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-100",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": false,
+                  "acceptance": [
+                    {
+                      "id": "G-J-100-ACCEPT",
+                      "revision": "2",
+                      "type": "independent",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "processed/reports/dad-high-value-recovery/baseline.json",
+                        "processed/reports/dad-high-value-recovery/baseline.md",
+                        "processed/reports/dad-high-value-recovery/operational-eligibility-baseline.json"
+                      ],
+                      "command": "not-applicable",
+                      "rubric": "Verify the job packet acceptance criteria, source authority, privacy, independence, and complete evidence reconciliation. The operational eligibility baseline must freeze the cutoff, exact source revisions, stable population, inclusion/exclusion rules, reason-code map, and item-level reconciliation equation, and its digest must be recorded in this acceptance receipt.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/phase-1/J-100-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-100"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "J-110",
+                  "title": "Bind temporary expansion freeze",
+                  "objective": "Record the approved, expiring recovery freeze without a new control plane.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-100"
+                  ],
+                  "dependency_digests": {
+                    "J-100": "receipt-digest:resolve-after-J-100-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/01_BASELINE_AND_FREEZE.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-110_TEMPORARY_EXPANSION_FREEZE.md",
+                    "AGENTS.md"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/01_BASELINE_AND_FREEZE.md": "sha256:3e37859df7d52b455e5027fdff540d2742bcb56639e2d91f54978499bc775d55",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-110_TEMPORARY_EXPANSION_FREEZE.md": "sha256:33c4e97c74c86bb8e488e9bbf9ef772ed6e482a51133d111dd408c4e889b04c0",
+                    "AGENTS.md": "sha256:686d11cac8f4f6fc06757ce365b80b34f12ef7c1fd19f2eb7858ee4af7c36742"
+                  },
+                  "outputs": [
+                    "docs/DAD_HIGH_VALUE_RECOVERY_FREEZE.md",
+                    "AGENTS.md",
+                    ".digital-asset/key-values/change-log.jsonl"
+                  ],
+                  "allowed_paths": [
+                    "docs/DAD_HIGH_VALUE_RECOVERY_FREEZE.md",
+                    "AGENTS.md",
+                    ".digital-asset/key-values/change-log.jsonl"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "bounded-writer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "governance contract editing",
+                    "authority-bound documentation",
+                    "key-value change recording"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/bounded-writer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-110:r1",
+                  "lease_minutes": 45,
+                  "heartbeat_minutes": 10,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-110.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-110.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-110",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": false,
+                  "acceptance": [
+                    {
+                      "id": "G-J-110-ACCEPT",
+                      "revision": "1",
+                      "type": "human",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "docs/DAD_HIGH_VALUE_RECOVERY_FREEZE.md",
+                        "AGENTS.md",
+                        ".digital-asset/key-values/change-log.jsonl"
+                      ],
+                      "command": "not-applicable",
+                      "rubric": "Verify the job packet acceptance criteria, source authority, privacy, independence, and complete evidence reconciliation.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/phase-1/J-110-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-110"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "CI and enforcement recovery",
+      "depends_on": [
+        "P1"
+      ],
+      "waves": [
+        {
+          "id": "P2-W1",
+          "title": "Local regression and protected-path truth",
+          "depends_on": [
+            "P1-W1"
+          ],
+          "subwaves": [
+            {
+              "id": "P2-W1-S1",
+              "title": "Repair then bind enforcement",
+              "depends_on": [
+                "P1-W1-S1"
+              ],
+              "jobs": [
+                {
+                  "id": "J-200",
+                  "title": "Repair local and scheduled regression failures",
+                  "objective": "Fix refreshed root causes with sensitive regression tests and no weakened assertions.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-110"
+                  ],
+                  "dependency_digests": {
+                    "J-110": "receipt-digest:resolve-after-J-110-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/02_CI_AND_ENFORCEMENT_RECOVERY.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-200_REPAIR_LOCAL_AND_SCHEDULED_REGRESSION.md",
+                    ".github/workflows/scheduled-full-regression.yml"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/02_CI_AND_ENFORCEMENT_RECOVERY.md": "sha256:cfc67c4c12832742cfd2db6e84b1e7c1cd93769bf2a62bfeb02bdc9a09a44a7d",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-200_REPAIR_LOCAL_AND_SCHEDULED_REGRESSION.md": "sha256:cf0e92193fdef7a5d5e1b9a9448aee3638b524daef98e68321cde9b0fca0f4d4",
+                    ".github/workflows/scheduled-full-regression.yml": "sha256:f2cdb8bdb3c82b95f2c03379327ac00cbf1856054c3a9f81952cd43a8edbcbbd"
+                  },
+                  "outputs": [
+                    ".github/workflows/scheduled-full-regression.yml",
+                    "src/digital_asset_directory/",
+                    "tests/"
+                  ],
+                  "allowed_paths": [
+                    ".github/workflows/scheduled-full-regression.yml",
+                    "src/digital_asset_directory/",
+                    "tests/"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "bounded-writer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "root-cause debugging",
+                    "regression-test authoring",
+                    "Python and workflow validation"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/bounded-writer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-200:r1",
+                  "lease_minutes": 180,
+                  "heartbeat_minutes": 20,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-200.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-200.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-200",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": true,
+                  "acceptance": [
+                    {
+                      "id": "G-J-200-ACCEPT",
+                      "revision": "1",
+                      "type": "deterministic",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        ".github/workflows/scheduled-full-regression.yml",
+                        "src/digital_asset_directory/",
+                        "tests/"
+                      ],
+                      "command": "python -m pytest",
+                      "rubric": "Verify the job packet acceptance criteria, source authority, privacy, independence, and complete evidence reconciliation.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/phase-2/J-200-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-200"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "J-210",
+                  "title": "Bind required checks and branch protection",
+                  "objective": "Make required failures fail the aggregate and protected path with authoritative remote evidence.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-200"
+                  ],
+                  "dependency_digests": {
+                    "J-200": "receipt-digest:resolve-after-J-200-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/02_CI_AND_ENFORCEMENT_RECOVERY.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-210_BIND_REQUIRED_CHECKS_AND_PROTECTION.md",
+                    ".github/workflows/dad-contract-check.yml"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/02_CI_AND_ENFORCEMENT_RECOVERY.md": "sha256:cfc67c4c12832742cfd2db6e84b1e7c1cd93769bf2a62bfeb02bdc9a09a44a7d",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-210_BIND_REQUIRED_CHECKS_AND_PROTECTION.md": "sha256:0aceede50d17b7b1e45013e46b67e6b4365482b733ff28dbaea110357ec6f6d9",
+                    ".github/workflows/dad-contract-check.yml": "sha256:b8bf439b3de8981aa52825fdae7672c7d7df1f575525453ee0305c81c2bc2971"
+                  },
+                  "outputs": [
+                    ".github/workflows/dad-contract-check.yml",
+                    ".github/workflows/validate.yml",
+                    ".ci/module-boundaries.yaml",
+                    "tests/test_ci_module_boundaries.py",
+                    "processed/reports/dad-high-value-recovery/branch-protection-change.json"
+                  ],
+                  "allowed_paths": [
+                    ".github/workflows/dad-contract-check.yml",
+                    ".github/workflows/validate.yml",
+                    ".ci/module-boundaries.yaml",
+                    "tests/test_ci_module_boundaries.py",
+                    "processed/reports/dad-high-value-recovery/branch-protection-change.json"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "bounded-writer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "GitHub Actions contract design",
+                    "branch-protection evidence review",
+                    "failure-injection testing"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/bounded-writer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-210:r1",
+                  "lease_minutes": 180,
+                  "heartbeat_minutes": 20,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-210.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-210.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-210",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": false,
+                  "acceptance": [
+                    {
+                      "id": "G-J-210-ACCEPT",
+                      "revision": "2",
+                      "type": "external-state",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        ".github/workflows/dad-contract-check.yml",
+                        ".github/workflows/validate.yml",
+                        ".ci/module-boundaries.yaml",
+                        "tests/test_ci_module_boundaries.py",
+                        "processed/reports/dad-high-value-recovery/branch-protection-change.json"
+                      ],
+                      "command": "not-applicable",
+                      "rubric": "Verify a deliberate failure blocks the protected path, protection matches H-004, and two immediate accepted-head runs pass. Calendar stability is owned only by J-215.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/phase-2/J-210-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-210"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "J-215",
+                  "title": "Observe four-week CI stability",
+                  "objective": "Observe four consecutive naturally scheduled weekly runs on accepted workflow and protection revisions while non-overlapping local recovery continues.",
+                  "non_goals": [
+                    "manually rerun or substitute an unfavorable scheduled result",
+                    "publish, merge, deploy, or change external settings without exact approval",
+                    "busy-poll unchanged external state"
+                  ],
+                  "depends_on": [
+                    "J-210"
+                  ],
+                  "dependency_digests": {
+                    "J-210": "receipt-digest:resolve-after-J-210-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/02_CI_AND_ENFORCEMENT_RECOVERY.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-215_OBSERVE_FOUR_WEEK_CI_STABILITY.md",
+                    ".github/workflows/dad-contract-check.yml"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/02_CI_AND_ENFORCEMENT_RECOVERY.md": "sha256:cfc67c4c12832742cfd2db6e84b1e7c1cd93769bf2a62bfeb02bdc9a09a44a7d",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-215_OBSERVE_FOUR_WEEK_CI_STABILITY.md": "sha256:d233cfc900e4ec3864f95e2ef452a3932e2bd20f17158fdedc314bbf59bb027d",
+                    ".github/workflows/dad-contract-check.yml": "sha256:b8bf439b3de8981aa52825fdae7672c7d7df1f575525453ee0305c81c2bc2971"
+                  },
+                  "outputs": [
+                    "processed/reports/dad-high-value-recovery/ci-stability-4-week.json",
+                    "processed/reports/dad-high-value-recovery/ci-stability-4-week.md"
+                  ],
+                  "allowed_paths": [
+                    "processed/reports/dad-high-value-recovery/ci-stability-4-week.json",
+                    "processed/reports/dad-high-value-recovery/ci-stability-4-week.md"
+                  ],
+                  "prohibited_actions": [
+                    "manually substitute a scheduled run",
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "ci-stability-observer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "GitHub Actions external-state observation",
+                    "accepted-head and protection-state reconciliation",
+                    "append-only evidence handling"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/ci-stability-observer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-215-cohort-gate:r2",
+                  "lease_minutes": 60,
+                  "heartbeat_minutes": 10,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 3,
+                  "time_ceiling_minutes": 60,
+                  "context_ceiling_tokens": 16000,
+                  "output_ceiling_mb": 10,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-215.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-215.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-215",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": false,
+                  "observation_execution": {
+                    "schema_version": "dad.campaign.scheduled_observation_slots.v1",
+                    "parent_semantics": "four-run-reconciliation-gate-only",
+                    "controller_max_concurrency": 1,
+                    "natural_schedule_only": true,
+                    "manual_substitution_allowed": false,
+                    "slots": [
+                      {
+                        "observation_id": "J-215-O01",
+                        "sequence": 1,
+                        "depends_on": [
+                          "J-210"
+                        ],
+                        "run_binding": "bind-authoritative-scheduled-run-id-at-observation",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-215-O01:{scheduled_run_id}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/ci/J-215-O01.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/ci/J-215-O01.receipts.jsonl",
+                        "lease_minutes": 60,
+                        "heartbeat_minutes": 10,
+                        "reissue_rule": "Reconcile run ID, current workflow/protection digests, effects, and prior receipt before any reissue."
+                      },
+                      {
+                        "observation_id": "J-215-O02",
+                        "sequence": 2,
+                        "depends_on": [
+                          "J-215-O01"
+                        ],
+                        "run_binding": "bind-authoritative-scheduled-run-id-at-observation",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-215-O02:{scheduled_run_id}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/ci/J-215-O02.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/ci/J-215-O02.receipts.jsonl",
+                        "lease_minutes": 60,
+                        "heartbeat_minutes": 10,
+                        "reissue_rule": "Reconcile run ID, current workflow/protection digests, effects, and prior receipt before any reissue."
+                      },
+                      {
+                        "observation_id": "J-215-O03",
+                        "sequence": 3,
+                        "depends_on": [
+                          "J-215-O02"
+                        ],
+                        "run_binding": "bind-authoritative-scheduled-run-id-at-observation",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-215-O03:{scheduled_run_id}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/ci/J-215-O03.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/ci/J-215-O03.receipts.jsonl",
+                        "lease_minutes": 60,
+                        "heartbeat_minutes": 10,
+                        "reissue_rule": "Reconcile run ID, current workflow/protection digests, effects, and prior receipt before any reissue."
+                      },
+                      {
+                        "observation_id": "J-215-O04",
+                        "sequence": 4,
+                        "depends_on": [
+                          "J-215-O03"
+                        ],
+                        "run_binding": "bind-authoritative-scheduled-run-id-at-observation",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-215-O04:{scheduled_run_id}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/ci/J-215-O04.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/ci/J-215-O04.receipts.jsonl",
+                        "lease_minutes": 60,
+                        "heartbeat_minutes": 10,
+                        "reissue_rule": "Reconcile run ID, current workflow/protection digests, effects, and prior receipt before any reissue."
+                      }
+                    ]
+                  },
+                  "acceptance": [
+                    {
+                      "id": "G-J-215-ACCEPT",
+                      "revision": "1",
+                      "type": "external-state",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "processed/reports/dad-high-value-recovery/ci-stability-4-week.json",
+                        "processed/reports/dad-high-value-recovery/ci-stability-4-week.md"
+                      ],
+                      "command": "not-applicable",
+                      "rubric": "Verify four consecutive naturally scheduled weekly passes on accepted heads and protection state, with authoritative run URLs, no failed/missing/skipped/stale required child, and no manual substitution.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/phase-2/J-215-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-215"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "workflow, protection, required-context, or accepted-head change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Outcome contract and data repair",
+      "depends_on": [
+        "J-210"
+      ],
+      "waves": [
+        {
+          "id": "P3-W1",
+          "title": "Value-spine integrity",
+          "depends_on": [
+            "J-210"
+          ],
+          "subwaves": [
+            {
+              "id": "P3-W1-S1",
+              "title": "Contract, legacy classification, and yield",
+              "depends_on": [
+                "J-210"
+              ],
+              "jobs": [
+                {
+                  "id": "J-300",
+                  "title": "Enforce recommendation outcome contract",
+                  "objective": "Validate recommendation membership, revisions, adoption closure, enums, idempotency, and checker independence.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-210"
+                  ],
+                  "dependency_digests": {
+                    "J-210": "receipt-digest:resolve-after-J-210-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/03_OUTCOME_CONTRACT_AND_DATA_REPAIR.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-300_ENFORCE_RECOMMENDATION_OUTCOME_CONTRACT.md",
+                    "schemas/repo-asset-usage.schema.json",
+                    "schemas/capability-recommendation.schema.json",
+                    "schemas/workflow-run-event.schema.json",
+                    "src/digital_asset_directory/dad_library.py"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/03_OUTCOME_CONTRACT_AND_DATA_REPAIR.md": "sha256:ed1b7da561e52c41e941e25aa7eb21f2cf4283052d525401053d160155d0edee",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-300_ENFORCE_RECOMMENDATION_OUTCOME_CONTRACT.md": "sha256:c78bf39aaebc2394beda5a83160adfad7f84828bc8abdc63a1eb1f968d9ee77e",
+                    "schemas/repo-asset-usage.schema.json": "sha256:2ddb59db6eff19641aac0ed61a0facc6667210b152634724aeae6ed679198561",
+                    "schemas/capability-recommendation.schema.json": "sha256:d02c2d08e1cd4821950ae84419b11fa949114a1332529ee73f979614f2deffda",
+                    "schemas/workflow-run-event.schema.json": "sha256:1373b2d620fb161c95bacefa77e27473a8aa5d89515c3ecb9058b7955af9a65a",
+                    "src/digital_asset_directory/dad_library.py": "sha256:2b6cf285c87970d66af00d26b63ff6123fb9d9d8e0ba120202446210aa07a75b"
+                  },
+                  "outputs": [
+                    "schemas/repo-asset-usage.schema.json",
+                    "schemas/capability-recommendation.schema.json",
+                    "schemas/workflow-run-event.schema.json",
+                    "schemas/dad-pipeline-event.schema.json",
+                    "src/digital_asset_directory/dad_library.py",
+                    "src/digital_asset_directory/event_pipeline.py",
+                    "tests/test_dad_library_control_plane.py",
+                    "tests/test_event_pipeline.py",
+                    "registry/schema-registry.json",
+                    ".digital-asset/key-values/change-log.jsonl"
+                  ],
+                  "allowed_paths": [
+                    "schemas/repo-asset-usage.schema.json",
+                    "schemas/capability-recommendation.schema.json",
+                    "schemas/workflow-run-event.schema.json",
+                    "schemas/dad-pipeline-event.schema.json",
+                    "src/digital_asset_directory/dad_library.py",
+                    "src/digital_asset_directory/event_pipeline.py",
+                    "tests/test_dad_library_control_plane.py",
+                    "tests/test_event_pipeline.py",
+                    "registry/schema-registry.json",
+                    ".digital-asset/key-values/change-log.jsonl"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "bounded-writer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "schema evolution",
+                    "data-flow validation",
+                    "idempotency and negative-fixture testing"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/bounded-writer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-300:r1",
+                  "lease_minutes": 180,
+                  "heartbeat_minutes": 20,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-300.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-300.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-300",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": true,
+                  "acceptance": [
+                    {
+                      "id": "G-J-300-ACCEPT",
+                      "revision": "1",
+                      "type": "deterministic",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "schemas/repo-asset-usage.schema.json",
+                        "schemas/capability-recommendation.schema.json",
+                        "schemas/workflow-run-event.schema.json",
+                        "schemas/dad-pipeline-event.schema.json",
+                        "src/digital_asset_directory/dad_library.py",
+                        "src/digital_asset_directory/event_pipeline.py",
+                        "tests/test_dad_library_control_plane.py",
+                        "tests/test_event_pipeline.py",
+                        "registry/schema-registry.json",
+                        ".digital-asset/key-values/change-log.jsonl"
+                      ],
+                      "command": "python -m pytest tests/test_dad_library_control_plane.py tests/test_event_pipeline.py",
+                      "rubric": "Verify the job packet acceptance criteria, source authority, privacy, independence, and complete evidence reconciliation.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/phase-3/J-300-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-300"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "J-310",
+                  "title": "Classify and quarantine legacy outcomes",
+                  "objective": "Classify every historical outcome joinable, invalid, or unknown while proving raw-source zero-write.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-300"
+                  ],
+                  "dependency_digests": {
+                    "J-300": "receipt-digest:resolve-after-J-300-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/03_OUTCOME_CONTRACT_AND_DATA_REPAIR.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-310_CLASSIFY_AND_QUARANTINE_LEGACY_OUTCOMES.md"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/03_OUTCOME_CONTRACT_AND_DATA_REPAIR.md": "sha256:ed1b7da561e52c41e941e25aa7eb21f2cf4283052d525401053d160155d0edee",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-310_CLASSIFY_AND_QUARANTINE_LEGACY_OUTCOMES.md": "sha256:1ee6685a8fa413d1badd945c8bdf90d50c2c1fed04eb20e4cc679de7ae07ab16"
+                  },
+                  "outputs": [
+                    "src/digital_asset_directory/dad_library.py",
+                    "tests/test_dad_library_control_plane.py",
+                    "processed/reports/dad-high-value-recovery/legacy-outcome-classification.json",
+                    "processed/reports/dad-high-value-recovery/legacy-outcome-classification.md"
+                  ],
+                  "allowed_paths": [
+                    "src/digital_asset_directory/dad_library.py",
+                    "tests/test_dad_library_control_plane.py",
+                    "processed/reports/dad-high-value-recovery/legacy-outcome-classification.json",
+                    "processed/reports/dad-high-value-recovery/legacy-outcome-classification.md"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "bounded-writer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "deterministic migration overlays",
+                    "data reconciliation",
+                    "zero-write verification"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/bounded-writer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-310:r1",
+                  "lease_minutes": 120,
+                  "heartbeat_minutes": 15,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-310.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-310.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-310",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": true,
+                  "acceptance": [
+                    {
+                      "id": "G-J-310-ACCEPT",
+                      "revision": "1",
+                      "type": "deterministic",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "src/digital_asset_directory/dad_library.py",
+                        "tests/test_dad_library_control_plane.py",
+                        "processed/reports/dad-high-value-recovery/legacy-outcome-classification.json",
+                        "processed/reports/dad-high-value-recovery/legacy-outcome-classification.md"
+                      ],
+                      "command": "python -m pytest tests/test_dad_library_control_plane.py",
+                      "rubric": "Verify the job packet acceptance criteria, source authority, privacy, independence, and complete evidence reconciliation.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/phase-3/J-310-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-310"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "J-320",
+                  "title": "Correct learning yield semantics",
+                  "objective": "Count actual written, reused, promoted, failed, and harmful events with transparent exclusions.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-310"
+                  ],
+                  "dependency_digests": {
+                    "J-310": "receipt-digest:resolve-after-J-310-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/03_OUTCOME_CONTRACT_AND_DATA_REPAIR.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-320_CORRECT_LEARNING_YIELD_SEMANTICS.md",
+                    "src/digital_asset_directory/learning_yield_report.py"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/03_OUTCOME_CONTRACT_AND_DATA_REPAIR.md": "sha256:ed1b7da561e52c41e941e25aa7eb21f2cf4283052d525401053d160155d0edee",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-320_CORRECT_LEARNING_YIELD_SEMANTICS.md": "sha256:02f0439fbee6666b9c8be7ff1a06e834d4f106f708c938ac9effb0b585b70d3e",
+                    "src/digital_asset_directory/learning_yield_report.py": "sha256:26ccc2e80a8ac325b6c87e4ef81275c4d995efa023a000c3fea0ba5292c5273b"
+                  },
+                  "outputs": [
+                    "src/digital_asset_directory/learning_yield_report.py",
+                    "tests/test_learning_yield_report.py",
+                    "processed/reports/dad-high-value-recovery/learning-yield.json",
+                    "processed/reports/dad-high-value-recovery/learning-yield.md"
+                  ],
+                  "allowed_paths": [
+                    "src/digital_asset_directory/learning_yield_report.py",
+                    "tests/test_learning_yield_report.py",
+                    "processed/reports/dad-high-value-recovery/learning-yield.json",
+                    "processed/reports/dad-high-value-recovery/learning-yield.md"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "bounded-writer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "event-semantic mapping",
+                    "aggregate reconciliation",
+                    "golden-fixture testing"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/bounded-writer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-320:r1",
+                  "lease_minutes": 120,
+                  "heartbeat_minutes": 15,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-320.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-320.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-320",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": true,
+                  "acceptance": [
+                    {
+                      "id": "G-J-320-ACCEPT",
+                      "revision": "1",
+                      "type": "deterministic",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "src/digital_asset_directory/learning_yield_report.py",
+                        "tests/test_learning_yield_report.py",
+                        "processed/reports/dad-high-value-recovery/learning-yield.json",
+                        "processed/reports/dad-high-value-recovery/learning-yield.md"
+                      ],
+                      "command": "python -m pytest tests/test_learning_yield_report.py",
+                      "rubric": "Verify the job packet acceptance criteria, source authority, privacy, independence, and complete evidence reconciliation.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/phase-3/J-320-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-320"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P4",
+      "title": "Operator backlog and lifecycle recovery",
+      "depends_on": [
+        "P3"
+      ],
+      "waves": [
+        {
+          "id": "P4-W1",
+          "title": "Operational closure and runtime truth",
+          "depends_on": [
+            "P3-W1"
+          ],
+          "subwaves": [
+            {
+              "id": "P4-W1-S1",
+              "title": "Debt closure then health reconciliation",
+              "depends_on": [
+                "P3-W1-S1"
+              ],
+              "jobs": [
+                {
+                  "id": "J-400",
+                  "title": "Close operational and workspace debt",
+                  "objective": "Build one read-only deduplicated review projection and reach pilot-readiness thresholds without inferred cleanup authority.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-320",
+                    "J-100"
+                  ],
+                  "dependency_digests": {
+                    "J-320": "receipt-digest:resolve-after-J-320-acceptance",
+                    "J-100": "receipt-digest:resolve-after-J-100-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/04_OPERATOR_BACKLOG_AND_LIFECYCLE_RECOVERY.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-400_CLOSE_OPERATIONAL_AND_WORKSPACE_DEBT.md",
+                    "src/digital_asset_directory/agent_session_reaper.py",
+                    "src/digital_asset_directory/lifecycle_janitor.py",
+                    "processed/reports/dad-high-value-recovery/operational-eligibility-baseline.json"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/04_OPERATOR_BACKLOG_AND_LIFECYCLE_RECOVERY.md": "sha256:a619ccf8e8c5e401b4a10a4a56ece22d46ab1757dbc589dabd2147dbdcf22dbe",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-400_CLOSE_OPERATIONAL_AND_WORKSPACE_DEBT.md": "sha256:8155e7fac2be2ff2e349ee484798dbf6bf3606a672170694f12c399b6154d595",
+                    "src/digital_asset_directory/agent_session_reaper.py": "sha256:8c8e2411c060957f1ee2b154049165f15987ef39c38385d1a28e53ee7ed0795c",
+                    "src/digital_asset_directory/lifecycle_janitor.py": "sha256:c7a43efe3b63a01c80897198681a7f82d3ddc1701ac91e20fd97d708d2ad2387",
+                    "processed/reports/dad-high-value-recovery/operational-eligibility-baseline.json": "receipt-bound-output-digest:resolve-from-accepted-J-100"
+                  },
+                  "outputs": [
+                    "processed/reports/dad-high-value-recovery/operator-backlog.json",
+                    "processed/reports/dad-high-value-recovery/operator-backlog.md"
+                  ],
+                  "allowed_paths": [
+                    "processed/reports/dad-high-value-recovery/operator-backlog.json",
+                    "processed/reports/dad-high-value-recovery/operator-backlog.md"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "bounded-writer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "lifecycle inventory",
+                    "safe deduplication",
+                    "human-attention projection"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/bounded-writer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-400:r1",
+                  "lease_minutes": 180,
+                  "heartbeat_minutes": 20,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-400.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-400.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-400",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": false,
+                  "acceptance": [
+                    {
+                      "id": "G-J-400-ACCEPT",
+                      "revision": "2",
+                      "type": "independent",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "processed/reports/dad-high-value-recovery/operational-eligibility-baseline.json",
+                        "processed/reports/dad-high-value-recovery/operator-backlog.json",
+                        "processed/reports/dad-high-value-recovery/operator-backlog.md"
+                      ],
+                      "command": "not-applicable",
+                      "rubric": "Verify Phase 04 thresholds against the frozen Phase 01 eligible population plus append-only arrivals, with reason-code reconciliation, source-zero-write proof, no post-hoc denominator shrinkage, and no unauthorized lifecycle effect.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/phase-4/J-400-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-400"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "J-410",
+                  "title": "Reconcile daemon journal and task health",
+                  "objective": "Make stale, missing, or contradictory runtime sources render non-green.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-400"
+                  ],
+                  "dependency_digests": {
+                    "J-400": "receipt-digest:resolve-after-J-400-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/04_OPERATOR_BACKLOG_AND_LIFECYCLE_RECOVERY.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-410_RECONCILE_DAEMON_JOURNAL_AND_TASK_HEALTH.md",
+                    "src/digital_asset_directory/daemon.py"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/04_OPERATOR_BACKLOG_AND_LIFECYCLE_RECOVERY.md": "sha256:a619ccf8e8c5e401b4a10a4a56ece22d46ab1757dbc589dabd2147dbdcf22dbe",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-410_RECONCILE_DAEMON_JOURNAL_AND_TASK_HEALTH.md": "sha256:3c9c8198fb737961098cd5e9b3231c790ec05e813e1b99ff6e89e1d8498dffa5",
+                    "src/digital_asset_directory/daemon.py": "sha256:df3ad439421ba84c7d4a8685bf2bca82103e28fe657b247162f5f687126ecc7d"
+                  },
+                  "outputs": [
+                    "src/digital_asset_directory/daemon.py",
+                    "src/digital_asset_directory/journal.py",
+                    "src/digital_asset_directory/transport_readiness.py",
+                    "tests/test_transport.py",
+                    "processed/reports/dad-high-value-recovery/runtime-health.json"
+                  ],
+                  "allowed_paths": [
+                    "src/digital_asset_directory/daemon.py",
+                    "src/digital_asset_directory/journal.py",
+                    "src/digital_asset_directory/transport_readiness.py",
+                    "tests/test_transport.py",
+                    "processed/reports/dad-high-value-recovery/runtime-health.json"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "bounded-writer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "health-state modeling",
+                    "fault-injection testing",
+                    "Windows task evidence reconciliation"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/bounded-writer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-410:r1",
+                  "lease_minutes": 120,
+                  "heartbeat_minutes": 15,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-410.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-410.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-410",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": true,
+                  "acceptance": [
+                    {
+                      "id": "G-J-410-ACCEPT",
+                      "revision": "1",
+                      "type": "deterministic",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "src/digital_asset_directory/daemon.py",
+                        "src/digital_asset_directory/journal.py",
+                        "src/digital_asset_directory/transport_readiness.py",
+                        "tests/test_transport.py",
+                        "processed/reports/dad-high-value-recovery/runtime-health.json"
+                      ],
+                      "command": "python -m pytest tests/test_transport.py",
+                      "rubric": "Verify the job packet acceptance criteria, source authority, privacy, independence, and complete evidence reconciliation.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/phase-4/J-410-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-410"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P5",
+      "title": "Three-workflow real-task pilot",
+      "depends_on": [
+        "P4",
+        "J-215"
+      ],
+      "waves": [
+        {
+          "id": "P5-W1",
+          "title": "Frozen protocol and staged pilot",
+          "depends_on": [
+            "P4-W1",
+            "J-215"
+          ],
+          "subwaves": [
+            {
+              "id": "P5-W1-S1",
+              "title": "Protocol, 10-task, 20-task, and 40-task gates",
+              "depends_on": [
+                "P4-W1-S1",
+                "J-215"
+              ],
+              "jobs": [
+                {
+                  "id": "J-500",
+                  "title": "Freeze pilot protocol and cases",
+                  "objective": "Freeze primary metric, cohorts, assignments, eligibility, privacy, and stops before outcomes.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-410",
+                    "J-215"
+                  ],
+                  "dependency_digests": {
+                    "J-410": "receipt-digest:resolve-after-J-410-acceptance",
+                    "J-215": "receipt-digest:resolve-after-J-215-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-500_FREEZE_PILOT_PROTOCOL_AND_CASES.md"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md": "sha256:b8337fa243339563cfd4f68c22429e0405d9792a7b1b70e38cabee4cb72f3611",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-500_FREEZE_PILOT_PROTOCOL_AND_CASES.md": "sha256:336cbf0758406b5572f6b52deb01bab1b402f40ba394d68e80f4a96b4d46a880"
+                  },
+                  "outputs": [
+                    "processed/reports/dad-high-value-recovery/pilot-protocol.json",
+                    "processed/reports/dad-high-value-recovery/pilot-protocol.md",
+                    "processed/reports/dad-high-value-recovery/pilot-case-bank.json",
+                    "processed/reports/dad-high-value-recovery/pilot-case-bindings.json"
+                  ],
+                  "allowed_paths": [
+                    "processed/reports/dad-high-value-recovery/pilot-protocol.json",
+                    "processed/reports/dad-high-value-recovery/pilot-protocol.md",
+                    "processed/reports/dad-high-value-recovery/pilot-case-bank.json",
+                    "processed/reports/dad-high-value-recovery/pilot-case-bindings.json"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "pilot-designer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "evaluation design",
+                    "cohort and metric freezing",
+                    "privacy and authority scoping"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/pilot-designer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-500:r1",
+                  "lease_minutes": 120,
+                  "heartbeat_minutes": 15,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-500.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-500.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-500",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": false,
+                  "acceptance": [
+                    {
+                      "id": "G-J-500-ACCEPT",
+                      "revision": "2",
+                      "type": "human",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "processed/reports/dad-high-value-recovery/pilot-protocol.json",
+                        "processed/reports/dad-high-value-recovery/pilot-protocol.md",
+                        "processed/reports/dad-high-value-recovery/pilot-case-bank.json",
+                        "processed/reports/dad-high-value-recovery/pilot-case-bindings.json"
+                      ],
+                      "command": "not-applicable",
+                      "rubric": "Verify H-005 through H-007, one frozen primary estimator/denominator/threshold schedule, minimum repo/slice/arm allocation, exact repo-local approvals, and 70 uniquely bound serial child slots with independent evaluation.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/J-500-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-500"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ],
+                  "pilot_metric_contract": {
+                    "success_rule": "Only the H-005 selected primary metric can satisfy P5B/P5C benefit. Predeclared secondary metrics cannot substitute.",
+                    "required_frozen_fields": [
+                      "metric_id",
+                      "direction",
+                      "estimator",
+                      "analysis_population",
+                      "denominator",
+                      "missing_data_rule",
+                      "P5B_threshold",
+                      "P5C_threshold",
+                      "uncertainty_method"
+                    ],
+                    "default_thresholds": {
+                      "cycle_time": {
+                        "P5B": "median reduction >=20%",
+                        "P5C": "median reduction >=25%"
+                      },
+                      "rework": {
+                        "P5B": "repair attempts per completion reduction >=25%",
+                        "P5C": "reduction >=30%"
+                      },
+                      "review_iterations": {
+                        "P5B": "material cycles per completion reduction >=20%",
+                        "P5C": "reduction >=30%"
+                      },
+                      "defects_prevented": {
+                        "P5B": "at least 2 additional independently verified preventions versus matched baseline",
+                        "P5C": "at least 3 additional independently verified preventions versus matched baseline"
+                      },
+                      "operator_attention": {
+                        "P5B": "human minutes per verified completion reduction >=20%",
+                        "P5C": "reduction >=25%"
+                      }
+                    },
+                    "minimum_allocation": {
+                      "P5B": {
+                        "total": 20,
+                        "per_repo": 8,
+                        "per_selected_slice": 6,
+                        "per_arm_or_completed_pairs": 8
+                      },
+                      "P5C": {
+                        "total": 40,
+                        "per_repo": 10,
+                        "per_selected_slice": 8,
+                        "per_arm_or_completed_pairs": 16
+                      }
+                    },
+                    "anti_goodhart": [
+                      "all eligible cases stay in the primary analysis population unless a frozen pre-result exclusion applies",
+                      "no metric, estimator, denominator, arm, slice, difficulty, or eligibility recoding after outcome visibility",
+                      "below 2 percent harm requires zero confirmed harmful cases for cohorts smaller than 50"
+                    ]
+                  }
+                },
+                {
+                  "id": "J-510",
+                  "title": "Run ten-task shadow calibration",
+                  "objective": "Reconcile ten individually leased atomic real-case children and verify envelope closure without a value claim.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-500"
+                  ],
+                  "dependency_digests": {
+                    "J-500": "receipt-digest:resolve-after-J-500-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-510_RUN_10_TASK_SHADOW_CALIBRATION.md"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md": "sha256:b8337fa243339563cfd4f68c22429e0405d9792a7b1b70e38cabee4cb72f3611",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-510_RUN_10_TASK_SHADOW_CALIBRATION.md": "sha256:767492993864057233ebd6d7ecea2f9f9ac63b49c5b55e28e21a7b53cd0ca252"
+                  },
+                  "outputs": [
+                    "processed/reports/dad-high-value-recovery/pilot-cases-shadow-10.jsonl",
+                    "processed/reports/dad-high-value-recovery/pilot-shadow-10.json",
+                    "processed/reports/dad-high-value-recovery/pilot-shadow-10.md"
+                  ],
+                  "allowed_paths": [
+                    "processed/reports/dad-high-value-recovery/pilot-cases-shadow-10.jsonl",
+                    "processed/reports/dad-high-value-recovery/pilot-shadow-10.json",
+                    "processed/reports/dad-high-value-recovery/pilot-shadow-10.md"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "pilot-producer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "bounded case execution",
+                    "outcome-envelope capture",
+                    "independent final-state verification"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/pilot-producer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-510-cohort-gate:r2",
+                  "lease_minutes": 180,
+                  "heartbeat_minutes": 20,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-510.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-510.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-510",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": false,
+                  "acceptance": [
+                    {
+                      "id": "G-J-510-ACCEPT",
+                      "revision": "2",
+                      "type": "independent",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "processed/reports/dad-high-value-recovery/pilot-cases-shadow-10.jsonl",
+                        "processed/reports/dad-high-value-recovery/pilot-shadow-10.json",
+                        "processed/reports/dad-high-value-recovery/pilot-shadow-10.md"
+                      ],
+                      "command": "not-applicable",
+                      "rubric": "Verify ten unique bound atomic child receipts, 100% valid envelopes, reproducible metrics, negative cases, no duplicate/rebind/whole-cohort lease, and no value claim.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/J-510-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-510"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ],
+                  "case_execution": {
+                    "schema_version": "dad.campaign.atomic_case_slots.v1",
+                    "parent_semantics": "cohort-reconciliation-gate-only",
+                    "binding_job": "J-500",
+                    "binding_table": "processed/reports/dad-high-value-recovery/pilot-case-bindings.json",
+                    "binding_gate": "G-J-500-ACCEPT",
+                    "controller_max_concurrency": 1,
+                    "child_owner_role": "pilot-producer",
+                    "child_checker_role": "independent-checker",
+                    "lease_minutes_per_child": 90,
+                    "heartbeat_minutes_per_child": 15,
+                    "max_attempts_per_child": 2,
+                    "repair_limit_per_child": 1,
+                    "cost_ceiling_per_child": 1,
+                    "output_ceiling_mb_per_child": 2,
+                    "binding_rule": "Before a lease, case_binding must be a SHA-256 case digest signed in the accepted J-500 binding table; rebinding after first lease is terminal.",
+                    "reissue_rule": "Expire the lease, reconcile source/effects/checkpoint/receipt by idempotency key, then reissue only the same slot and case digest.",
+                    "child_acceptance": {
+                      "revision": "1",
+                      "evidence_path_template": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/{job_id}-acceptance.json",
+                      "revalidation_triggers": [
+                        "case binding or binding-table digest change",
+                        "prior dependency receipt change",
+                        "source, adapter, authority, or validator revision change"
+                      ]
+                    },
+                    "slots": [
+                      {
+                        "job_id": "J-510-C01",
+                        "sequence": 1,
+                        "depends_on": [
+                          "J-500"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-510-C01:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C01.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C01.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-510-C02",
+                        "sequence": 2,
+                        "depends_on": [
+                          "J-510-C01"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-510-C02:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C02.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C02.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-510-C03",
+                        "sequence": 3,
+                        "depends_on": [
+                          "J-510-C02"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-510-C03:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C03.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C03.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-510-C04",
+                        "sequence": 4,
+                        "depends_on": [
+                          "J-510-C03"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-510-C04:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C04.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C04.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-510-C05",
+                        "sequence": 5,
+                        "depends_on": [
+                          "J-510-C04"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-510-C05:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C05.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C05.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-510-C06",
+                        "sequence": 6,
+                        "depends_on": [
+                          "J-510-C05"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-510-C06:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C06.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C06.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-510-C07",
+                        "sequence": 7,
+                        "depends_on": [
+                          "J-510-C06"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-510-C07:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C07.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C07.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-510-C08",
+                        "sequence": 8,
+                        "depends_on": [
+                          "J-510-C07"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-510-C08:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C08.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C08.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-510-C09",
+                        "sequence": 9,
+                        "depends_on": [
+                          "J-510-C08"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-510-C09:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C09.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C09.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-510-C10",
+                        "sequence": 10,
+                        "depends_on": [
+                          "J-510-C09"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-510-C10:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C10.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-510/J-510-C10.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "J-520",
+                  "title": "Run twenty-task comparative pilot",
+                  "objective": "Reconcile at least twenty individually leased comparable real-case children and apply only the frozen H-005 P5B threshold.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-510"
+                  ],
+                  "dependency_digests": {
+                    "J-510": "receipt-digest:resolve-after-J-510-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-520_RUN_20_TASK_COMPARATIVE_PILOT.md"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md": "sha256:b8337fa243339563cfd4f68c22429e0405d9792a7b1b70e38cabee4cb72f3611",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-520_RUN_20_TASK_COMPARATIVE_PILOT.md": "sha256:ab139a5194415e85802d0cbec6e879174c8bae306c805522edbbe77fbee240dd"
+                  },
+                  "outputs": [
+                    "processed/reports/dad-high-value-recovery/pilot-cases-comparison-20.jsonl",
+                    "processed/reports/dad-high-value-recovery/pilot-comparison-20.json",
+                    "processed/reports/dad-high-value-recovery/pilot-comparison-20.md"
+                  ],
+                  "allowed_paths": [
+                    "processed/reports/dad-high-value-recovery/pilot-cases-comparison-20.jsonl",
+                    "processed/reports/dad-high-value-recovery/pilot-comparison-20.json",
+                    "processed/reports/dad-high-value-recovery/pilot-comparison-20.md"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "pilot-producer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "comparative evaluation execution",
+                    "statistical and operational reconciliation",
+                    "counterevidence reporting"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/pilot-producer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-520-cohort-gate:r2",
+                  "lease_minutes": 180,
+                  "heartbeat_minutes": 20,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-520.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-520.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-520",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": false,
+                  "acceptance": [
+                    {
+                      "id": "G-J-520-ACCEPT",
+                      "revision": "2",
+                      "type": "independent",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "processed/reports/dad-high-value-recovery/pilot-cases-comparison-20.jsonl",
+                        "processed/reports/dad-high-value-recovery/pilot-comparison-20.json",
+                        "processed/reports/dad-high-value-recovery/pilot-comparison-20.md"
+                      ],
+                      "command": "not-applicable",
+                      "rubric": "Verify twenty unique bound atomic child receipts, frozen primary population/allocation, the selected H-005 P5B threshold, every guardrail, exclusions, and cross-repo reuse evidence; no secondary metric may substitute.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/J-520-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-520"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ],
+                  "case_execution": {
+                    "schema_version": "dad.campaign.atomic_case_slots.v1",
+                    "parent_semantics": "cohort-reconciliation-gate-only",
+                    "binding_job": "J-500",
+                    "binding_table": "processed/reports/dad-high-value-recovery/pilot-case-bindings.json",
+                    "binding_gate": "G-J-500-ACCEPT",
+                    "controller_max_concurrency": 1,
+                    "child_owner_role": "pilot-producer",
+                    "child_checker_role": "independent-checker",
+                    "lease_minutes_per_child": 90,
+                    "heartbeat_minutes_per_child": 15,
+                    "max_attempts_per_child": 2,
+                    "repair_limit_per_child": 1,
+                    "cost_ceiling_per_child": 1,
+                    "output_ceiling_mb_per_child": 2,
+                    "binding_rule": "Before a lease, case_binding must be a SHA-256 case digest signed in the accepted J-500 binding table; rebinding after first lease is terminal.",
+                    "reissue_rule": "Expire the lease, reconcile source/effects/checkpoint/receipt by idempotency key, then reissue only the same slot and case digest.",
+                    "child_acceptance": {
+                      "revision": "1",
+                      "evidence_path_template": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/{job_id}-acceptance.json",
+                      "revalidation_triggers": [
+                        "case binding or binding-table digest change",
+                        "prior dependency receipt change",
+                        "source, adapter, authority, or validator revision change"
+                      ]
+                    },
+                    "slots": [
+                      {
+                        "job_id": "J-520-C01",
+                        "sequence": 1,
+                        "depends_on": [
+                          "J-510"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C01:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C01.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C01.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C02",
+                        "sequence": 2,
+                        "depends_on": [
+                          "J-520-C01"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C02:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C02.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C02.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C03",
+                        "sequence": 3,
+                        "depends_on": [
+                          "J-520-C02"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C03:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C03.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C03.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C04",
+                        "sequence": 4,
+                        "depends_on": [
+                          "J-520-C03"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C04:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C04.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C04.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C05",
+                        "sequence": 5,
+                        "depends_on": [
+                          "J-520-C04"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C05:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C05.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C05.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C06",
+                        "sequence": 6,
+                        "depends_on": [
+                          "J-520-C05"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C06:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C06.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C06.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C07",
+                        "sequence": 7,
+                        "depends_on": [
+                          "J-520-C06"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C07:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C07.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C07.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C08",
+                        "sequence": 8,
+                        "depends_on": [
+                          "J-520-C07"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C08:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C08.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C08.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C09",
+                        "sequence": 9,
+                        "depends_on": [
+                          "J-520-C08"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C09:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C09.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C09.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C10",
+                        "sequence": 10,
+                        "depends_on": [
+                          "J-520-C09"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C10:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C10.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C10.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C11",
+                        "sequence": 11,
+                        "depends_on": [
+                          "J-520-C10"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C11:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C11.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C11.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C12",
+                        "sequence": 12,
+                        "depends_on": [
+                          "J-520-C11"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C12:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C12.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C12.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C13",
+                        "sequence": 13,
+                        "depends_on": [
+                          "J-520-C12"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C13:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C13.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C13.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C14",
+                        "sequence": 14,
+                        "depends_on": [
+                          "J-520-C13"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C14:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C14.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C14.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C15",
+                        "sequence": 15,
+                        "depends_on": [
+                          "J-520-C14"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C15:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C15.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C15.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C16",
+                        "sequence": 16,
+                        "depends_on": [
+                          "J-520-C15"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C16:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C16.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C16.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C17",
+                        "sequence": 17,
+                        "depends_on": [
+                          "J-520-C16"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C17:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C17.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C17.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C18",
+                        "sequence": 18,
+                        "depends_on": [
+                          "J-520-C17"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C18:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C18.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C18.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C19",
+                        "sequence": 19,
+                        "depends_on": [
+                          "J-520-C18"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C19:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C19.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C19.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-520-C20",
+                        "sequence": 20,
+                        "depends_on": [
+                          "J-520-C19"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-520-C20:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C20.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-520/J-520-C20.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "J-530",
+                  "title": "Run forty-task value gate",
+                  "objective": "Reconcile at least forty individually leased real-case children and decide whether the frozen H-005 P5C value threshold passes.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-520"
+                  ],
+                  "dependency_digests": {
+                    "J-520": "receipt-digest:resolve-after-J-520-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-530_RUN_40_TASK_VALUE_GATE.md"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md": "sha256:b8337fa243339563cfd4f68c22429e0405d9792a7b1b70e38cabee4cb72f3611",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-530_RUN_40_TASK_VALUE_GATE.md": "sha256:f18582f1482df209c5347a9f3da06cd01a4f8842438f9d67182cd110079dfd4b"
+                  },
+                  "outputs": [
+                    "processed/reports/dad-high-value-recovery/pilot-cases-value-40.jsonl",
+                    "processed/reports/dad-high-value-recovery/pilot-value-gate-40.json",
+                    "processed/reports/dad-high-value-recovery/pilot-value-gate-40.md"
+                  ],
+                  "allowed_paths": [
+                    "processed/reports/dad-high-value-recovery/pilot-cases-value-40.jsonl",
+                    "processed/reports/dad-high-value-recovery/pilot-value-gate-40.json",
+                    "processed/reports/dad-high-value-recovery/pilot-value-gate-40.md"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "pilot-producer",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "multi-repo real-task evaluation",
+                    "independent harm and defect validation",
+                    "voluntary-use observation"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/pilot-producer.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-530-cohort-gate:r2",
+                  "lease_minutes": 180,
+                  "heartbeat_minutes": 20,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-530.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-530.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-530",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": false,
+                  "acceptance": [
+                    {
+                      "id": "G-J-530-ACCEPT",
+                      "revision": "2",
+                      "type": "independent",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "processed/reports/dad-high-value-recovery/pilot-cases-value-40.jsonl",
+                        "processed/reports/dad-high-value-recovery/pilot-value-gate-40.json",
+                        "processed/reports/dad-high-value-recovery/pilot-value-gate-40.md"
+                      ],
+                      "command": "not-applicable",
+                      "rubric": "Verify forty unique bound atomic real-case receipts, frozen repo/slice/arm allocation, three repos, two-week voluntary use, the selected H-005 P5C threshold, every guardrail, zero confirmed harm at this sample, and synthetic exclusion.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/J-530-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-530"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ],
+                  "case_execution": {
+                    "schema_version": "dad.campaign.atomic_case_slots.v1",
+                    "parent_semantics": "cohort-reconciliation-gate-only",
+                    "binding_job": "J-500",
+                    "binding_table": "processed/reports/dad-high-value-recovery/pilot-case-bindings.json",
+                    "binding_gate": "G-J-500-ACCEPT",
+                    "controller_max_concurrency": 1,
+                    "child_owner_role": "pilot-producer",
+                    "child_checker_role": "independent-checker",
+                    "lease_minutes_per_child": 90,
+                    "heartbeat_minutes_per_child": 15,
+                    "max_attempts_per_child": 2,
+                    "repair_limit_per_child": 1,
+                    "cost_ceiling_per_child": 1,
+                    "output_ceiling_mb_per_child": 2,
+                    "binding_rule": "Before a lease, case_binding must be a SHA-256 case digest signed in the accepted J-500 binding table; rebinding after first lease is terminal.",
+                    "reissue_rule": "Expire the lease, reconcile source/effects/checkpoint/receipt by idempotency key, then reissue only the same slot and case digest.",
+                    "child_acceptance": {
+                      "revision": "1",
+                      "evidence_path_template": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/{job_id}-acceptance.json",
+                      "revalidation_triggers": [
+                        "case binding or binding-table digest change",
+                        "prior dependency receipt change",
+                        "source, adapter, authority, or validator revision change"
+                      ]
+                    },
+                    "slots": [
+                      {
+                        "job_id": "J-530-C01",
+                        "sequence": 1,
+                        "depends_on": [
+                          "J-520"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C01:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C01.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C01.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C02",
+                        "sequence": 2,
+                        "depends_on": [
+                          "J-530-C01"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C02:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C02.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C02.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C03",
+                        "sequence": 3,
+                        "depends_on": [
+                          "J-530-C02"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C03:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C03.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C03.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C04",
+                        "sequence": 4,
+                        "depends_on": [
+                          "J-530-C03"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C04:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C04.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C04.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C05",
+                        "sequence": 5,
+                        "depends_on": [
+                          "J-530-C04"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C05:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C05.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C05.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C06",
+                        "sequence": 6,
+                        "depends_on": [
+                          "J-530-C05"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C06:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C06.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C06.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C07",
+                        "sequence": 7,
+                        "depends_on": [
+                          "J-530-C06"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C07:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C07.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C07.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C08",
+                        "sequence": 8,
+                        "depends_on": [
+                          "J-530-C07"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C08:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C08.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C08.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C09",
+                        "sequence": 9,
+                        "depends_on": [
+                          "J-530-C08"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C09:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C09.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C09.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C10",
+                        "sequence": 10,
+                        "depends_on": [
+                          "J-530-C09"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C10:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C10.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C10.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C11",
+                        "sequence": 11,
+                        "depends_on": [
+                          "J-530-C10"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C11:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C11.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C11.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C12",
+                        "sequence": 12,
+                        "depends_on": [
+                          "J-530-C11"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C12:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C12.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C12.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C13",
+                        "sequence": 13,
+                        "depends_on": [
+                          "J-530-C12"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C13:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C13.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C13.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C14",
+                        "sequence": 14,
+                        "depends_on": [
+                          "J-530-C13"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C14:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C14.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C14.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C15",
+                        "sequence": 15,
+                        "depends_on": [
+                          "J-530-C14"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C15:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C15.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C15.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C16",
+                        "sequence": 16,
+                        "depends_on": [
+                          "J-530-C15"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C16:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C16.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C16.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C17",
+                        "sequence": 17,
+                        "depends_on": [
+                          "J-530-C16"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C17:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C17.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C17.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C18",
+                        "sequence": 18,
+                        "depends_on": [
+                          "J-530-C17"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C18:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C18.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C18.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C19",
+                        "sequence": 19,
+                        "depends_on": [
+                          "J-530-C18"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C19:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C19.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C19.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C20",
+                        "sequence": 20,
+                        "depends_on": [
+                          "J-530-C19"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C20:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C20.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C20.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C21",
+                        "sequence": 21,
+                        "depends_on": [
+                          "J-530-C20"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C21:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C21.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C21.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C22",
+                        "sequence": 22,
+                        "depends_on": [
+                          "J-530-C21"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C22:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C22.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C22.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C23",
+                        "sequence": 23,
+                        "depends_on": [
+                          "J-530-C22"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C23:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C23.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C23.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C24",
+                        "sequence": 24,
+                        "depends_on": [
+                          "J-530-C23"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C24:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C24.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C24.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C25",
+                        "sequence": 25,
+                        "depends_on": [
+                          "J-530-C24"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C25:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C25.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C25.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C26",
+                        "sequence": 26,
+                        "depends_on": [
+                          "J-530-C25"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C26:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C26.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C26.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C27",
+                        "sequence": 27,
+                        "depends_on": [
+                          "J-530-C26"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C27:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C27.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C27.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C28",
+                        "sequence": 28,
+                        "depends_on": [
+                          "J-530-C27"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C28:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C28.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C28.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C29",
+                        "sequence": 29,
+                        "depends_on": [
+                          "J-530-C28"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C29:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C29.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C29.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C30",
+                        "sequence": 30,
+                        "depends_on": [
+                          "J-530-C29"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C30:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C30.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C30.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C31",
+                        "sequence": 31,
+                        "depends_on": [
+                          "J-530-C30"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C31:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C31.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C31.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C32",
+                        "sequence": 32,
+                        "depends_on": [
+                          "J-530-C31"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C32:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C32.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C32.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C33",
+                        "sequence": 33,
+                        "depends_on": [
+                          "J-530-C32"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C33:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C33.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C33.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C34",
+                        "sequence": 34,
+                        "depends_on": [
+                          "J-530-C33"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C34:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C34.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C34.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C35",
+                        "sequence": 35,
+                        "depends_on": [
+                          "J-530-C34"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C35:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C35.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C35.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C36",
+                        "sequence": 36,
+                        "depends_on": [
+                          "J-530-C35"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C36:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C36.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C36.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C37",
+                        "sequence": 37,
+                        "depends_on": [
+                          "J-530-C36"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C37:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C37.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C37.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C38",
+                        "sequence": 38,
+                        "depends_on": [
+                          "J-530-C37"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C38:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C38.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C38.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C39",
+                        "sequence": 39,
+                        "depends_on": [
+                          "J-530-C38"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C39:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C39.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C39.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      },
+                      {
+                        "job_id": "J-530-C40",
+                        "sequence": 40,
+                        "depends_on": [
+                          "J-530-C39"
+                        ],
+                        "case_binding": "unbound-until-accepted-J-500-binding-table",
+                        "idempotency_key": "dad-high-value-recovery-v1:J-530-C40:{case_digest}:r1",
+                        "checkpoint": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C40.json",
+                        "receipt": "docs/campaigns/dad-high-value-recovery/state/pilot/J-530/J-530-C40.receipts.jsonl",
+                        "lease_minutes": 90,
+                        "heartbeat_minutes": 15
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P6",
+      "title": "Scale, narrow, retire, or re-audit",
+      "depends_on": [
+        "P5"
+      ],
+      "waves": [
+        {
+          "id": "P6-W1",
+          "title": "Evidence-backed lifecycle decision",
+          "depends_on": [
+            "P5-W1"
+          ],
+          "subwaves": [
+            {
+              "id": "P6-W1-S1",
+              "title": "Decision and bounded handoff",
+              "depends_on": [
+                "P5-W1-S1"
+              ],
+              "jobs": [
+                {
+                  "id": "J-600",
+                  "title": "Issue scale narrow retire or re-audit decision",
+                  "objective": "Select one lifecycle decision from frozen evidence and define a non-authorizing follow-on boundary.",
+                  "non_goals": [
+                    "publish, merge, deploy, or activate automation",
+                    "destructive cleanup or raw-observation rewrite",
+                    "unrelated refactoring or feature-family expansion"
+                  ],
+                  "depends_on": [
+                    "J-530"
+                  ],
+                  "dependency_digests": {
+                    "J-530": "receipt-digest:resolve-after-J-530-acceptance"
+                  },
+                  "inputs": [
+                    "docs/campaigns/dad-high-value-recovery/campaign.md",
+                    "docs/campaigns/dad-high-value-recovery/06_SCALE_OR_SHRINK_DECISION.md",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-600_ISSUE_SCALE_NARROW_RETIRE_DECISION.md"
+                  ],
+                  "input_digests": {
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/06_SCALE_OR_SHRINK_DECISION.md": "sha256:b92b783476785feba6c949cca00246612c1dc96ee6b7b31940e23242ef70e199",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-600_ISSUE_SCALE_NARROW_RETIRE_DECISION.md": "sha256:e2ef97634b01e88902db720f0af680ace42e237081ddaf5d3bb632ee1b9a550d"
+                  },
+                  "outputs": [
+                    "processed/reports/dad-high-value-recovery/scale-or-shrink-decision.json",
+                    "processed/reports/dad-high-value-recovery/scale-or-shrink-decision.md"
+                  ],
+                  "allowed_paths": [
+                    "processed/reports/dad-high-value-recovery/scale-or-shrink-decision.json",
+                    "processed/reports/dad-high-value-recovery/scale-or-shrink-decision.md"
+                  ],
+                  "prohibited_actions": [
+                    "publish or merge",
+                    "deploy or change external systems without exact approval",
+                    "delete, move, prune, reset, or clean worktrees or branches",
+                    "edit controller state or checker evidence",
+                    "store secrets, raw conversations, client rows, or private payloads"
+                  ],
+                  "owner_role": "campaign-owner",
+                  "checker_role": "independent-checker",
+                  "required_capabilities": [
+                    "evidence-backed lifecycle decision",
+                    "premortem and counterevidence analysis",
+                    "bounded follow-on planning"
+                  ],
+                  "qualification_evidence": [
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/campaign-owner.json",
+                    "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json"
+                  ],
+                  "idempotency_key": "dad-high-value-recovery-v1:J-600:r1",
+                  "lease_minutes": 120,
+                  "heartbeat_minutes": 15,
+                  "max_attempts": 2,
+                  "repair_limit": 1,
+                  "max_transient_retries": 0,
+                  "cost_ceiling": 5,
+                  "time_ceiling_minutes": 180,
+                  "context_ceiling_tokens": 24000,
+                  "output_ceiling_mb": 20,
+                  "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-600.json",
+                  "receipt": "docs/campaigns/dad-high-value-recovery/state/J-600.receipts.jsonl",
+                  "durability_check": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py J-600",
+                  "retry_policy": {
+                    "classes": [
+                      "transient",
+                      "repairable_output",
+                      "stale_dependency",
+                      "authority_or_human",
+                      "security_privacy",
+                      "terminal_spec"
+                    ],
+                    "backoff_seconds": [
+                      600
+                    ],
+                    "same_state_deterministic_retry": false
+                  },
+                  "escalation": {
+                    "owner": "campaign-owner",
+                    "conditions": [
+                      "human gate or authority conflict",
+                      "inconclusive validation",
+                      "repair limit reached",
+                      "security, privacy, or source-authority signal"
+                    ]
+                  },
+                  "handoff_states": [
+                    "complete",
+                    "failed",
+                    "blocked",
+                    "resumable"
+                  ],
+                  "auto_advance": false,
+                  "acceptance": [
+                    {
+                      "id": "G-J-600-ACCEPT",
+                      "revision": "1",
+                      "type": "human",
+                      "checker_role": "independent-checker",
+                      "inputs": [
+                        "processed/reports/dad-high-value-recovery/scale-or-shrink-decision.json",
+                        "processed/reports/dad-high-value-recovery/scale-or-shrink-decision.md"
+                      ],
+                      "command": "not-applicable",
+                      "rubric": "Verify one allowed decision, frozen-threshold integrity, complete counterevidence/cost/attention, component dispositions, and no follow-on effects.",
+                      "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/J-600-acceptance.json",
+                      "result_semantics": {
+                        "pass": "required evidence is current and satisfies the gate",
+                        "fail_repairable": "one bounded repair may address the named defect",
+                        "fail_terminal": "a protected invariant or frozen success criterion failed",
+                        "blocked_human": "an exact human decision or permission is missing",
+                        "inconclusive": "evidence is missing, stale, unjoinable, or insufficient"
+                      },
+                      "affects": [
+                        "J-600"
+                      ],
+                      "revalidation_triggers": [
+                        "input digest change",
+                        "dependency receipt change",
+                        "validator or methodology revision change",
+                        "runtime or authority change"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stop_conditions": [
+    {
+      "code": "user_interrupt",
+      "detection": "controller observes a user interrupt, scope replacement, or stop request",
+      "evidence": "docs/campaigns/dad-high-value-recovery/state/stop-user.json",
+      "shutdown": "checkpoint accepted evidence and stop before the next effect",
+      "release_leases": true,
+      "recovery_owner": "campaign-owner",
+      "resume_preconditions": [
+        "affirmative scoped resume",
+        "current worktree and source revalidated"
+      ]
+    },
+    {
+      "code": "budget_exhausted",
+      "detection": "any job or campaign hard time, cost, attempt, context, output, or storage ceiling is reached",
+      "evidence": "docs/campaigns/dad-high-value-recovery/state/stop-budget.json",
+      "shutdown": "stop before the next effect and preserve receipts",
+      "release_leases": true,
+      "recovery_owner": "campaign-owner",
+      "resume_preconditions": [
+        "approved budget and graph revision"
+      ]
+    },
+    {
+      "code": "authority_boundary",
+      "detection": "requested effect is outside the current job, launch receipt, repo authority, or workspace policy",
+      "evidence": "docs/campaigns/dad-high-value-recovery/state/stop-authority.json",
+      "shutdown": "block the effect and fail closed",
+      "release_leases": true,
+      "recovery_owner": "campaign-owner",
+      "resume_preconditions": [
+        "affirmative exact authority",
+        "revalidated current scope"
+      ]
+    },
+    {
+      "code": "human_gate_required",
+      "detection": "a named launch, external-state, lifecycle, pilot, or decision gate lacks an exact current receipt",
+      "evidence": "docs/campaigns/dad-high-value-recovery/state/stop-human-gate.json",
+      "shutdown": "checkpoint and block advancement",
+      "release_leases": true,
+      "recovery_owner": "campaign-owner",
+      "resume_preconditions": [
+        "signed unexpired decision receipt"
+      ]
+    },
+    {
+      "code": "repeated_failure",
+      "detection": "original attempt plus one bounded repair fails or the accepted repair limit is reached",
+      "evidence": "docs/campaigns/dad-high-value-recovery/state/stop-repeated-failure.json",
+      "shutdown": "preserve failed evidence and stop the affected branch",
+      "release_leases": true,
+      "recovery_owner": "campaign-owner",
+      "resume_preconditions": [
+        "approved revised job graph or terminal lifecycle decision"
+      ]
+    },
+    {
+      "code": "gold_standard_failure",
+      "detection": "any protected gold standard fails or becomes unprovable",
+      "evidence": "docs/campaigns/dad-high-value-recovery/state/stop-gold-standard.json",
+      "shutdown": "stop the campaign before further effects",
+      "release_leases": true,
+      "recovery_owner": "campaign-owner",
+      "resume_preconditions": [
+        "independent proof the standard passes on a revised state"
+      ]
+    },
+    {
+      "code": "security_or_privacy",
+      "detection": "secret, private payload, client data, unsafe release, injection, or source-authority risk is observed",
+      "evidence": "docs/campaigns/dad-high-value-recovery/state/stop-security-privacy.json",
+      "shutdown": "fail closed, minimize retained evidence, and stop",
+      "release_leases": true,
+      "recovery_owner": "security-owner",
+      "resume_preconditions": [
+        "human-reviewed clearance",
+        "privacy-safe revised scope"
+      ]
+    },
+    {
+      "code": "dependency_stale",
+      "detection": "source, job input, dependency receipt, validator, method, runtime, or authority digest differs",
+      "evidence": "docs/campaigns/dad-high-value-recovery/state/stop-dependency.json",
+      "shutdown": "block affected jobs and preserve the mismatch",
+      "release_leases": true,
+      "recovery_owner": "campaign-controller",
+      "resume_preconditions": [
+        "approved digest refresh and revalidation"
+      ]
+    },
+    {
+      "code": "write_conflict",
+      "detection": "overlapping write lease, dirty unexpected path, or unrelated user change conflicts with the current job",
+      "evidence": "docs/campaigns/dad-high-value-recovery/state/stop-write-conflict.json",
+      "shutdown": "stop all conflicting effects without resetting user work",
+      "release_leases": true,
+      "recovery_owner": "campaign-controller",
+      "resume_preconditions": [
+        "reconciled non-overlapping write set",
+        "uncontested lease"
+      ]
+    },
+    {
+      "code": "validation_inconclusive",
+      "detection": "required evidence is missing, stale, unjoinable, contradictory, coverage unavailable, or checker confidence is insufficient",
+      "evidence": "docs/campaigns/dad-high-value-recovery/state/stop-inconclusive.json",
+      "shutdown": "do not auto-advance or relabel the result",
+      "release_leases": true,
+      "recovery_owner": "campaign-owner",
+      "resume_preconditions": [
+        "new independent evidence or approved re-audit revision"
+      ]
+    }
+  ]
+}

@@ -25,7 +25,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:capability-dad-governed-mcp",
-      "revision_id": "portability-card-revision:capability-dad-governed-mcp:0.1.0",
+      "revision_id": "portability-card-revision:capability-dad-governed-mcp:0.1.1",
       "artifact_id": "capability:dad-governed-mcp",
       "artifact_kind": "library",
       "binding_class": "portable_core",
@@ -37,11 +37,15 @@
         "schemas/mcp-surface-contract.schema.json",
         "schemas/mcp-action-packet.schema.json",
         "schemas/mcp-action-result.schema.json",
+        "registry/mcp-dependency-map.json",
+        "schemas/mcp-dependency-map.schema.json",
+        "src/digital_asset_directory/mcp_dependency_map.py",
         "src/digital_asset_directory/mcp_server.py",
         "src/digital_asset_directory/mcp_packets.py",
-        "src/digital_asset_directory/mcp_conformance.py"
+        "src/digital_asset_directory/mcp_conformance.py",
+        "src/digital_asset_directory/validation.py"
       ],
-      "content_digest": "sha256:6a1ff8c9396da90d2001ace0efe30a4cf008e2175ad874bbc5b11c2bd7eb34be",
+      "content_digest": "sha256:ee956eb412318b80a0ceef9a39162c47bf20b7843726680320ad8d4e681708a2",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -261,7 +265,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-personal-portfolio-capacity-review",
-      "revision_id": "portability-card-revision:skill-personal-portfolio-capacity-review:0.1.1",
+      "revision_id": "portability-card-revision:skill-personal-portfolio-capacity-review:0.1.2",
       "artifact_id": "skill:personal-portfolio-capacity-review",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -337,7 +341,7 @@
         "tests/test_portfolio_capacity_review.py",
         "tests/test_subagent_role_directory.py"
       ],
-      "fresh_until": "2026-08-15T00:00:00-04:00",
+      "fresh_until": "2026-11-19T23:59:59-05:00",
       "rollback_ref": "Remove the candidate skill registration and read-only route while preserving its immutable plan and evaluation evidence.",
       "candidate_only": true,
       "execution_authorized": false,
@@ -346,7 +350,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.26",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.29",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -398,7 +402,8 @@
         "schemas/portable-capability-card.schema.json",
         "schemas/portable-capability-registry.schema.json",
         "schemas/portable-runtime-qualification.schema.json",
-        "schemas/portfolio-execution-control-event.schema.json",
+    "schemas/portfolio-execution-control-event.schema.json",
+    "schemas/portfolio-attempt-event.schema.json",
         "schemas/repo-enrollment-contract.schema.json",
         "schemas/routine-contract-registry.schema.json",
         "schemas/subagent-pack.schema.json",
@@ -438,7 +443,8 @@
         "src/digital_asset_directory/pointer_liveness.py",
         "src/digital_asset_directory/portability_control.py",
         "src/digital_asset_directory/portfolio_cockpit.py",
-        "src/digital_asset_directory/portfolio_execution.py",
+    "src/digital_asset_directory/portfolio_execution.py",
+    "src/digital_asset_directory/portfolio_attempts.py",
         "src/digital_asset_directory/routine_health.py",
         "src/digital_asset_directory/utils.py",
         "src/digital_asset_directory/validation.py",
@@ -448,10 +454,11 @@
         "tests/test_agent_session_split_report.py",
         "tests/test_cross_vendor_review_policy.py",
         "tests/test_intelligence_routing.py",
-        "tests/test_learning_yield_report.py",
+    "tests/test_learning_yield_report.py",
+    "tests/test_portfolio_attempt_journal.py",
         "tests/test_synthetic_silver_program.py"
       ],
-      "content_digest": "sha256:06b324ff6dcb846ce7389af8bbb04df9acbf2de313b46b44c4848239dda52028",
+      "content_digest": "sha256:117893afb292b237f9a3446da62762f6978476e8d098d053c69a5daf6c2acde6",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -816,7 +823,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-ml-workflow-agent-family",
-      "revision_id": "portability-card-revision:skill-ml-workflow-agent-family:0.3.1",
+      "revision_id": "portability-card-revision:skill-ml-workflow-agent-family:0.3.2",
       "artifact_id": "skill:ml-workflow-agent-family",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -842,7 +849,7 @@
         "src/digital_asset_directory/ml_agent_family.py",
         "src/digital_asset_directory/synthetic_data_resources.py"
       ],
-      "content_digest": "sha256:0a465ac1b20f9bc8fdc92e49773f1904e8421646ce76da360fe4124122266b63",
+      "content_digest": "sha256:410a5d5fa889e15bcef81287a4f35d6c396021edff5021d8880ff39282e46ef9",
       "source_observation_digest": "sha256:01e8bb182e297135e3e1502b249d199a84c29db4345f6b13561f170f5b9b3948",
       "contract_digests": {
         "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -980,7 +987,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:workflow-ml-synthetic-data-opportunity-review",
-      "revision_id": "portability-card-revision:workflow-ml-synthetic-data-opportunity-review:0.1.0",
+      "revision_id": "portability-card-revision:workflow-ml-synthetic-data-opportunity-review:0.1.1",
       "artifact_id": "workflow:ml-synthetic-data-opportunity-review",
       "artifact_kind": "workflow",
       "binding_class": "portable_core",
@@ -997,7 +1004,7 @@
         "src/digital_asset_directory/synthetic_data_resources.py",
         "tests/test_synthetic_data_resources.py"
       ],
-      "content_digest": "sha256:399c31b1eef12a284b750645f4fca3fb9eb122a50962d60babc0e3adb57e8677",
+      "content_digest": "sha256:7428a1f2c1108458a704a3ace9d8651d35653d60e2d689796e617a19f9dac8bd",
       "source_observation_digest": "sha256:80afe3cadfd35c2c6332459f1ea037df4e6916d0f4920d2e8ffb71b8f86a7bb8",
       "contract_digests": {
         "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -1058,7 +1065,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:workflow-ml-synthetic-helper-research-refresh",
-      "revision_id": "portability-card-revision:workflow-ml-synthetic-helper-research-refresh:0.1.0",
+      "revision_id": "portability-card-revision:workflow-ml-synthetic-helper-research-refresh:0.1.1",
       "artifact_id": "workflow:ml-synthetic-helper-research-refresh",
       "artifact_kind": "workflow",
       "binding_class": "portable_core",
@@ -1073,7 +1080,7 @@
         "docs/SYNTHETIC_DATA_RESOURCE_LIBRARY.md",
         "tests/test_synthetic_data_resources.py"
       ],
-      "content_digest": "sha256:a7f0bc6969a7373e5cec01b38043ebe0907c737da2a69a4a26c59bdec8dc5b40",
+      "content_digest": "sha256:fb6d312861520d37dfbe7d21c3a56ac6fed302862ffd906c59cb5333e62edf02",
       "source_observation_digest": "sha256:d3169f148efef74cfc218393e950ce51deb67248e052d5018ba8fe70ce3f5f01",
       "contract_digests": {
         "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -1121,7 +1128,7 @@
         "research-intake"
       ],
       "adapter_revision_ids": [
-        "portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.0"
+        "portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.1"
       ],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
@@ -1138,15 +1145,15 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research",
-      "revision_id": "portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.0",
+      "revision_id": "portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.1",
       "artifact_id": "runtime-adapter:codex-gpt-5-6-luna-low-weekly-research",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "source_authority": "codex-automation:weekly-dad-external-asset-scout",
       "owner": "Lowell",
-      "status": "shadow_validated",
-      "core_revision_id": "portability-card-revision:workflow-ml-synthetic-helper-research-refresh:0.1.0",
+      "status": "stale",
+      "core_revision_id": "portability-card-revision:workflow-ml-synthetic-helper-research-refresh:0.1.1",
       "target_capability_predicate": {
         "capability_alias": "luna",
         "reasoning_effort": "low",
@@ -1165,7 +1172,8 @@
       },
       "compatibility_evidence": [
         "Codex automation host accepted model gpt-5.6-luna with low reasoning effort on 2026-07-16.",
-        "The automation retains candidate-only authority and disables local environment setup scripts."
+        "The automation retains candidate-only authority and disables local environment setup scripts.",
+        "Lifecycle disposition 2026-08-21: no source-bound interface or current named-host observation was available, so this revision is archival and non-routable."
       ],
       "target_runtime_classes": [
         "codex-local-worktree-automation"
@@ -1177,7 +1185,7 @@
       "rollback_ref": "Pause the automation. Do not substitute a model until a human reviews a new adapter against the same core contract.",
       "candidate_only": true,
       "execution_authorized": false,
-      "authority_boundary": "This expiring adapter records one accepted host binding only; it cannot prove model quality, widen the core contract, reactivate after retirement, or authorize pointer promotion or external effects."
+      "authority_boundary": "This stale archival adapter is non-routable. It records one historical host binding only and cannot prove current model quality, widen the core contract, reactivate itself, or authorize pointer promotion or external effects."
     },
     {
       "schema_version": "dad.portable_capability_card.v1",
@@ -1467,7 +1475,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-personal-project-management-ops",
-      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.16",
+      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.17",
       "artifact_id": "skill:personal-project-management-ops",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -1521,7 +1529,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:875ae4d6db665b3559d43973f91cf75b2053c6c001802bd9f2190d6f58d54c22",
+      "content_digest": "sha256:a2fe4133ce4d7b795960abae0663ade32ac31bdc9d9e6c9dd4e07424babafc9e",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1589,20 +1597,20 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:adapter-intent-continuity-codex-host",
-      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.17",
+      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.20",
       "artifact_id": "adapter:intent-continuity-codex-host",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
       "source_authority": "config/intent-continuity-shadow-hooks.json",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.16",
+      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.17",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "target_capability_predicate": {
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:c902e84022ab0290d9cb515f0afb7af0a906299cccf57e86ecb4a29bcb7c2769",
+      "adapter_interface_digest": "sha256:751a7439821d93304475cb1f906136dc10afbe16d8a7aea21381aaaa9718ad0b",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -1615,6 +1623,7 @@
         "schemas/portfolio-continuity-adapter-receipt.schema.json",
         "schemas/portfolio-continuity-event.schema.json",
         "schemas/portfolio-continuity-trial-operator-packet.schema.json",
+        "src/digital_asset_directory/config.py",
         "src/digital_asset_directory/portfolio_continuity_adapter.py",
         "src/digital_asset_directory/portfolio_continuity_codex_hook.py",
         "src/digital_asset_directory/portfolio_continuity_events.py",
@@ -1636,13 +1645,15 @@
         "schemas/intent-continuity-host-readiness.schema.json",
         "tests/test_portfolio_continuity_adapter.py",
         "tests/test_portfolio_continuity_codex_hook.py",
+        "tests/test_portfolio_continuity_hook_benchmark.py",
+        "tests/test_portfolio_continuity_hook_fast_validation.py",
         "tests/test_portfolio_continuity_host_readiness.py",
         "tests/test_portfolio_continuity_runtime.py"
       ],
       "target_runtime_classes": [
         "codex_host"
       ],
-      "fresh_until": "2026-08-16T00:00:00-04:00",
+      "fresh_until": "2026-11-19T23:59:59-05:00",
       "rollback_ref": "Delete or disable .codex/hooks.json and set every trigger in config/intent-continuity-shadow-hooks.json to disabled without changing the provider-neutral receipt core or private append-only evidence.",
       "candidate_only": true,
       "execution_authorized": false,
@@ -2083,7 +2094,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:workflow-ml-hybrid-composition-review",
-      "revision_id": "portability-card-revision:workflow-ml-hybrid-composition-review:0.1.0",
+      "revision_id": "portability-card-revision:workflow-ml-hybrid-composition-review:0.1.1",
       "artifact_id": "workflow:ml-hybrid-composition-review",
       "artifact_kind": "workflow",
       "binding_class": "portable_core",
@@ -2099,7 +2110,7 @@
         "src/digital_asset_directory/ml_agent_family.py",
         "tests/test_ml_agent_family.py"
       ],
-      "content_digest": "sha256:77f06a3e889e6233ea40a425ca9bd26a6631e3a975f5eb734d2ef31f5dc3f766",
+      "content_digest": "sha256:d01ee4bf64681516ed8bffdd19fe3bed209dc2a1c9ce86d156cd85b2dc3f5d6f",
       "source_observation_digest": "sha256:efa3301f54b0b1723259ed32c5cd211d2908df2faeaf8549e72fb04930c4d385",
       "contract_digests": {
         "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -2157,7 +2168,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:workflow-ml-operational-monitoring-and-retraining",
-      "revision_id": "portability-card-revision:workflow-ml-operational-monitoring-and-retraining:0.1.0",
+      "revision_id": "portability-card-revision:workflow-ml-operational-monitoring-and-retraining:0.1.1",
       "artifact_id": "workflow:ml-operational-monitoring-and-retraining",
       "artifact_kind": "workflow",
       "binding_class": "portable_core",
@@ -2173,7 +2184,7 @@
         "src/digital_asset_directory/ml_agent_family.py",
         "tests/test_ml_agent_family.py"
       ],
-      "content_digest": "sha256:77f06a3e889e6233ea40a425ca9bd26a6631e3a975f5eb734d2ef31f5dc3f766",
+      "content_digest": "sha256:d01ee4bf64681516ed8bffdd19fe3bed209dc2a1c9ce86d156cd85b2dc3f5d6f",
       "source_observation_digest": "sha256:01a3e635c43cbe47bdaedc93f8c57fc5da00c7348f1fcad3448d98b9a599a7a6",
       "contract_digests": {
         "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -2231,7 +2242,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:workflow-ml-specialist-champion-challenger",
-      "revision_id": "portability-card-revision:workflow-ml-specialist-champion-challenger:0.1.0",
+      "revision_id": "portability-card-revision:workflow-ml-specialist-champion-challenger:0.1.1",
       "artifact_id": "workflow:ml-specialist-champion-challenger",
       "artifact_kind": "workflow",
       "binding_class": "portable_core",
@@ -2247,7 +2258,7 @@
         "src/digital_asset_directory/ml_agent_family.py",
         "tests/test_ml_agent_family.py"
       ],
-      "content_digest": "sha256:77f06a3e889e6233ea40a425ca9bd26a6631e3a975f5eb734d2ef31f5dc3f766",
+      "content_digest": "sha256:d01ee4bf64681516ed8bffdd19fe3bed209dc2a1c9ce86d156cd85b2dc3f5d6f",
       "source_observation_digest": "sha256:80ba2cc875683640bb572008744aa9ad67b5fb646157150888ef72b1e07c72ed",
       "contract_digests": {
         "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -2375,7 +2386,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:runtime-adapter-git-convergence-readonly",
-      "revision_id": "portability-card-revision:runtime-adapter-git-convergence-readonly:0.2.2",
+      "revision_id": "portability-card-revision:runtime-adapter-git-convergence-readonly:0.2.3",
       "artifact_id": "runtime-adapter:git-convergence-readonly",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
@@ -2394,7 +2405,7 @@
           "model_calls"
         ]
       },
-      "adapter_interface_digest": "sha256:2a26f616faab8c67e01df11b00f0d2825ecab063b22beaa35177022c2c2a09a4",
+      "adapter_interface_digest": "sha256:67991325ac63a121f049a5165f0a67d6c8392b5b339488f3179af3831bcf2ae8",
       "adapter_interface_sources": [
         "src/digital_asset_directory/portfolio_convergence_git.py",
         "schemas/portfolio-convergence-git-producer-receipt.schema.json",
@@ -2499,7 +2510,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:runtime-adapter-local-file-capture-inbox",
-      "revision_id": "portability-card-revision:runtime-adapter-local-file-capture-inbox:0.1.1",
+      "revision_id": "portability-card-revision:runtime-adapter-local-file-capture-inbox:0.1.2",
       "artifact_id": "runtime-adapter:local-file-capture-inbox",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
@@ -2520,7 +2531,7 @@
           "workstream_creation"
         ]
       },
-      "adapter_interface_digest": "sha256:3c4441fcf4f0ee878fdaba77e0671216e81e30999747bf289c5ee1fe48909ca3",
+      "adapter_interface_digest": "sha256:56515266171b5177439118f7fc3ab64276c0b18c47ff74c2d2de56f7d780037f",
       "adapter_interface_sources": [
         "registry/routine-contract-registry.json",
         "schemas/portfolio-capture-candidate.schema.json",
@@ -2780,6 +2791,154 @@
       "candidate_only": true,
       "execution_authorized": false,
       "authority_boundary": "This card dispositions candidate trigger-signature and watch-only routine specs only; it cannot schedule automations, mutate repositories, authorize publication, or grant side-effect authority."
+    },
+    {
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:library-campaign-packet-controller",
+      "revision_id": "portability-card-revision:library-campaign-packet-controller:0.2.0",
+      "artifact_id": "library:campaign-packet-controller",
+      "artifact_kind": "library",
+      "binding_class": "portable_core",
+      "source_authority": "src/digital_asset_directory/campaign_controller.py",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "src/digital_asset_directory/campaign_controller.py",
+        "src/digital_asset_directory/portfolio_execution.py",
+        "src/digital_asset_directory/_portfolio_execution_legacy.py",
+        "schemas/portfolio-execution-control-event.schema.json",
+        "docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py",
+        "tests/test_portfolio_execution_control.py"
+      ],
+      "content_digest": "sha256:a01551c5368cf55d96d91fbab4765da969839524cf32c1c617fe23b28714ebfe",
+      "contract_digests": {
+        "input": "sha256:93d5611a045b1e6eecd83806efb7de0d594ac66ce306757f329533124953c604",
+        "output": "sha256:d4f054f8b0a7d0eb736cd518139ce41d4d98bfb68bdf1305492e3b9430ed5fea",
+        "error": "sha256:6a0cc45b868bda6e4c0b27c57b5367f9aefc0275f7e3eb8536153ba0d6c28162",
+        "privacy": "sha256:4d5cd0afbb21b7dbaad9b919cd147af5f5e3c6c97f8720661e6223328802f291",
+        "effect": "sha256:e1faae46f6092a67e5a5f0c7befc0a6fba9f70f8ccc169265cb8101c42069e36",
+        "authority": "sha256:8ff7262f600057585033a0ea34248f654750f3bfc59ff94c40e284ad47ab0a51"
+      },
+      "capability_ids": [
+        "campaign_job_packet_projection",
+        "dependency_and_budget_gating",
+        "atomic_child_slot_projection",
+        "stop_checkpoint_projection",
+        "portfolio_execution_control_binding",
+        "receipt_bound_input_resolution",
+        "qualification_and_heartbeat_gating",
+        "reissue_and_partial_effect_reconciliation",
+        "canonical_manifest_and_measured_source_binding",
+        "verified_approval_and_revision_identity_binding",
+        "durable_portfolio_attempt_state_projection",
+        "output_and_acceptance_evidence_scope_binding",
+        "unresolved_atomic_child_fail_closed",
+        "signed_public_fold_ready_manual_proof",
+        "fully_verified_durable_budget_aggregation",
+        "strict_duplicate_key_rejection",
+        "stable_evidence_binding_with_nonbinding_observation_metadata"
+      ],
+      "tool_ids": [
+        "repository-files",
+        "json"
+      ],
+      "context_contract": "Canonical repository manifest, measured source revision, exact authorization and named approver, explicit repository-local signed attestations, verified Portfolio approval identities, resolved input/dependency digests, distinct revision-bound qualifications, durable Portfolio lease/dispatch/attempt projections, fully file-verified budget receipts, outputs, acceptance evidence, checkpoints, privacy-safe receipts, and stable evidence digests that exclude non-authoritative observation-time metadata only.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "harness:portable-capability-control-plane"
+      ],
+      "reverse_consumers": [
+        "adapter:campaign-codex-shell-inert",
+        "dad-high-value-recovery-campaign"
+      ],
+      "adapter_revision_ids": [
+        "portability-card-revision:adapter-campaign-codex-shell-inert:0.2.0"
+      ],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "tests/test_campaign_controller.py",
+        "tests/test_portfolio_execution_control.py",
+        "docs/campaigns/dad-high-value-recovery/checks/test_verify_receipt_durability.py",
+        "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/prelaunch-revision-6.json"
+      ],
+      "fresh_until": "2026-11-19T23:59:59-05:00",
+      "rollback_ref": "Remove the candidate controller and inert adapter bindings while preserving the campaign specification and qualification evidence.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This core treats local authorization JSON as a claim and requires exact Ed25519-verified Portfolio approval identities and the same named approver in the Portfolio OS authority projection. It builds blocked or ready-manual candidates only; it cannot launch workers, execute jobs, write state, make dispatch available, or grant authority."
+    },
+    {
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:adapter-campaign-codex-shell-inert",
+      "revision_id": "portability-card-revision:adapter-campaign-codex-shell-inert:0.2.0",
+      "artifact_id": "adapter:campaign-codex-shell-inert",
+      "artifact_kind": "runtime_adapter",
+      "binding_class": "runtime_adapter",
+      "source_authority": "src/digital_asset_directory/campaign_codex_shell_adapter.py",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "core_revision_id": "portability-card-revision:library-campaign-packet-controller:0.2.0",
+      "target_capability_predicate": {
+        "runtime_adapter_id": "adapter:codex-host",
+        "manual_host_only": true,
+        "canonical_manifest_only": true,
+        "durable_portfolio_state_required": true,
+        "explicit_repository_local_attestations": true,
+        "ed25519_backend_required_for_positive_fold": true,
+        "intent_continuity_host_gate_required": false,
+        "launch_available": false,
+        "execution_authorized": false
+      },
+      "adapter_interface_digest": "sha256:611a8eebe2a1bd582286f2452691cb091bccb67d0fd0de5d3e9367f0bd21c5ba",
+      "adapter_interface_sources": [
+        "src/digital_asset_directory/campaign_codex_shell_adapter.py",
+        "src/digital_asset_directory/campaign_controller.py",
+        "src/digital_asset_directory/portfolio_execution.py",
+        "schemas/portfolio-execution-control-event.schema.json",
+        "docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py",
+        "registry/runtime-adapter-registry.json",
+        "tests/test_campaign_controller.py"
+      ],
+      "preserved_contract_digests": {
+        "input": "sha256:93d5611a045b1e6eecd83806efb7de0d594ac66ce306757f329533124953c604",
+        "output": "sha256:d4f054f8b0a7d0eb736cd518139ce41d4d98bfb68bdf1305492e3b9430ed5fea",
+        "error": "sha256:6a0cc45b868bda6e4c0b27c57b5367f9aefc0275f7e3eb8536153ba0d6c28162",
+        "privacy": "sha256:4d5cd0afbb21b7dbaad9b919cd147af5f5e3c6c97f8720661e6223328802f291",
+        "effect": "sha256:e1faae46f6092a67e5a5f0c7befc0a6fba9f70f8ccc169265cb8101c42069e36",
+        "authority": "sha256:8ff7262f600057585033a0ea34248f654750f3bfc59ff94c40e284ad47ab0a51"
+      },
+      "compatibility_evidence": [
+        "tests/test_campaign_controller.py",
+        "tests/test_portfolio_execution_control.py",
+        "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/prelaunch-revision-6.json"
+      ],
+      "target_runtime_classes": [
+        "codex_manual_shell_host"
+      ],
+      "provider_bindings": [
+        "openai:codex-host"
+      ],
+      "fresh_until": "2026-11-19T23:59:59-05:00",
+      "rollback_ref": "Remove this candidate adapter binding; no campaign job or state depends on it before separate activation approval.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This adapter reads only the canonical repository campaign, explicit repository-local attestation envelopes, fully verified receipt logs, and existing Portfolio journals. It normalizes dry-run and shutdown candidates only and cannot invoke Codex, a shell, Git, a network, continuity hooks, or any campaign job."
     }
   ],
   "candidate_only": true,

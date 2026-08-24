@@ -30,7 +30,7 @@ def test_registry_is_valid_unique_and_pointer_only() -> None:
     assert registry["research_contract"]["runtime_route"] == {
         "capability_alias": "luna",
         "reasoning_effort": "low",
-        "adapter_revision_id": "portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.0",
+        "adapter_revision_id": "portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.1",
         "retirement_rule": registry["research_contract"]["runtime_route"]["retirement_rule"],
         "escalation_rule": registry["research_contract"]["runtime_route"]["escalation_rule"],
     }

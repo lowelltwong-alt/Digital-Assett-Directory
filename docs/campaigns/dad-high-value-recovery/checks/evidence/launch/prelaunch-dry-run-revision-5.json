@@ -1,0 +1,89 @@
+{
+  "adapter": {
+    "adapter_id": "adapter:codex-host",
+    "adapter_revision": "dad-campaign-codex-shell-adapter:0.1.0-prelaunch",
+    "authority_boundary": "This manual host adapter normalizes inert packet evidence only. It cannot launch Codex, execute a campaign job, invoke a shell, read credentials, write state, or authorize any effect.",
+    "execution_authorized": false,
+    "launch_available": false,
+    "protocol_methods": [
+      "discover",
+      "health",
+      "normalize_receipt"
+    ],
+    "registration_mode": "local_host_receipt",
+    "registry_status": null,
+    "schema_version": "dad.campaign.local_host_snapshot.v1",
+    "snapshot_digest": "sha256:ec64ac59086b499016bccd60b81f333627cdc6a2c66717389a4ccfefd771959c"
+  },
+  "authority_boundary": "This controller is a non-authoritative packet projection. It does not authorize or perform campaign jobs, subprocesses, model calls, network access, Git changes, downstream writes, publication, or deployment.",
+  "dispatch_allowed": false,
+  "effects": {
+    "campaign_job_receipts_created": 0,
+    "campaign_state_writes": 0,
+    "downstream_writes": 0,
+    "git_changes": 0,
+    "model_calls": 0,
+    "network_calls": 0,
+    "subprocesses_started": 0
+  },
+  "execution_authorized": false,
+  "job_id": "J-100",
+  "packet": {
+    "allowed_paths": [
+      "processed/reports/dad-high-value-recovery/baseline.json",
+      "processed/reports/dad-high-value-recovery/baseline.md",
+      "processed/reports/dad-high-value-recovery/operational-eligibility-baseline.json"
+    ],
+    "authority_boundary": "This controller is a non-authoritative packet projection. It does not authorize or perform campaign jobs, subprocesses, model calls, network access, Git changes, downstream writes, publication, or deployment.",
+    "budget": {
+      "reason_codes": [],
+      "used_attempts": 0,
+      "used_cost_units": 0.0,
+      "used_output_mb": 0.0,
+      "within_budget": true
+    },
+    "campaign_id": "dad-high-value-recovery-v1",
+    "campaign_revision": "5-hook-latency-candidate-20260821",
+    "checker_role": "independent-checker",
+    "checkpoint": "docs/campaigns/dad-high-value-recovery/state/J-100.json",
+    "depends_on": [],
+    "dispatch_allowed": false,
+    "execution_authorized": false,
+    "heartbeat_minutes": 15,
+    "idempotency_key": "dad-high-value-recovery-v1:J-100:r1",
+    "input_digests": {
+      "docs/campaigns/dad-high-value-recovery/01_BASELINE_AND_FREEZE.md": "sha256:3e37859df7d52b455e5027fdff540d2742bcb56639e2d91f54978499bc775d55",
+      "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:dea94ff17c0f6c738595470273dec3b5c6fe49cc8963e4ef49de8b8284065707",
+      "docs/campaigns/dad-high-value-recovery/jobs/J-100_REPRODUCIBLE_BASELINE.md": "sha256:bf4c0171653a81c1f278d1f5154c7a6f9618adb88593c98b9eed21254956043a"
+    },
+    "job_id": "J-100",
+    "lease_minutes": 90,
+    "manifest_digest": "sha256:ab01a104ab4e77df8157d43052d4602c80779dc1488d0e114d1f7a5029d4a875",
+    "owner_role": "bounded-writer",
+    "packet_digest": "sha256:baa5163173b958ab4cf2b1910e4f21a76831ba7d3a6fb157a6e311da6f3f5b59",
+    "parent_id": null,
+    "readiness": {
+      "budget": {
+        "reason_codes": [],
+        "used_attempts": 0,
+        "used_cost_units": 0.0,
+        "used_output_mb": 0.0,
+        "within_budget": true
+      },
+      "dispatch_allowed": false,
+      "execution_authorized": false,
+      "manifest_digest": "sha256:ab01a104ab4e77df8157d43052d4602c80779dc1488d0e114d1f7a5029d4a875",
+      "reason_codes": [
+        "activation_not_authorized",
+        "decision_digest_mismatch",
+        "decision_revision_mismatch"
+      ],
+      "status": "blocked_human"
+    },
+    "receipt": "docs/campaigns/dad-high-value-recovery/state/J-100.receipts.jsonl",
+    "schema_version": "dad.campaign.job_packet_candidate.v1",
+    "source_revision": "e05c4e5de2d8ad0fb87e19c42783ad28dd04a3b4"
+  },
+  "schema_version": "dad.campaign.prelaunch_dry_run.v1",
+  "status": "blocked_human"
+}

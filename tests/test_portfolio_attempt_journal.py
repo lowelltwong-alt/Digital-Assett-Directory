@@ -16,6 +16,7 @@ from digital_asset_directory.portfolio_attempts import (
     simulate_claim_race,
 )
 from digital_asset_directory.portfolio_events import LedgerIntegrityError
+from digital_asset_directory.portfolio_events import LedgerLock, lock_path
 
 
 T0 = datetime(2026, 7, 13, 12, 0, tzinfo=timezone.utc)
@@ -204,6 +205,51 @@ def test_concurrent_claims_have_exactly_one_selected_winner(tmp_path: Path) -> N
     projection = load_attempt_projection(tmp_path)
     assert projection["summary"]["selected_claim_count"] == 1
     assert projection["summary"]["event_count"] == 20
+
+
+def test_concurrent_exact_retries_append_once_and_deduplicate(tmp_path: Path) -> None:
+    def claim(_index: int) -> dict:
+        return claim_dry_run_attempt(
+            tmp_path,
+            _projection(),
+            DISPATCH,
+            worker_revision_id="worker:stable",
+            attempt_id=_attempt(1),
+            command_id=_command(1),
+            now=T0,
+        )
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(claim, range(20)))
+
+    assert sum(item["events_appended"] for item in results) == 1
+    assert sum(item["events_deduplicated"] for item in results) == 19
+    events, diagnostics = read_attempt_events(attempt_journal_path(tmp_path))
+    assert len(events) == 1
+    assert diagnostics["problems"] == []
+
+
+def test_busy_lock_times_out_without_unlinking_owner_generation(tmp_path: Path) -> None:
+    journal = attempt_journal_path(tmp_path)
+    journal.parent.mkdir(parents=True, exist_ok=True)
+
+    with LedgerLock(journal):
+        held_record = lock_path(journal).read_text(encoding="utf-8")
+        with pytest.raises(TimeoutError, match="Ledger lock busy"):
+            with LedgerLock(journal, timeout=0.05):
+                pytest.fail("contender unexpectedly acquired the held lock")
+        assert lock_path(journal).read_text(encoding="utf-8") == held_record
+
+    result = claim_dry_run_attempt(
+        tmp_path,
+        _projection(),
+        DISPATCH,
+        worker_revision_id="worker:after-release",
+        attempt_id=_attempt(1),
+        command_id=_command(1),
+        now=T0,
+    )
+    assert result["claim_selected"] is True
 
 
 def test_race_simulation_uses_explicit_sequence_and_never_executes() -> None:

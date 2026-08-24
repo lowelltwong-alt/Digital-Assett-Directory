@@ -12,8 +12,8 @@
     "AI_TABLE_OF_CONTENTS.md"
   ],
   "navigation_standards": {
-    "navigation_version": "2026.07.17.1",
-    "updated_at": "2026-07-17T05:20:00Z",
+    "navigation_version": "2026.08.20.1",
+    "updated_at": "2026-08-20T19:45:00Z",
     "single_ai_entrypoint": "AI_FRONT_DOOR.md",
     "ai_table_of_contents": "AI_TABLE_OF_CONTENTS.md",
     "navigation_registry": "registry/ai-navigation-registry.json",
@@ -107,6 +107,8 @@
     "src/digital_asset_directory/agent_families.py",
     "docs/TECHNICAL_PRODUCT_COMPANY_OS.md",
     "docs/SELF_LEARNING_IMPROVEMENT_SYSTEM_PLAN.md",
+    "docs/campaigns/dad-high-value-recovery/README.md",
+    "docs/campaigns/dad-high-value-recovery/campaign.md",
     "docs/FABLE_SELF_LEARNING_IMPROVEMENT_SYSTEM_PROMPT.md",
     "docs/research/AI_SELF_LEARNING_AND_IMPROVEMENT_RESEARCH_2026-07-14.md",
     "registry/technical-product-company-os-registry.json",

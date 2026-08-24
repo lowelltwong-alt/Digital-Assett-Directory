@@ -495,9 +495,21 @@ def _read_resource_payload(
         if parts[0] == "dependency-map":
             return "application/json", (hub_root / MAP_PATH).read_text(encoding="utf-8")
         if parts[0] == "installed-host-status":
-            return "application/json", (hub_root / HOST_EVIDENCE_PATH).read_text(
-                encoding="utf-8"
-            )
+            evidence = json.loads((hub_root / HOST_EVIDENCE_PATH).read_text(encoding="utf-8"))
+            status = validate_mcp_dependency_map(hub_root)
+            payload = {
+                "schema_version": "dad.mcp.installed_host_status.v1",
+                "observation_state": (
+                    "current" if status["installed_host_claims_allowed"] else "stale"
+                ),
+                "installed_or_active_claims_allowed": status[
+                    "installed_host_claims_allowed"
+                ],
+                "issue_codes": status["scoped_host_issue_codes"],
+                "evidence": evidence,
+                "authority": "metadata_only_no_activation_inference",
+            }
+            return "application/json", json_dumps(payload, pretty=True)
 
     raise MCPError(-32602, "Unsupported resource URI")
 
@@ -932,11 +944,16 @@ class DADGraphMCPServer:
             payload = self._dependency_status()
         elif name == "dad_mcp_dependency_impact":
             status = self._dependency_status()
-            if not status["current_claims_allowed"]:
+            if not status["structural_claims_allowed"]:
                 raise MCPError(-32010, "MCP dependency map is stale; current impact claims refused")
             try:
                 payload = mcp_dependency_impact(self.hub_root, **arguments)
             except MCPDependencyMapError as exc:
+                if str(exc) == "dependency_map_stale":
+                    raise MCPError(
+                        -32010,
+                        "MCP dependency evidence is stale for the requested claim",
+                    ) from exc
                 raise MCPError(-32602, "Invalid dependency impact request") from exc
         elif name == "dad_mcp_dependency_refresh_candidate":
             payload = build_mcp_dependency_refresh_candidate(self.hub_root)

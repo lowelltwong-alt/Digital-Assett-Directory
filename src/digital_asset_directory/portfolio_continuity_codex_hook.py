@@ -9,13 +9,13 @@ from pathlib import Path
 import re
 from typing import Any, Mapping
 
-from .portfolio_continuity_adapter import ingest_receipt
+from .portfolio_continuity_adapter import _ingest_codex_hook_receipt
 from .portfolio_continuity_events import _append_line, _exclusive_lock
 from .transport import DATA_PLANE_PATHS, resolve_data_root
 
 
 CODEX_HOOK_ADAPTER_ID = "adapter:intent-continuity-shadow"
-CODEX_HOOK_ADAPTER_REVISION_ID = "adapter-revision:intent-continuity-codex-host:0.3.9"
+CODEX_HOOK_ADAPTER_REVISION_ID = "adapter-revision:intent-continuity-codex-host:0.3.10"
 MAX_HOOK_INPUT_BYTES = 64 * 1024
 HOOK_LOCK_TIMEOUT_SECONDS = 1.5
 AUTHORITY_BOUNDARY = (
@@ -137,11 +137,10 @@ def ingest_codex_hook(
     """Ingest one real Codex event with stable retry behavior and no action surface."""
 
     receipt = build_codex_hook_receipt(hook_input, repository_id=repository_id)
-    return ingest_receipt(
+    return _ingest_codex_hook_receipt(
         hub_root,
         receipt,
         lock_timeout_seconds=HOOK_LOCK_TIMEOUT_SECONDS,
-        retry_clock_tolerant=True,
     )
 
 

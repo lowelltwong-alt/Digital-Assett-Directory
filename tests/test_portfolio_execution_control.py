@@ -21,6 +21,7 @@ from digital_asset_directory.portfolio_events import (
 )
 from digital_asset_directory.portfolio_authority import VerifiedApprovals
 from digital_asset_directory.portfolio_execution import (
+    CAMPAIGN_BINDING_SCHEMA,
     approve_dispatch_intent,
     dispatch_packet,
     _fold_execution_control_for_test as fold_execution_control,
@@ -111,6 +112,53 @@ def _run_two_concurrent(call):
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         return list(pool.map(run, range(2)))
+
+
+def _campaign_binding() -> dict:
+    digest = "sha256:" + "a" * 64
+    return {
+        "schema_version": CAMPAIGN_BINDING_SCHEMA,
+        "campaign_id": "campaign:test",
+        "campaign_revision": "revision:test",
+        "manifest_digest": digest,
+        "job_id": "J-100",
+        "packet_digest": digest,
+        "source_revision": digest,
+        "authorization_id": "authorization:test:r1",
+        "named_approver": "Lowell",
+        "authorization_receipt_digest": digest,
+        "authority_approval_ids": {
+            "lease_approval_id": "human:lease:campaign",
+            "dispatch_approval_id": "human:dispatch:campaign",
+        },
+        "budget_receipt_digests": {},
+        "input_digests": {"input.json": digest},
+        "dependency_receipt_digests": {},
+        "qualification_evidence_digests": {"qualification.json": digest},
+        "idempotency_key": "campaign:test:J-100:r1",
+        "worker_revision_id": "role:builder:v1",
+        "checker_revision_id": "role:checker:v1",
+        "action_class": "implement",
+        "lease_minutes": 90,
+        "output_paths": ["src"],
+        "acceptance_evidence_paths": ["evidence/J-100.json"],
+        "checkpoint_path": "state/J-100.json",
+        "receipt_path": "state/J-100.receipts.jsonl",
+        "allowed_paths": ["src"],
+        "allowed_effects": ["bounded local implementation"],
+        "campaign_budget_digest": digest,
+        "job_budget_digest": digest,
+        "durability_verifier_digest": digest,
+        "evidence_snapshot_digest": digest,
+        "adapter_revision": "adapter:test:r1",
+        "heartbeat_at": (T0 + timedelta(minutes=1)).isoformat(),
+        "heartbeat_minutes": 15,
+        "repair_attempt": 0,
+        "max_repairs": 1,
+        "reissue_of_attempt_id": "",
+        "prior_reconciliation_digest": "",
+        "partial_effects_reconciled": True,
+    }
 
 
 def _synchronize_legacy_prelock_projection(monkeypatch) -> None:
@@ -392,6 +440,88 @@ def test_dispatch_needs_separate_exact_approval_and_never_executes(tmp_path: Pat
     packet = dispatch_packet(both, proposed["dispatch_revision_id"])
     assert packet["manual_packet_ready"] is True
     assert packet["dispatch_allowed"] is False
+
+
+def test_campaign_binding_is_hash_bound_across_lease_and_dispatch(tmp_path: Path) -> None:
+    from digital_asset_directory.portfolio_execution import lease_scope_digest
+
+    workstream_id, binding_id = _active_bound_workstream(tmp_path)
+    campaign_binding = _campaign_binding()
+    requested = request_execution_lease(
+        tmp_path,
+        workstream_id,
+        owner_id="role:builder:v1",
+        owner_kind="agent",
+        repo_binding_id=binding_id,
+        action_classes=["implement"],
+        requested_paths=["src"],
+        not_before=T0,
+        expires_at=T0 + timedelta(hours=2),
+        return_state="paused",
+        rationale_code="campaign-bridge-test",
+        campaign_binding=campaign_binding,
+        command_id="campaign-binding-lease",
+        now=T0,
+    )
+    assert requested["status"] == "requested"
+    events, diagnostics = read_events(ledger_path(tmp_path))
+    assert diagnostics["problems"] == []
+    lease_payload = next(
+        event["payload"]
+        for event in events
+        if event["event_kind"] == "execution_lease_requested"
+    )
+    assert lease_payload["campaign_binding"] == campaign_binding
+    changed = {**lease_payload, "campaign_binding": {**campaign_binding, "job_id": "J-110"}}
+    assert lease_scope_digest(changed) != lease_payload["scope_digest"]
+
+    grant_execution_lease(
+        tmp_path,
+        workstream_id,
+        requested["lease_id"],
+        granted_by="Lowell",
+        approval_id="human:campaign-lease",
+        command_id="campaign-binding-grant",
+        now=T0,
+    )
+    mismatch = propose_dispatch_intent(
+        tmp_path,
+        workstream_id,
+        lease_id=requested["lease_id"],
+        repo_binding_id=binding_id,
+        action="implement",
+        worker_revision_id="role:builder:v1",
+        checker_revision_id="role:checker:v2",
+        task_summary="Campaign binding mismatch must fail closed.",
+        requested_paths=["src"],
+        acceptance_refs=["test:campaign-binding"],
+        validation_commands=["python -m pytest tests/test_campaign_controller.py"],
+        authority_refs=["campaign:test"],
+        expected_repo_snapshot="sha256:" + "b" * 64,
+        campaign_binding={**campaign_binding, "job_id": "J-110"},
+        command_id="campaign-binding-mismatch",
+        now=T0 + timedelta(minutes=1),
+    )
+    assert mismatch["status"] == "campaign_binding_scope_mismatch"
+    accepted = propose_dispatch_intent(
+        tmp_path,
+        workstream_id,
+        lease_id=requested["lease_id"],
+        repo_binding_id=binding_id,
+        action="implement",
+        worker_revision_id="role:builder:v1",
+        checker_revision_id="role:checker:v2",
+        task_summary="Campaign binding remains exact and non-dispatching.",
+        requested_paths=["src"],
+        acceptance_refs=["test:campaign-binding"],
+        validation_commands=["python -m pytest tests/test_campaign_controller.py"],
+        authority_refs=["campaign:test"],
+        expected_repo_snapshot="sha256:" + "b" * 64,
+        campaign_binding=campaign_binding,
+        command_id="campaign-binding-match",
+        now=T0 + timedelta(minutes=1),
+    )
+    assert accepted["status"] == "proposed"
 
 
 def test_revocation_and_expiry_fail_closed(tmp_path: Path) -> None:

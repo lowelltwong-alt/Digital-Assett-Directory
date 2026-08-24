@@ -1,0 +1,65 @@
+{
+  "schema_version": "dad.high_value_recovery.evidence_receipt.v1",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "campaign_revision": "replace",
+  "job_id": "replace",
+  "idempotency_key": "replace",
+  "checkpoint_path": "replace",
+  "receipt_path": "replace",
+  "attempt_id": "replace",
+  "gate_id": "replace",
+  "gate_revision": "1",
+  "result": "inconclusive",
+  "source_revision": "sha256:replace",
+  "input_digests": {},
+  "dependency_receipt_digests": {},
+  "producer_role": "replace",
+  "producer_identity": "replace",
+  "checker_role": "independent-checker",
+  "checker_identity": "replace",
+  "independence_basis": "replace",
+  "adapter": {
+    "name": "replace",
+    "revision": "replace"
+  },
+  "worker_capability": {
+    "profile_id": "replace",
+    "qualification_evidence": [
+      "replace"
+    ]
+  },
+  "lease": {
+    "lease_id": "replace",
+    "issued_at": "replace",
+    "expires_at": "replace",
+    "released_at": "replace",
+    "state": "released"
+  },
+  "lease_minutes": 0,
+  "heartbeat_minutes": 0,
+  "command_or_query": "replace",
+  "started_at": "replace",
+  "completed_at": "replace",
+  "exit_code": null,
+  "evidence_paths": [],
+  "evidence_digests": {},
+  "output_digests": {},
+  "affected_paths": [],
+  "coverage": "coverage_unavailable",
+  "privacy_class": "internal_metadata",
+  "synthetic_or_fixture": false,
+  "measured_budgets": {
+    "wall_seconds": 0,
+    "cost_units": 0,
+    "context_tokens": 0,
+    "output_bytes": 0,
+    "attempt_number": 1
+  },
+  "state": "resumable",
+  "next_action": "replace",
+  "limitations": [],
+  "revalidation_triggers": [],
+  "case_binding": null,
+  "case_binding_table_digest": null,
+  "authority_boundary": "This receipt is evidence for one gate only and does not authorize external, destructive, publication, merge, deployment, or downstream effects."
+}

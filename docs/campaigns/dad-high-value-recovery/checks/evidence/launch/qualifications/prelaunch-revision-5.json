@@ -1,0 +1,117 @@
+{
+  "schema_version": "dad.campaign.prelaunch_qualification.v1",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "campaign_revision": "5-hook-latency-candidate-20260821",
+  "manifest_digest": "sha256:ab01a104ab4e77df8157d43052d4602c80779dc1488d0e114d1f7a5029d4a875",
+  "mesh_semantic_digest": "sha256:e4b4f15d08ee05faae8fe5c024eed811378532dbcff2a1919fdc92ebc1847787",
+  "recorded_at": "2026-08-22T03:29:22.3838032Z",
+  "qualification_result": "pass_bounded_prelaunch_only",
+  "qualified_components": [
+    {
+      "artifact_id": "adapter:intent-continuity-codex-host",
+      "adapter_revision_id": "adapter-revision:intent-continuity-codex-host:0.3.10",
+      "portability_card_revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.20",
+      "adapter_interface_digest": "sha256:751a7439821d93304475cb1f906136dc10afbe16d8a7aea21381aaaa9718ad0b",
+      "result": "pass_synthetic_scale_and_safety_boundary"
+    },
+    {
+      "artifact_id": "library:campaign-packet-controller",
+      "revision_id": "portability-card-revision:library-campaign-packet-controller:0.1.0",
+      "result": "pass_inert_boundary"
+    },
+    {
+      "artifact_id": "adapter:campaign-codex-shell-inert",
+      "revision_id": "portability-card-revision:adapter-campaign-codex-shell-inert:0.1.0",
+      "result": "pass_inert_boundary"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/hook-latency-repair.json",
+      "digest": "sha256:7d39df63638ddebfece1aacff4870e3a8e13b502ee3a9ef611e7960d5c270df7",
+      "result": "pass"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/controller-and-adapter.json",
+      "digest": "sha256:7e4b6e290c54dcb643eb9671acfae228aef11b401f73b309553a51ee52b4012f",
+      "result": "historical_revision_4_evidence_retained"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/prelaunch-dry-run-revision-5.json",
+      "digest": "sha256:4f8256e85ad940837f1305bd4cc7bd76c146f1ab2b58eeb27e7ea859ca36f60d",
+      "result": "blocked_human_with_zero_effects"
+    }
+  ],
+  "commands": [
+    {
+      "command": "python -m pytest tests/test_portfolio_continuity_adapter.py tests/test_portfolio_continuity_events.py tests/test_portfolio_continuity_hook_fast_validation.py tests/test_portfolio_continuity_codex_hook.py tests/test_portfolio_continuity_hook_benchmark.py tests/test_portfolio_continuity_host_readiness.py tests/test_portfolio_continuity_runtime.py tests/test_portability_control.py -q",
+      "result": "pass",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m digital_asset_directory.cli os continuity benchmark-hook-scale --output docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/hook-latency-repair.json",
+      "result": "pass: warm p95 1039.816ms at 0 rows, 1180.959ms at 1000 rows, and 1151.946ms at 10000 rows; cold 10000-row latency 2803.612ms",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m pytest tests/test_campaign_controller.py docs/campaigns/dad-high-value-recovery/checks/test_verify_receipt_durability.py -q",
+      "result": "13 passed",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m digital_asset_directory.campaign_codex_shell_adapter qualify --repo . --manifest docs/campaigns/dad-high-value-recovery/campaign.json --decision-receipt docs/campaigns/dad-high-value-recovery/checks/evidence/decision/human-decision-receipt.json --job J-100 --source-revision e05c4e5de2d8ad0fb87e19c42783ad28dd04a3b4",
+      "result": "blocked_human for activation_not_authorized, decision_digest_mismatch, and decision_revision_mismatch; all seven effect counters zero",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m pytest -q",
+      "result": "two repository-validation assertion failures, both caused by the six intentionally untracked campaign pointer targets; no hook, portability, controller, or runtime regression",
+      "exit_code": 1
+    },
+    {
+      "command": "python -m digital_asset_directory.cli validate --hub .",
+      "result": "failed closed on six intentionally untracked campaign pointers plus two pre-existing branch-disposition errors; one pre-existing stale-branch warning",
+      "exit_code": 1
+    },
+    {
+      "command": "python -m digital_asset_directory.cli roadmap check --no-update",
+      "result": "pass with legacy computed blocked and awaiting-human-gate statuses visible",
+      "exit_code": 0
+    }
+  ],
+  "hook_scale_invariants": {
+    "warm_sample_count_per_case": 5,
+    "cold_sample_count": 1,
+    "warm_latency_budget_ms": 1500.0,
+    "cold_hard_timeout_ms": 5000,
+    "all_samples_silent": true,
+    "all_samples_persisted_once": true,
+    "all_indexes_valid": true,
+    "all_full_schema_oracles_valid": true,
+    "timed_out_count": 0,
+    "failure_marker_count": 0,
+    "source_worktree_unchanged_during_measurement": true
+  },
+  "effect_boundary": {
+    "campaign_jobs_executed": 0,
+    "campaign_state_writes": 0,
+    "git_changes": 0,
+    "github_changes": 0,
+    "network_calls": 0,
+    "downstream_writes": 0,
+    "deployments": 0,
+    "execution_authorized": false,
+    "dispatch_allowed": false
+  },
+  "activation_readiness": "blocked_pending_exact_h010_atomic_tracking_repository_validation_and_host_attestation",
+  "limitations": [
+    "Synthetic hook qualification does not attest Codex project trust, real host discovery, hook activation, or business value.",
+    "source_worktree_unchanged compares Git porcelain path state before and after measurement; it is not a byte-exact full-worktree fingerprint, although the declared adapter interface is independently digest-bound.",
+    "The full JSON Schema oracle currently treats date-time format as an annotation; fast-path parity preserves that behavior but does not strengthen date-time validation.",
+    "All campaign files remain untracked because staging and commit authority were withheld, so pointer liveness cannot yet pass.",
+    "The independent checker accepted the bounded repair and blocked launch/J-100."
+  ],
+  "candidate_only": true,
+  "execution_authorized": false,
+  "authority_boundary": "This qualification is local candidate evidence only. It does not authorize H-010, J-100, campaign launch, staging, commit, push, merge, GitHub changes, deployment, downstream mutation, plugins, global settings, automation, or cleanup."
+}

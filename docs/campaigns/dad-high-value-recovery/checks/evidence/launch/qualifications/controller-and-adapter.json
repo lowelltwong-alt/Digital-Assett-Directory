@@ -1,0 +1,107 @@
+{
+  "schema_version": "dad.campaign.prelaunch_qualification.v1",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "campaign_revision": "4-activation-candidate-20260821",
+  "manifest_digest": "sha256:40a73141b10f0f073c8b158b587a130e3873ae647a41ce1c22adcad38ff13d4e",
+  "qualified_components": [
+    {
+      "artifact_id": "library:campaign-packet-controller",
+      "revision_id": "portability-card-revision:library-campaign-packet-controller:0.1.0",
+      "result": "pass_inert_boundary"
+    },
+    {
+      "artifact_id": "adapter:campaign-codex-shell-inert",
+      "revision_id": "portability-card-revision:adapter-campaign-codex-shell-inert:0.1.0",
+      "result": "pass_inert_boundary"
+    }
+  ],
+  "commands": [
+    {
+      "command": "python -m pytest tests/test_campaign_controller.py docs/campaigns/dad-high-value-recovery/checks/test_verify_receipt_durability.py -q",
+      "result": "13 passed",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m digital_asset_directory.campaign_codex_shell_adapter qualify --repo . --manifest docs/campaigns/dad-high-value-recovery/campaign.json --decision-receipt docs/campaigns/dad-high-value-recovery/checks/evidence/decision/human-decision-receipt.json --job J-100 --source-revision e05c4e5de2d8ad0fb87e19c42783ad28dd04a3b4",
+      "result": "blocked_human as required because prior H-010 revision and digest do not carry forward; all effect counters zero",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m digital_asset_directory.campaign_codex_shell_adapter shutdown --manifest docs/campaigns/dad-high-value-recovery/campaign.json --reason prelaunch-qualification",
+      "result": "pure stop checkpoint candidate; no checkpoint write or execution",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m pytest -q",
+      "result": "failed with 5 tests: 2 stale-host structural tests, 1 hook latency boundary, and 2 repository validations blocked by untracked campaign pointers",
+      "exit_code": 1
+    },
+    {
+      "command": "python -m pytest tests/test_dad_mcp_host_adapters.py::test_all_host_templates_resolve_to_one_entrypoint_and_authority tests/test_dad_mcp_host_adapters.py::test_validator_fails_closed_on_entrypoint_or_template_set_drift tests/test_dad_mcp_host_adapters.py::test_host_evidence_exact_age_boundary_and_future_rejection -q",
+      "result": "3 passed after structural tests were pinned to the evidence capture time; the dedicated age-boundary test still fails closed for stale and future evidence",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m pytest tests/test_portfolio_continuity_hook_benchmark.py::test_hook_scale_harness_covers_cold_and_warm_0_1k_10k -q",
+      "result": "failed in isolation: 0/warm 1841.977ms exceeded the 1500ms boundary after the full-suite observation was 1981.968ms",
+      "exit_code": 1
+    },
+    {
+      "command": "python -m digital_asset_directory.cli validate --hub .",
+      "result": "failed closed on six untracked campaign pointers and two pre-existing branch-disposition findings; MCP and portability repairs introduced no worktree validation error",
+      "exit_code": 1
+    }
+  ],
+  "invariant_results": {
+    "flattens_70_atomic_children": true,
+    "cohort_parent_leases_denied_by_contract": true,
+    "budget_gate_fail_closed": true,
+    "conflicting_idempotency_key_denied": true,
+    "stale_h010_denied": true,
+    "subprocesses_started": 0,
+    "model_calls": 0,
+    "network_calls": 0,
+    "git_changes": 0,
+    "downstream_writes": 0,
+    "campaign_state_writes": 0,
+    "campaign_job_receipts_created": 0,
+    "shutdown_checkpoint_write_performed": false,
+    "execution_authorized": false,
+    "dispatch_allowed": false
+  },
+  "repository_qualification": {
+    "full_suite_rerun_after_test_correction": false,
+    "reason_not_rerun": "The complete suite is expensive and the remaining failed cases were independently classified with narrow retries. Launch remains blocked, so another unchanged-state full run would be redundant before atomic tracking and the hook latency failure are resolved.",
+    "unresolved_failures": [
+      "hook_scale_harness_warm_latency_boundary",
+      "pointer_target_untracked",
+      "pre_existing_branch_disposition_findings"
+    ],
+    "independent_bounded_repair_disposition": "accept",
+    "independent_launch_disposition": "block"
+  },
+  "dry_run_packet_digest": "sha256:78ce03791914a72b30d19d269572ab57687df3206f89d928779a44619e90d9d2",
+  "shutdown_checkpoint_candidate": {
+    "active_job_id": "",
+    "authority_boundary": "This controller is a non-authoritative packet projection. It does not authorize or perform campaign jobs, subprocesses, model calls, network access, Git changes, downstream writes, publication, or deployment.",
+    "campaign_id": "dad-high-value-recovery-v1",
+    "campaign_revision": "4-activation-candidate-20260821",
+    "checkpoint_digest": "sha256:6f95ef1325c9f1d57dbb3564d99def36cc7a2db87c7992a592a85bba7f8d94e5",
+    "checkpoint_write_performed": false,
+    "evidence_preserved": true,
+    "execution_authorized": false,
+    "lease_action": "release_or_revoke_if_active",
+    "reason_code": "prelaunch-qualification",
+    "requested_at": "2026-08-21T15:46:18.122293+00:00",
+    "schema_version": "dad.campaign.stop_checkpoint_candidate.v1",
+    "successors_blocked": true
+  },
+  "qualification_result": "pass_inert_prelaunch_only",
+  "activation_readiness": "blocked_pending_new_h010_atomic_tracking_full_validation_and_independent_review",
+  "limitations": [
+    "This qualification proves only the non-executing controller and adapter boundary.",
+    "It does not execute J-100, authorize launch, or prove campaign value.",
+    "Repository pointer liveness remains blocked until the complete reviewed untracked campaign set is atomically tracked under separate commit authority."
+  ],
+  "authority_boundary": "This qualification is local candidate evidence only and does not authorize J-100, launch, Git changes, downstream mutation, publication, merge, deployment, or cleanup."
+}

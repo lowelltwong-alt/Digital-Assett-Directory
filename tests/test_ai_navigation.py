@@ -58,7 +58,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert manifest["navigation_standards"]["navigation_registry"] == (
         "registry/ai-navigation-registry.json"
     )
-    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.17.1"
+    assert manifest["navigation_standards"]["navigation_version"] == "2026.08.20.1"
     assert manifest["navigation_standards"]["routing_standard"] == (
         "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md"
     )
@@ -70,6 +70,14 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert "registry/ml-agent-family-registry.json" in manifest["knowledge_graph_entrypoints"]
     assert "registry/ml-technique-registry.json" in manifest["knowledge_graph_entrypoints"]
     assert "docs/AGENT_FAMILY_PORTFOLIO.md" in manifest["knowledge_graph_entrypoints"]
+    assert (
+        "docs/campaigns/dad-high-value-recovery/README.md"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert (
+        "docs/campaigns/dad-high-value-recovery/campaign.md"
+        in manifest["knowledge_graph_entrypoints"]
+    )
     assert "registry/agent-family-portfolio-registry.json" in manifest["knowledge_graph_entrypoints"]
     assert (
         "processed/reports/exception_backfill_classifier_refresh_plan.md"
@@ -181,7 +189,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     registry = json.loads((ROOT / "registry" / "ai-navigation-registry.json").read_text())
 
     assert registry["singular_entrypoint"]["path"] == "AI_FRONT_DOOR.md"
-    assert registry["navigation_version"] == "2026.07.20.1"
+    assert registry["navigation_version"] == "2026.08.20.1"
     assert registry["updated_at"]
     assert "memory" in registry["entrypoint_policy"]["memory_rule"].lower()
     assert registry["freshness_policy"]["recent_changes_limit"] <= 20
@@ -198,6 +206,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     assert "registry/dad-offerings-registry.json" in branches
     assert "assets/agent-skills/ml-workflow-agent-family/SKILL.md" in branches
     assert "docs/AGENT_FAMILY_PORTFOLIO.md" in branches
+    assert "docs/campaigns/dad-high-value-recovery/README.md" in branches
     assert "docs/MAIL_CENTER.md" in branches
     assert "docs/DAD_EVENT_PIPELINE.md" in branches
     assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in branches

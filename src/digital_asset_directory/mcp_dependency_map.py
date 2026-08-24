@@ -27,6 +27,13 @@ HOST_EVIDENCE_PATH = Path("assets/mcp/dad-local-readonly/installed-host-evidence
 HOST_EVIDENCE_SCHEMA_PATH = Path(
     "assets/mcp/dad-local-readonly/installed-host-evidence.schema.json"
 )
+_SCOPED_HOST_OBSERVATION_ISSUES = frozenset(
+    {
+        "installed_host_evidence_stale",
+        "installed_host_evidence_from_future",
+        "installed_host_evidence_freshness_invalid",
+    }
+)
 REQUIRED_CATEGORIES = {
     "identity",
     "protocol",
@@ -485,7 +492,7 @@ def _coverage_errors(repo_root: Path, dependency_map: Mapping[str, Any]) -> list
             or "mcp_server" not in imports
             or "validate_mcp_dependency_map" not in calls
             or "DADGraphMCPServer" not in calls
-            or "current_claims_allowed" not in string_constants
+            or "structural_claims_allowed" not in string_constants
         ):
             errors.append("repository_validation_gate_stale")
     except Exception:
@@ -639,13 +646,21 @@ def validate_mcp_dependency_map(
             errors.append("fingerprint_stale")
             errors.append(f"fingerprint_stale:{node_id}")
     issue_codes = sorted(set(errors))
+    scoped_host_issues = sorted(set(issue_codes) & _SCOPED_HOST_OBSERVATION_ISSUES)
+    structural_issues = sorted(set(issue_codes) - _SCOPED_HOST_OBSERVATION_ISSUES)
     current = not issue_codes
+    structural_current = not structural_issues
+    installed_host_current = structural_current and not scoped_host_issues
     return {
         "schema_version": "dad.mcp.dependency_status.v1",
-        "state": "current" if current else "stale",
+        "state": "current" if current else ("degraded" if structural_current else "stale"),
         "map_revision": str(dependency_map.get("map_revision", "unknown")),
         "current_claims_allowed": current,
+        "structural_claims_allowed": structural_current,
+        "installed_host_claims_allowed": installed_host_current,
         "issue_codes": issue_codes,
+        "structural_issue_codes": structural_issues,
+        "scoped_host_issue_codes": scoped_host_issues,
         "counts": {
             "categories": len({row.get("category") for row in dependency_map.get("nodes", [])}),
             "nodes": len(dependency_map.get("nodes", [])),
@@ -693,13 +708,18 @@ def mcp_dependency_impact(repo_root: Path, node_id: str, *, max_depth: int = 8) 
 
     if isinstance(max_depth, bool) or not isinstance(max_depth, int) or not 1 <= max_depth <= 16:
         raise MCPDependencyMapError("invalid_max_depth")
-    status = validate_mcp_dependency_map(repo_root)
-    if not status["current_claims_allowed"]:
-        raise MCPDependencyMapError("dependency_map_stale")
     dependency_map = load_mcp_dependency_map(repo_root)
     nodes = {str(row["node_id"]): row for row in dependency_map["nodes"]}
     if node_id not in nodes:
         raise MCPDependencyMapError("unknown_dependency_node")
+    status = validate_mcp_dependency_map(repo_root)
+    claims_field = (
+        "installed_host_claims_allowed"
+        if node_id == "mcp.node.host-adapter.installed-evidence"
+        else "structural_claims_allowed"
+    )
+    if not status[claims_field]:
+        raise MCPDependencyMapError("dependency_map_stale")
     outgoing: dict[str, list[Mapping[str, Any]]] = {}
     for edge in dependency_map["edges"]:
         outgoing.setdefault(str(edge["source"]), []).append(edge)

@@ -78,6 +78,7 @@ _GOVERNED_PREFIXES = (
 )
 _SELF_DESCRIBING_GOVERNED_FILES = {REGISTRY_PATH.as_posix()}
 _MAX_PORTABLE_SOURCE_BYTES = 1_048_576
+_NONROUTABLE_STATUSES = frozenset({"stale", "superseded", "retired"})
 _NORMATIVE_RUNTIME_TERMS = re.compile(
     r"(?:^|[^a-z0-9])(?:gpt(?:[-_.]?[0-9])?|openai|anthropic|claude|gemini|cursor|"
     r"bedrock|vertex|mistral|llama|groq)(?:$|[^a-z0-9])",
@@ -647,7 +648,18 @@ def validate_portability(repo_root: Path, *, now: datetime | None = None) -> dic
         if fresh:
             parsed = datetime.fromisoformat(str(fresh).replace("Z", "+00:00"))
             if parsed.astimezone(timezone.utc) <= observed:
-                findings.append(_finding("expired_exception" if card["binding_class"] == "environment_bound_exception" else "stale_evidence", artifact))
+                if card["binding_class"] == "environment_bound_exception":
+                    findings.append(_finding("expired_exception", artifact))
+                elif card.get("status") in _NONROUTABLE_STATUSES:
+                    findings.append(
+                        _finding(
+                            "nonroutable_stale_evidence",
+                            artifact,
+                            severity="warning",
+                        )
+                    )
+                else:
+                    findings.append(_finding("stale_evidence", artifact))
     for artifact, card in artifact_cards.items():
         if card.get("binding_class") == "runtime_adapter":
             core = revision_cards.get(str(card.get("core_revision_id", "")))
@@ -764,6 +776,21 @@ def assess_lifecycle(
         if any(artifact not in known_cards for artifact in exact_artifacts):
             finding_codes = sorted(set(finding_codes) | {"missing_exact_portability_binding"})
         else:
+            revision_cards = {
+                str(card.get("revision_id", "")): card for card in known_cards.values()
+            }
+            nonroutable = {
+                artifact
+                for artifact in exact_artifacts
+                if known_cards[artifact].get("status") in _NONROUTABLE_STATUSES
+            }
+            for artifact in exact_artifacts:
+                for revision_id in known_cards[artifact].get("adapter_revision_ids", []):
+                    adapter = revision_cards.get(str(revision_id))
+                    if adapter is None or adapter.get("status") in _NONROUTABLE_STATUSES:
+                        nonroutable.add(artifact)
+            if nonroutable:
+                finding_codes = sorted(set(finding_codes) | {"artifact_nonroutable"})
             covered_scope = {
                 str(path).replace("\\", "/")
                 for artifact in exact_artifacts
@@ -784,6 +811,7 @@ def assess_lifecycle(
         validation["hard_finding_count"]
         or eligibility.get("runtime_binding_requested")
         or "missing_exact_portability_binding" in finding_codes
+        or "artifact_nonroutable" in finding_codes
         or (protected_transition and quarantine_codes)
     ) and (protected_transition or validation["rollout_mode"] in {"enforce_new_or_worsened", "reviewed_active"}):
         outcome = "block"

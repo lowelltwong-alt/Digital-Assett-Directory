@@ -75,7 +75,7 @@
     "runtime_route": {
       "capability_alias": "luna",
       "reasoning_effort": "low",
-      "adapter_revision_id": "portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.0",
+      "adapter_revision_id": "portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.1",
       "retirement_rule": "The automation host requires a concrete model binding. When this model is retired or unqualified, pause the automation and human-review a replacement that satisfies the same Luna/low capability, privacy, tool, cost, and evidence contract; never silently widen intelligence or authority.",
       "escalation_rule": "Luna/low may discover, normalize, deduplicate, and screen pointers. Ambiguous trust, licensing, security, privacy, high-consequence domain fit, or architecture value becomes a candidate for separate Terra or human review; the weekly run does not escalate itself or use Sol."
     },

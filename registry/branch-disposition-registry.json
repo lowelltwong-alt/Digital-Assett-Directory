@@ -6,11 +6,21 @@
     {
       "branch": "codex/preserve-parallel-orchestration-20260710",
       "commit": "4f085940b8e5f529911c58477742dbd42c6c186f",
-      "disposition": "active",
-      "reason": "Orchestration layer (TASK_BOARD bus, coordination protocol, decisions D17-D20, programs P1-P3, specs T-0001..T-0006) parked pending the marathon Wave 0 decision-by-decision recovery. Integrate-vs-tombstone will be decided per record during that recovery, not wholesale.",
+      "disposition": "tombstone",
+      "reason": "D17-D20 were recovered to docs/orchestration-recovery and resolved; ARCHITECTURE_PACKET and START_HERE are historical references. The remaining TASK_BOARD, lease, queue, specification, and program state is dated 2026-07-10 operational history, preserved at this immutable tip, and must not be re-published as a second DAD operating system under the High-Value Recovery Campaign.",
+      "content_pointer": "git:4f085940b8e5f529911c58477742dbd42c6c186f; docs/orchestration-recovery/README.md; docs/campaigns/dad-high-value-recovery/08_SUPERSESSION_AND_ARCHIVE_MAP.md",
       "decided_by": "Lowell Wong",
-      "decided_at": "2026-07-27",
-      "review_after": "2026-08-09"
+      "decided_at": "2026-08-22"
+    },
+    {
+      "branch": "preserve/c4-ci-test-routing",
+      "commit": "e17cb43cd8269d507e0635f67b3ff4689f2e4abe",
+      "disposition": "active",
+      "reason": "PR #55's selector architecture supersedes the C4 workflow. The sole retained review question is whether a new main-based, module-boundary-qualified pytest-xdist experiment can prove parallel safety and material CI improvement; C4's broad change routing, testmon advisory lane, merge_group, and concurrency settings are excluded.",
+      "content_pointer": "docs/handoffs/CODEX54_EXECUTION_HANDOFF_2026-07-17.md#c4-revised-ci-acceleration-remnants; .ci/module-boundaries.yaml; .github/workflows/validate.yml",
+      "decided_by": "Lowell Wong",
+      "decided_at": "2026-08-22",
+      "review_after": "2026-09-05"
     }
   ]
 }

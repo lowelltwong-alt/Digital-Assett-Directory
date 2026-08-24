@@ -1,0 +1,36 @@
+{
+  "schema_version": "dad.campaign.role_qualification.v1",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "campaign_revision": "6-execution-control-bridge-candidate-20260823",
+  "manifest_digest": "sha256:58bf4181a3eeb2cc45156d8e50dc7089e8c1a42a17cd3ff4c4eda67f077c2ee9",
+  "status": "qualified_candidate",
+  "qualified_at": "2026-08-23T12:00:00-04:00",
+  "expires_at": "2026-11-19T23:59:59-05:00",
+  "adapter_revision": "dad-campaign-codex-shell-adapter:0.2.0-prelaunch",
+  "qualification_method": "deterministic_contract_and_boundary_review",
+  "limitations": [
+    "Qualification is revision-bound candidate evidence, not a capability score.",
+    "It does not authorize campaign execution, J-100, external effects, or publication."
+  ],
+  "revalidation_triggers": [
+    "campaign revision or manifest digest change",
+    "role contract, source digest, adapter revision, authority, privacy, or effect change",
+    "qualification expiry or independent-review challenge"
+  ],
+  "candidate_only": true,
+  "execution_authorized": false,
+  "dispatch_allowed": false,
+  "authority_boundary": "This role qualification is local prelaunch evidence only and does not authorize a campaign job or any external, Git, GitHub, deployment, downstream, automation, or cleanup effect.",
+  "role": "campaign-owner",
+  "profile_id": "campaign-role:campaign-owner:r6",
+  "qualified_revision_id": "campaign-role-revision:campaign-owner:r6",
+  "capabilities": [
+    "exact human-gate routing",
+    "budget and stop-state oversight",
+    "bounded lifecycle decision handoff"
+  ],
+  "source_digests": {
+    "docs/campaigns/dad-high-value-recovery/campaign.json": "sha256:58bf4181a3eeb2cc45156d8e50dc7089e8c1a42a17cd3ff4c4eda67f077c2ee9",
+    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362"
+  }
+}

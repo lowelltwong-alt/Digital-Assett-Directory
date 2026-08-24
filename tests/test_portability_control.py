@@ -224,6 +224,82 @@ def test_runtime_adapter_interface_is_bound_to_its_source_authority(
     }
 
 
+def test_explicit_stale_disposition_is_visible_but_not_globally_hard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = deepcopy(pc.load_registry(ROOT))
+    adapter = next(
+        card
+        for card in registry["cards"]
+        if card["artifact_id"]
+        == "runtime-adapter:codex-gpt-5-6-luna-low-weekly-research"
+    )
+    adapter["status"] = "stale"
+    adapter["fresh_until"] = "2020-01-01T00:00:00+00:00"
+    monkeypatch.setattr(pc, "load_registry", lambda _root: registry)
+
+    result = pc.validate_portability(ROOT)
+    assert result["valid"] is True
+    assert {
+        (row["code"], row["severity"]) for row in result["findings"]
+    } >= {("nonroutable_stale_evidence", "warning")}
+
+
+def test_campaign_bridge_core_and_adapter_are_revision_bound_and_host_decoupled() -> None:
+    registry = pc.load_registry(ROOT)
+    core = next(
+        card
+        for card in registry["cards"]
+        if card["artifact_id"] == "library:campaign-packet-controller"
+    )
+    adapter = next(
+        card
+        for card in registry["cards"]
+        if card["artifact_id"] == "adapter:campaign-codex-shell-inert"
+    )
+    assert core["revision_id"].endswith(":0.2.0")
+    assert adapter["revision_id"].endswith(":0.2.0")
+    assert adapter["core_revision_id"] == core["revision_id"]
+    assert adapter["target_capability_predicate"] == {
+        "runtime_adapter_id": "adapter:codex-host",
+        "manual_host_only": True,
+        "canonical_manifest_only": True,
+        "durable_portfolio_state_required": True,
+        "explicit_repository_local_attestations": True,
+        "ed25519_backend_required_for_positive_fold": True,
+        "intent_continuity_host_gate_required": False,
+        "launch_available": False,
+        "execution_authorized": False,
+    }
+    assert "portfolio_execution_control_binding" in core["capability_ids"]
+    assert core["execution_authorized"] is False
+    assert adapter["execution_authorized"] is False
+
+
+def test_stale_artifact_and_dependent_core_are_denied_protected_routing() -> None:
+    stale = pc.assess_lifecycle(
+        ROOT,
+        stage="activation",
+        task="Activate the weekly research runtime adapter",
+        artifact_ids=[
+            "runtime-adapter:codex-gpt-5-6-luna-low-weekly-research"
+        ],
+        protected_transition=True,
+    )
+    assert stale["gate_outcome"] == "block"
+    assert "artifact_nonroutable" in stale["finding_codes"]
+
+    dependent = pc.assess_lifecycle(
+        ROOT,
+        stage="activation",
+        task="Activate the reusable synthetic helper research workflow",
+        artifact_ids=["workflow:ml-synthetic-helper-research-refresh"],
+        protected_transition=True,
+    )
+    assert dependent["gate_outcome"] == "block"
+    assert "artifact_nonroutable" in dependent["finding_codes"]
+
+
 def test_existing_identity_revision_needs_fresh_disposition(monkeypatch: pytest.MonkeyPatch) -> None:
     observed = _inventory([])
     observed["changed_identity_ids"] = ["skill:portable-capability-governance"]

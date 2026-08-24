@@ -1,0 +1,82 @@
+{
+  "schema_version": "dad.campaign.independent_launch_review.v1",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "campaign_revision": "6-execution-control-bridge-candidate-20260823",
+  "manifest_digest": "sha256:58bf4181a3eeb2cc45156d8e50dc7089e8c1a42a17cd3ff4c4eda67f077c2ee9",
+  "mesh_semantic_digest": "sha256:7ec717e316d513c65da5dc3eca372202b4488977aead6b88c1ae3d1ddf865451",
+  "packet_digest": "sha256:a56b05d4685c1cd56fec19cc87fde9f43c65809fa036fa043ad651263d436988",
+  "evidence_snapshot_digest": "sha256:66eff02fa653c83b61add990b079fc367445d5e1aaa0a0829d5bbbe2971429aa",
+  "reviewer_role": "independent-checker",
+  "reviewer_relationship": "non-author-read-only",
+  "bounded_revision_6_repair_disposition": "ACCEPT",
+  "launch_h010_j100_disposition": "BLOCK",
+  "unresolved_high_severity_findings": 0,
+  "resolved_findings": [
+    {
+      "initial_severity": "high",
+      "finding": "volatile observed_at metadata changed the evidence snapshot and packet digests, making a later real qualification unable to match an existing lease and dispatch binding",
+      "resolution": "observed_at remains validated metadata but is excluded from stable evidence and packet digests",
+      "independent_recheck": "unchanged evidence one second apart produced the same snapshot digest sha256:66eff02fa653c83b61add990b079fc367445d5e1aaa0a0829d5bbbe2971429aa and packet digest sha256:a56b05d4685c1cd56fec19cc87fde9f43c65809fa036fa043ad651263d436988",
+      "status": "resolved"
+    }
+  ],
+  "verified": [
+    "actual repository qualification is blocked with all seven effect counters zero, execution_authorized false, and dispatch_allowed false",
+    "no revision-6 authorization, active campaign lease, or verified manual dispatch exists",
+    "the revision-3 receipt and removal of a prohibition cannot authorize revision 6",
+    "a real Ed25519 public-fold integration reaches only inert ready-manual with exact signed lease and dispatch attestations and no execution effect",
+    "source, input, dependency receipt, qualification, identity, approval, lease, heartbeat, budget, idempotency, path, output, evidence, durability, repair, stop, and reconciliation controls fail closed",
+    "intent-continuity host readiness is decoupled from campaign and J-100 while retained for a future supervised continuity trial",
+    "both metadata-only branch dispositions match the authorized branches, tips, decisions, and review date without ref mutation",
+    "the revision-5 mesh prior and revision-specific historical evidence remain present with no historical artifact mutation detected during review",
+    "no revision-6 allowlist violation or prohibited Git, GitHub, deployment, downstream, plugin, automation, cleanup, or destructive effect was found"
+  ],
+  "independent_validation": [
+    {
+      "check": "focused execution-control suite",
+      "result": "82 passed; 1 optional-crypto skip"
+    },
+    {
+      "check": "signed integration using the existing bundled cryptography 50.0.0",
+      "result": "1 passed"
+    },
+    {
+      "check": "campaign schema, consistency, and mesh validators",
+      "result": "pass"
+    },
+    {
+      "check": "portability",
+      "result": "valid; zero hard findings; one unrelated archival stale warning"
+    },
+    {
+      "check": "branch dispositions",
+      "result": "valid; both rows ok"
+    },
+    {
+      "check": "git diff --check",
+      "result": "pass"
+    }
+  ],
+  "launch_blockers": [
+    "current trust registry is empty, unanchored, and deny-all; temporary test-only trust material establishes no present launch authority",
+    "no exact revision-6 H-010, execution authorization, campaign lease, or manual dispatch approval exists",
+    "atomic child execution bindings remain intentionally unimplemented and blocked",
+    "campaign files remain untracked and full repository validation plus the full suite were not rerun",
+    "the standard project runtime lacks the optional crypto backend",
+    "no real campaign job, executor, business-value outcome, or continuity-host trial has been performed"
+  ],
+  "residual_caveats": [
+    "attestation file digests are intentionally excluded from event binding to avoid a cryptographic cycle; signatures still bind exact Portfolio events",
+    "observed_at is non-binding diagnostic metadata but is rejected when invalid or in the future",
+    "the signed positive test uses temporary test-only trust material",
+    "the bounded bridge proves control-plane reachability, not launch authority or business value"
+  ],
+  "review_conclusion": "The bounded revision-6 bridge now has real control-plane bite and is accepted as a local prelaunch repair. It provides no authority to launch or execute anything.",
+  "effects": {
+    "files_edited_by_checker": 0,
+    "campaign_state_or_receipts_created_by_checker": 0,
+    "git_or_external_effects": 0,
+    "j_100_executed": false
+  },
+  "authority_boundary": "This independent review accepts only the bounded local revision-6 prelaunch repair. It does not authorize H-010, J-100, campaign launch, staging, commit, push, merge, GitHub changes, deployment, downstream mutation, plugins, global settings, automation, branch deletion, cleanup, or any destructive effect."
+}

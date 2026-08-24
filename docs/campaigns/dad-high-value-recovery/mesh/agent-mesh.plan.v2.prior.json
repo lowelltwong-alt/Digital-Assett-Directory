@@ -1,0 +1,303 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:dad-high-value-recovery",
+  "task_id": "dad-high-value-recovery-v1",
+  "revision_id": "dad:agent-mesh-revision:dad-high-value-recovery:v2",
+  "phase": "planning",
+  "status": "planned",
+  "source_snapshot_digest": "sha256:220ef85814ff35624ea23c0abd50fa01d4a33d29c238a504a53e61306f90b510",
+  "authority": {
+    "source_authority": "The DAD repository, AGENTS.md, global workspace lifecycle policy, source-repository contracts, and named human decisions retain authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "bounded-writer",
+  "checker_role_id": "independent-checker",
+  "non_overlap_statement": "Only bounded-writer may edit one active job's exact repository write set. Campaign-controller writes only controller state and checker evidence paths; independent-checker is read-only over writer outputs; human-owner decides gates and does not act as the producer's checker.",
+  "roles": [
+    {
+      "role_id": "campaign-controller",
+      "why_needed": "A resumable campaign needs deterministic dependency, lease, budget, stop, and receipt control separate from implementation.",
+      "mission": "Validate the current manifest, dispatch only approved atomic work, own controller state, and stop on stale or unauthorized conditions.",
+      "inputs": [
+        "approved campaign manifest revision",
+        "signed human decisions",
+        "accepted job and checker receipts",
+        "current source and dependency digests"
+      ],
+      "dependencies": [
+        "human-owner"
+      ],
+      "authority": "May write only campaign state and checker-evidence routing paths after launch approval; cannot edit implementation outputs or infer external authority.",
+      "model_effort_class": "deterministic",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": [
+        "No job dispatches without exact current digests, authority, lease, budget, and checker.",
+        "Every stop releases leases and preserves receipts."
+      ],
+      "stop_conditions": [
+        "Launch receipt is absent or expired.",
+        "Any digest, scope, authority, budget, or evidence gate is stale or inconclusive."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "bounded-writer",
+          "independent-checker"
+        ],
+        "deliverables": [
+          "exact job lease and input bundle",
+          "accepted dependency receipts",
+          "stop and budget state"
+        ],
+        "readiness_conditions": [
+          "Human launch/gate receipt is current.",
+          "Static manifest and mesh validation pass."
+        ]
+      }
+    },
+    {
+      "role_id": "human-owner",
+      "why_needed": "The campaign contains launch, external-state, lifecycle, privacy, pilot, and scale-or-shrink decisions that cannot be delegated.",
+      "mission": "Resolve H-001 through H-010, approve only exact effects, review exceptions, and sign the terminal lifecycle decision.",
+      "inputs": [
+        "campaign charter",
+        "independent findings",
+        "privacy-safe evidence and counterevidence",
+        "exact proposed effect receipts"
+      ],
+      "dependencies": [],
+      "authority": "May approve or reject exact campaign decisions; no standing blanket approval is represented by this role.",
+      "model_effort_class": "frontier_manual",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": [
+        "Every approval names scope, effects, expiry, rollback, and prohibited effects.",
+        "Terminal decision addresses counterevidence, cost, attention, safety, and unknowns."
+      ],
+      "stop_conditions": [
+        "Evidence is incomplete or authority is ambiguous.",
+        "A requested effect exceeds the presented receipt."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "campaign-controller",
+          "independent-checker"
+        ],
+        "deliverables": [
+          "signed exact decision receipts",
+          "decision rationale and expiry"
+        ],
+        "readiness_conditions": [
+          "Independent evidence is available.",
+          "The exact manifest/effect revision is identified."
+        ]
+      }
+    },
+    {
+      "role_id": "bounded-writer",
+      "why_needed": "One accountable writer prevents overlapping changes and keeps each recovery job reversible.",
+      "mission": "Implement exactly one approved job packet, run focused deterministic checks, and hand raw permitted evidence to the checker.",
+      "inputs": [
+        "exact current job packet and lease",
+        "accepted dependency receipts",
+        "pinned source inputs",
+        "approved write paths and stop conditions"
+      ],
+      "dependencies": [
+        "campaign-controller"
+      ],
+      "authority": "May edit only the current job's exact approved repository paths; cannot write controller state/checker evidence or perform external/destructive effects.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": [
+        "Diff stays within the current lease.",
+        "Focused checks run and raw results are handed off without self-approving value."
+      ],
+      "stop_conditions": [
+        "Scope, source, dependency, authority, privacy, or write set changes.",
+        "Original attempt plus one repair is exhausted."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "independent-checker",
+          "campaign-controller"
+        ],
+        "deliverables": [
+          "bounded diff or generated report",
+          "commands and raw results",
+          "limitations, unknowns, and rollback"
+        ],
+        "readiness_conditions": [
+          "Writer checks completed.",
+          "All outputs and unexpected changes are disclosed."
+        ]
+      }
+    },
+    {
+      "role_id": "independent-checker",
+      "why_needed": "DAD's core audit problem is false confidence; material work and value claims require a distinct evaluator.",
+      "mission": "Verify job acceptance, evidence reconciliation, authority, privacy, regression, independence, and counterevidence without editing writer outputs.",
+      "inputs": [
+        "writer outputs and raw permitted evidence",
+        "job acceptance contract",
+        "source and dependency digests",
+        "gold standards and negative controls"
+      ],
+      "dependencies": [
+        "bounded-writer"
+      ],
+      "authority": "Read-only review of writer scope and evidence; may write only checker receipts through the controller-owned evidence path and cannot authorize human/external effects.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": [
+        "Every gate receives one of the five declared result semantics with evidence.",
+        "False green, missing coverage, self-checking, and selective evidence are tested."
+      ],
+      "stop_conditions": [
+        "Checker is the writer or shares disqualifying outcome knowledge.",
+        "Evidence is stale, incomplete, private beyond scope, or irreconcilable."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "campaign-controller",
+          "human-owner"
+        ],
+        "deliverables": [
+          "independent gate receipt",
+          "findings, disagreements, counterevidence, and revalidation triggers"
+        ],
+        "readiness_conditions": [
+          "Raw permitted evidence and exact acceptance revision are available."
+        ]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "bounded-change",
+      "description": "Prove each writer stayed inside the approved exact write set and preserved unrelated user changes.",
+      "evidence_required": [
+        "final diff and path inventory",
+        "worktree status before and after",
+        "independent scope receipt"
+      ],
+      "owner_role_id": "bounded-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "truthful-enforcement",
+      "description": "Prove missing, failed, skipped, stale, cancelled, contradictory, or unavailable required evidence cannot render green.",
+      "evidence_required": [
+        "negative-control fixtures",
+        "deliberate remote required-check failure",
+        "protection and scheduled-run evidence"
+      ],
+      "owner_role_id": "bounded-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "value-spine-integrity",
+      "description": "Prove counted outcomes join recommendation revision through adoption, independent validation, and lifecycle decision.",
+      "evidence_required": [
+        "positive and negative end-to-end fixtures",
+        "legacy reconciliation and raw zero-write proof",
+        "yield semantic parity"
+      ],
+      "owner_role_id": "bounded-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "pilot-validity",
+      "description": "Prove pilot protocols were frozen, real cases reconciled, synthetic evidence excluded, and producer/checker independence preserved.",
+      "evidence_required": [
+        "frozen protocol and case digests",
+        "atomic case receipts and reconciliation",
+        "human calibration and counterevidence"
+      ],
+      "owner_role_id": "campaign-controller",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "decision-integrity",
+      "description": "Prove the terminal decision follows frozen thresholds or labels an explicit exception and performs no follow-on effect.",
+      "evidence_required": [
+        "scale-or-shrink memo and machine decision",
+        "component disposition map",
+        "signed human receipt and postflight/worktree disposition"
+      ],
+      "owner_role_id": "human-owner",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [
+    {
+      "decision_id": "campaign-owner",
+      "summary": "H-001 name the campaign owner.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    },
+    {
+      "decision_id": "campaign-expiry",
+      "summary": "H-002 set an exact expiry no more than 90 days after launch.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    },
+    {
+      "decision_id": "expansion-freeze",
+      "summary": "H-003 approve, reject, or modify the temporary expansion freeze.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    },
+    {
+      "decision_id": "protection-posture",
+      "summary": "H-004 choose administrator enforcement or an exact signed expiring bypass.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    },
+    {
+      "decision_id": "pilot-metric-scope",
+      "summary": "H-005 and H-006 choose the primary metric and workflow slices.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    },
+    {
+      "decision_id": "pilot-repositories",
+      "summary": "H-007 name at most three locally approved repositories and privacy boundaries.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    },
+    {
+      "decision_id": "legacy-treatment",
+      "summary": "H-008 approve immutable invalid/unknown legacy-row treatment.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    },
+    {
+      "decision_id": "workspace-treatment",
+      "summary": "H-009 approve review-only classification or exact lifecycle effects.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    },
+    {
+      "decision_id": "launch-revision",
+      "summary": "H-010 approve the exact current manifest revision and digest.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    }
+  ],
+  "manifest_digest": "sha256:229e6b9742158be85f2a540bc3c7c0d08d8fb19cf88b31a86e4fc10291e883cc"
+}
