@@ -6,6 +6,19 @@ Start date: not authorized
 Execution owner: Lowell (H-001)  
 Current authority: bounded prelaunch repair and local qualification only
 
+Postcommit evidence correction (2026-08-24): the committed revision-6 packet is
+at `76c268d191d40dd66016e7f41ad5fa79ffbd5f29`, with parent
+`e05c4e5de2d8ad0fb87e19c42783ad28dd04a3b4`. The commit-scoped command
+`git diff-tree --check HEAD^ HEAD` reports 29 historical whitespace findings on
+18 paths: 13 trailing-whitespace findings and 16 blank-line-at-EOF findings.
+The frozen revision-6 review remains immutable; only its `git diff --check`
+cleanliness assertion is superseded by
+`checks/evidence/launch/prelaunch-evidence-correction-revision-6-postcommit.json`
+and the checker-owned companion review. This is an evidence-coverage correction,
+not a runtime or execution-control failure. Revision-6 controls remain accepted
+and inert; H-010, J-100, launch, staging, commit, and external effects remain
+blocked pending their separate gates.
+
 This directory turns the August 2026 DAD audit into an ordered, resumable build
 campaign. It is intentionally not another operating system, dashboard, radar,
 registry family, or source of execution authority.

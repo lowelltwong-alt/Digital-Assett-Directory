@@ -9,6 +9,28 @@ Candidate manifest digest:
 Mesh semantic digest:  
 `sha256:7ec717e316d513c65da5dc3eca372202b4488977aead6b88c1ae3d1ddf865451`
 
+## Postcommit evidence correction
+
+The atomic 100-file packet was committed at
+`76c268d191d40dd66016e7f41ad5fa79ffbd5f29`, with parent
+`e05c4e5de2d8ad0fb87e19c42783ad28dd04a3b4` and tree
+`2b2daa145a052314afbdba36a856cf86252a6d94`. A commit-scoped reproduction with
+`git diff-tree --check HEAD^ HEAD` exits 2 and reports 29 historical findings on
+18 paths: 13 trailing-whitespace findings and 16 blank-line-at-EOF findings.
+
+The earlier `git diff --check` result remains immutable precommit attempt
+evidence. It did not cover the 64 files that were then untracked, so it does not
+prove the committed delta clean. The correction receipt at
+`checks/evidence/launch/prelaunch-evidence-correction-revision-6-postcommit.json`
+supersedes only that cleanliness assertion. The checker-owned companion receipt
+independently decides whether the correction is complete. None of the 29 lines
+is normalized in this evidence-only lane.
+
+This discrepancy is evidence-coverage debt, not a new runtime, authority, or
+execution-control failure. The bounded revision-6 control acceptance remains in
+force, while launch, H-010, J-100, staging, commit, and every external effect
+remain blocked.
+
 ## Decision under review
 
 Whether the bounded local revision-6 execution-control bridge, host-gate
