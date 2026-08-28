@@ -2,17 +2,35 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+import json
 from pathlib import Path
+import runpy
 from types import SimpleNamespace
 
 import pytest
 
+import digital_asset_directory.campaign_codex_shell_adapter as shell_adapter
 import digital_asset_directory.portability_control as pc
 from digital_asset_directory.harness_engineering import validate_harness_revision
 from digital_asset_directory.portfolio_execution import request_execution_lease
 
 
 ROOT = Path(__file__).resolve().parents[1]
+CAMPAIGN_MANIFEST = ROOT / "docs/campaigns/dad-high-value-recovery/campaign.json"
+CAMPAIGN_CONSISTENCY_CHECK = (
+    ROOT / "docs/campaigns/dad-high-value-recovery/checks/validate_campaign_consistency.py"
+)
+RECEIPT_VERIFIER_RELATIVE = Path(
+    "docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py"
+)
+RECEIPT_VERIFIER = ROOT / RECEIPT_VERIFIER_RELATIVE
+
+
+def _consistency_loader(repo_root: Path):
+    namespace = runpy.run_path(str(CAMPAIGN_CONSISTENCY_CHECK))
+    loader = namespace["_load_receipt_checker"]
+    loader.__globals__["REPO_ROOT"] = repo_root
+    return loader
 
 
 def _inventory(new_ids: list[str]) -> dict:
@@ -247,6 +265,7 @@ def test_explicit_stale_disposition_is_visible_but_not_globally_hard(
 
 def test_campaign_bridge_core_and_adapter_are_revision_bound_and_host_decoupled() -> None:
     registry = pc.load_registry(ROOT)
+    manifest = json.loads(CAMPAIGN_MANIFEST.read_text(encoding="utf-8"))
     core = next(
         card
         for card in registry["cards"]
@@ -257,8 +276,10 @@ def test_campaign_bridge_core_and_adapter_are_revision_bound_and_host_decoupled(
         for card in registry["cards"]
         if card["artifact_id"] == "adapter:campaign-codex-shell-inert"
     )
-    assert core["revision_id"].endswith(":0.3.0")
-    assert adapter["revision_id"].endswith(":0.3.0")
+    assert core["revision_id"].endswith(":0.3.1")
+    assert adapter["revision_id"].endswith(":0.3.1")
+    assert shell_adapter.revision == "dad-campaign-codex-shell-adapter:0.3.1-prelaunch"
+    assert shell_adapter.revision == manifest["execution"]["adapter"]["revision"]
     assert adapter["core_revision_id"] == core["revision_id"]
     assert core["adapter_revision_ids"] == [adapter["revision_id"]]
     assert adapter["target_capability_predicate"] == {
@@ -286,11 +307,75 @@ def test_campaign_bridge_core_and_adapter_are_revision_bound_and_host_decoupled(
     assert adapter["adapter_interface_digest"] == pc._adapter_interface_digest(
         ROOT, adapter
     )
+    assert adapter["adapter_interface_digest"] == (
+        "sha256:3e9b1c94d09701579113f3fe615e623330759387922071ba3f52f00fa805ad01"
+    )
     assert adapter["preserved_contract_digests"] == core["contract_digests"]
     assert core["candidate_only"] is True
     assert adapter["candidate_only"] is True
     assert core["execution_authorized"] is False
     assert adapter["execution_authorized"] is False
+
+
+def test_campaign_consistency_rejects_modified_verifier_before_execution(
+    tmp_path: Path,
+) -> None:
+    verifier = tmp_path / RECEIPT_VERIFIER_RELATIVE
+    verifier.parent.mkdir(parents=True, exist_ok=True)
+    marker = tmp_path / "modified-verifier-executed.txt"
+    verifier.write_bytes(
+        RECEIPT_VERIFIER.read_bytes()
+        + (
+            "\nfrom pathlib import Path as _MarkerPath\n"
+            f"_MarkerPath({str(marker)!r}).write_text('executed', encoding='utf-8')\n"
+        ).encode("utf-8")
+    )
+
+    with pytest.raises(ValueError, match="verifier digest mismatch"):
+        _consistency_loader(tmp_path)()
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize("link_kind", ["leaf", "ancestor"])
+def test_campaign_consistency_rejects_symlinked_verifier(
+    tmp_path: Path, link_kind: str
+) -> None:
+    repo_root = tmp_path / "repo"
+    verifier = repo_root / RECEIPT_VERIFIER_RELATIVE
+    outside_checks = tmp_path / "outside-checks"
+    outside_checks.mkdir(parents=True)
+    outside_verifier = outside_checks / "verify_receipt_durability.py"
+    outside_verifier.write_bytes(RECEIPT_VERIFIER.read_bytes())
+
+    try:
+        if link_kind == "leaf":
+            verifier.parent.mkdir(parents=True)
+            verifier.symlink_to(outside_verifier)
+        else:
+            verifier.parent.parent.mkdir(parents=True)
+            verifier.parent.symlink_to(outside_checks, target_is_directory=True)
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f"symlink creation is unavailable: {exc}")
+
+    with pytest.raises(ValueError, match="traverses a symlink"):
+        _consistency_loader(repo_root)()
+
+
+def test_campaign_consistency_loader_failure_is_deterministic_invalid(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    namespace = runpy.run_path(str(CAMPAIGN_CONSISTENCY_CHECK))
+
+    def fail_closed():
+        raise ValueError("receipt durability verifier digest mismatch")
+
+    namespace["validate"].__globals__["_load_receipt_checker"] = fail_closed
+    assert namespace["main"]() == 1
+    output = capsys.readouterr()
+    assert output.err == ""
+    assert "validator failed closed: ValueError: receipt durability verifier digest mismatch" in output.out
+    assert "INVALID: 1 consistency error(s)" in output.out
+    assert "Traceback" not in output.out
 
 
 def test_stale_artifact_and_dependent_core_are_denied_protected_routing() -> None:

@@ -97,7 +97,7 @@
     "durability_command": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py",
     "adapter": {
       "name": "dad-campaign-codex-shell-inert",
-      "revision": "dad-campaign-codex-shell-adapter:0.3.0-prelaunch"
+      "revision": "dad-campaign-codex-shell-adapter:0.3.1-prelaunch"
     },
     "readiness_contract": {
       "schema_version": "dad.campaign.execution_control_binding.v2",

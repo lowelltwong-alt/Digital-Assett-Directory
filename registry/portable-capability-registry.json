@@ -2795,7 +2795,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:library-campaign-packet-controller",
-      "revision_id": "portability-card-revision:library-campaign-packet-controller:0.3.0",
+      "revision_id": "portability-card-revision:library-campaign-packet-controller:0.3.1",
       "artifact_id": "library:campaign-packet-controller",
       "artifact_kind": "library",
       "binding_class": "portable_core",
@@ -2873,7 +2873,7 @@
         "dad-high-value-recovery-campaign"
       ],
       "adapter_revision_ids": [
-        "portability-card-revision:adapter-campaign-codex-shell-inert:0.3.0"
+        "portability-card-revision:adapter-campaign-codex-shell-inert:0.3.1"
       ],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
@@ -2891,7 +2891,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:adapter-campaign-codex-shell-inert",
-      "revision_id": "portability-card-revision:adapter-campaign-codex-shell-inert:0.3.0",
+      "revision_id": "portability-card-revision:adapter-campaign-codex-shell-inert:0.3.1",
       "artifact_id": "adapter:campaign-codex-shell-inert",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
@@ -2899,7 +2899,7 @@
       "owner": "DAD and Lowell",
       "status": "schema_validated",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "core_revision_id": "portability-card-revision:library-campaign-packet-controller:0.3.0",
+      "core_revision_id": "portability-card-revision:library-campaign-packet-controller:0.3.1",
       "target_capability_predicate": {
         "runtime_adapter_id": "adapter:codex-host",
         "manual_host_only": true,
@@ -2911,7 +2911,7 @@
         "launch_available": false,
         "execution_authorized": false
       },
-      "adapter_interface_digest": "sha256:d19ea7962e9df3aeba02b484265a9b3ea0d0874faf144dc20629d15dc5f6274f",
+      "adapter_interface_digest": "sha256:3e9b1c94d09701579113f3fe615e623330759387922071ba3f52f00fa805ad01",
       "adapter_interface_sources": [
         "src/digital_asset_directory/campaign_codex_shell_adapter.py",
         "src/digital_asset_directory/campaign_controller.py",

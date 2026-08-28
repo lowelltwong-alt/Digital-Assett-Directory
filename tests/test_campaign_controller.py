@@ -54,10 +54,15 @@ from digital_asset_directory.portfolio_execution import (
 
 ROOT = Path(__file__).resolve().parents[1]
 CAMPAIGN = ROOT / "docs/campaigns/dad-high-value-recovery/campaign.json"
-DECISION = (
-    ROOT / "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/"
+DECISION_RELATIVE = Path(
+    "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/"
     "human-decision-receipt.json"
 )
+DECISION = ROOT / DECISION_RELATIVE
+VERIFIER_RELATIVE = Path(
+    "docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py"
+)
+VERIFIER = ROOT / VERIFIER_RELATIVE
 
 
 def _manifest() -> dict:
@@ -602,7 +607,7 @@ def test_source_revision_is_measured_and_false_expected_digest_blocks() -> None:
         ROOT,
         manifest,
         "J-100",
-        DECISION,
+        DECISION_RELATIVE,
         source_revision=fake,
         as_of=datetime(2026, 8, 23, 12, 0, tzinfo=timezone.utc),
     )
@@ -660,7 +665,7 @@ def test_adapter_resolves_atomic_table_from_accepted_j500_provenance(
         ROOT,
         manifest,
         job_id,
-        DECISION,
+        DECISION_RELATIVE,
         as_of=datetime(2026, 8, 26, 12, 0, tzinfo=timezone.utc),
     )
     assert snapshot["resolved_input_digests"][table_path] == table_file_digest
@@ -675,8 +680,12 @@ def test_observation_time_is_nonbinding_but_must_not_be_in_the_future() -> None:
     manifest = _manifest()
     now = datetime(2026, 8, 23, 12, 0, tzinfo=timezone.utc)
     later = now + timedelta(seconds=1)
-    first = build_execution_evidence_snapshot(ROOT, manifest, "J-100", DECISION, as_of=now)
-    second = build_execution_evidence_snapshot(ROOT, manifest, "J-100", DECISION, as_of=later)
+    first = build_execution_evidence_snapshot(
+        ROOT, manifest, "J-100", DECISION_RELATIVE, as_of=now
+    )
+    second = build_execution_evidence_snapshot(
+        ROOT, manifest, "J-100", DECISION_RELATIVE, as_of=later
+    )
     assert first["observed_at"] != second["observed_at"]
     assert first["snapshot_digest"] == second["snapshot_digest"]
 
@@ -1017,7 +1026,7 @@ def test_prepare_dry_run_forwards_content_bound_atomic_prefix(
 
     monkeypatch.setattr(shell_adapter, "build_campaign_dry_run", fake_build)
     monkeypatch.setattr(shell_adapter, "build_local_host_snapshot", lambda _root: {})
-    prepare_dry_run(ROOT, CAMPAIGN, DECISION, job_id="J-510-C10")
+    prepare_dry_run(ROOT, CAMPAIGN, DECISION_RELATIVE, job_id="J-510-C10")
     assert captured["state"]["atomic_case_outcomes"] == only_c09
 
 
@@ -1128,7 +1137,7 @@ def _parent_evidence_snapshot(
         ROOT,
         manifest,
         parent_id,
-        DECISION,
+        DECISION_RELATIVE,
         pre_parent_reconciliation=reason_material,
         as_of=datetime(2026, 8, 26, 12, 0, tzinfo=timezone.utc),
     )
@@ -1406,7 +1415,63 @@ def test_adapter_rejects_noncanonical_manifest_path(tmp_path: Path) -> None:
     alternate = tmp_path / "campaign.json"
     alternate.write_bytes(CAMPAIGN.read_bytes())
     with pytest.raises(ValueError, match="canonical repository campaign.json"):
-        prepare_dry_run(ROOT, alternate, DECISION, job_id="J-100")
+        prepare_dry_run(ROOT, alternate, DECISION_RELATIVE, job_id="J-100")
+
+
+def test_adapter_rejects_modified_verifier_before_top_level_execution(
+    tmp_path: Path,
+) -> None:
+    verifier = tmp_path / VERIFIER_RELATIVE
+    verifier.parent.mkdir(parents=True, exist_ok=True)
+    marker = tmp_path / "modified-verifier-executed.txt"
+    verifier.write_bytes(
+        VERIFIER.read_bytes()
+        + (
+            "\nfrom pathlib import Path as _MarkerPath\n"
+            f"_MarkerPath({str(marker)!r}).write_text('executed', encoding='utf-8')\n"
+        ).encode("utf-8")
+    )
+
+    with pytest.raises(ValueError, match="verifier digest mismatch"):
+        shell_adapter._load_receipt_checker(tmp_path)
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize(
+    "supplied",
+    [
+        DECISION,
+        Path("../outside-human-decision-receipt.json"),
+        Path(
+            "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/"
+            "alternate-human-decision-receipt.json"
+        ),
+    ],
+    ids=["absolute", "outside-root", "alternate"],
+)
+def test_adapter_rejects_noncanonical_decision_receipt_path(supplied: Path) -> None:
+    with pytest.raises(ValueError, match="canonical repository-relative path"):
+        prepare_dry_run(ROOT, CAMPAIGN, supplied, job_id="J-100")
+
+
+def test_adapter_rejects_symlinked_canonical_decision_receipt(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    receipt = repo_root / DECISION_RELATIVE
+    receipt.parent.mkdir(parents=True, exist_ok=True)
+    outside = tmp_path / "outside-human-decision-receipt.json"
+    outside.write_bytes(DECISION.read_bytes())
+    try:
+        receipt.symlink_to(outside)
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f"file symlink creation is unavailable: {exc}")
+
+    with pytest.raises(ValueError, match="traverses a symlink"):
+        prepare_dry_run(
+            repo_root,
+            repo_root / "docs/campaigns/dad-high-value-recovery/campaign.json",
+            DECISION_RELATIVE,
+            job_id="J-100",
+        )
 
 
 def test_pre_parent_reconciliation_is_rejected_for_non_parent_job() -> None:
@@ -1414,7 +1479,7 @@ def test_pre_parent_reconciliation_is_rejected_for_non_parent_job() -> None:
         prepare_dry_run(
             ROOT,
             CAMPAIGN,
-            DECISION,
+            DECISION_RELATIVE,
             job_id="J-100",
             pre_parent_reconciliation={},
         )
@@ -1427,9 +1492,7 @@ def test_cli_loads_and_forwards_repo_local_pre_parent_reason_material(
     reason_material = {"schema_version": COHORT_REASON_MATERIAL_SCHEMA}
     reason_path.write_text(json.dumps(reason_material), encoding="utf-8")
     manifest_path = tmp_path / "campaign.json"
-    decision_path = tmp_path / "decision.json"
     manifest_path.write_text("{}", encoding="utf-8")
-    decision_path.write_text("{}", encoding="utf-8")
     captured: dict[str, object] = {}
 
     def fake_prepare(
@@ -1460,7 +1523,7 @@ def test_cli_loads_and_forwards_repo_local_pre_parent_reason_material(
             "--manifest",
             str(manifest_path),
             "--decision-receipt",
-            str(decision_path),
+            DECISION_RELATIVE.as_posix(),
             "--job",
             "J-510",
             "--pre-parent-reconciliation",
@@ -1469,6 +1532,7 @@ def test_cli_loads_and_forwards_repo_local_pre_parent_reason_material(
     )
     assert shell_adapter.main() == 0
     assert captured["pre_parent_reconciliation"] == reason_material
+    assert captured["decision"] == DECISION_RELATIVE
     assert json.loads(capsys.readouterr().out)["status"] == "blocked"
 
 
@@ -1489,11 +1553,11 @@ def test_adapter_forwards_explicit_repo_local_attestation_to_trusted_fold(
         }
 
     monkeypatch.setattr(shell_adapter, "load_execution_control", fake_load)
-    relative = DECISION.relative_to(ROOT)
+    relative = DECISION_RELATIVE
     prepare_dry_run(
         ROOT,
         CAMPAIGN,
-        DECISION,
+        relative,
         job_id="J-100",
         authority_attestation_paths=[relative],
     )
@@ -1546,15 +1610,12 @@ def test_real_adapter_reaches_ready_manual_through_signed_public_fold(
 
     now = datetime(2026, 8, 23, 12, 0, tzinfo=timezone.utc)
     authorization = _authorization(manifest, now)
-    decision_path = (
-        tmp_path / "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/"
-        "test-execution-authorization.json"
-    )
+    decision_path = tmp_path / DECISION_RELATIVE
     decision_path.parent.mkdir(parents=True, exist_ok=True)
     decision_path.write_text(json.dumps(authorization, indent=2) + "\n", encoding="utf-8")
     manifest_path = tmp_path / "docs/campaigns/dad-high-value-recovery/campaign.json"
     evidence = build_execution_evidence_snapshot(
-        tmp_path, manifest, "J-100", decision_path, as_of=now
+        tmp_path, manifest, "J-100", DECISION_RELATIVE, as_of=now
     )
     initial = build_campaign_dry_run(
         tmp_path,
@@ -1757,7 +1818,7 @@ def test_real_adapter_reaches_ready_manual_through_signed_public_fold(
     result = prepare_dry_run(
         tmp_path,
         manifest_path,
-        decision_path,
+        DECISION_RELATIVE,
         job_id="J-100",
         authority_attestation_paths=attestation_paths,
         as_of=now,
@@ -1865,7 +1926,7 @@ def test_codex_adapter_is_registered_inert_and_shutdown_is_projection_only() -> 
     assert snapshot["execution_authorized"] is False
     assert snapshot["launch_available"] is False
 
-    dry_run = prepare_dry_run(ROOT, CAMPAIGN, DECISION, job_id="J-100")
+    dry_run = prepare_dry_run(ROOT, CAMPAIGN, DECISION_RELATIVE, job_id="J-100")
     assert_no_execution_effect(dry_run)
     assert dry_run["adapter"]["execution_authorized"] is False
 

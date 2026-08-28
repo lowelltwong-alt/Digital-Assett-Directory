@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
-import importlib.util
+import hashlib
 import json
 from pathlib import Path
 from types import ModuleType
@@ -37,11 +37,21 @@ from .portfolio_execution import (
 
 
 adapter_id = "adapter:codex-host"
-revision = "dad-campaign-codex-shell-adapter:0.3.0-prelaunch"
+revision = "dad-campaign-codex-shell-adapter:0.3.1-prelaunch"
 AUTHORITY_BOUNDARY = (
     "This manual host adapter normalizes inert, repository-local candidate "
     "evidence only. It cannot launch Codex, execute a campaign job, invoke a "
     "shell, read credentials, write state, or authorize any effect."
+)
+CANONICAL_DECISION_RECEIPT = Path(
+    "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/"
+    "human-decision-receipt.json"
+)
+CANONICAL_RECEIPT_VERIFIER = Path(
+    "docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py"
+)
+CANONICAL_RECEIPT_VERIFIER_DIGEST = (
+    "sha256:0d41455a37bbdb01d91d2d9a9db820fee309c135a708af9615f70f00952b27ac"
 )
 
 
@@ -75,13 +85,42 @@ def _safe_path(repo_root: Path, relative: str) -> Path:
     return resolved
 
 
+def _canonical_decision_receipt_path(repo_root: Path, supplied: Path) -> Path:
+    root = repo_root.resolve(strict=True)
+    if supplied.is_absolute() or supplied.as_posix() != CANONICAL_DECISION_RECEIPT.as_posix():
+        raise ValueError(
+            "decision receipt must use the canonical repository-relative path: "
+            f"{CANONICAL_DECISION_RECEIPT.as_posix()}"
+        )
+    path = root / CANONICAL_DECISION_RECEIPT
+    try:
+        resolved = path.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError("canonical decision receipt is missing or unreadable") from exc
+    if resolved != path or root not in resolved.parents or not resolved.is_file():
+        raise ValueError("canonical decision receipt path drifted or traverses a symlink")
+    return resolved
+
+
 def _load_receipt_checker(repo_root: Path) -> ModuleType:
-    path = repo_root / "docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py"
-    spec = importlib.util.spec_from_file_location("dad_campaign_receipt_checker", path)
-    if spec is None or spec.loader is None:
-        raise ValueError("receipt durability verifier could not be loaded")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    root = repo_root.resolve(strict=True)
+    path = root / CANONICAL_RECEIPT_VERIFIER
+    try:
+        resolved = path.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError("canonical receipt durability verifier is missing or unreadable") from exc
+    if resolved != path or root not in resolved.parents or not resolved.is_file():
+        raise ValueError("receipt durability verifier path drifted or traverses a symlink")
+    try:
+        source = resolved.read_bytes()
+    except OSError as exc:
+        raise ValueError("canonical receipt durability verifier is unreadable") from exc
+    observed_digest = "sha256:" + hashlib.sha256(source).hexdigest()
+    if observed_digest != CANONICAL_RECEIPT_VERIFIER_DIGEST:
+        raise ValueError("receipt durability verifier digest mismatch")
+    module = ModuleType("dad_campaign_receipt_checker")
+    module.__file__ = str(resolved)
+    exec(compile(source, str(resolved), "exec"), module.__dict__)
     return module
 
 
@@ -199,6 +238,9 @@ def build_execution_evidence_snapshot(
 ) -> dict[str, Any]:
     """Build a content-bound, read-only snapshot; errors become blocking evidence."""
 
+    decision_receipt_path = _canonical_decision_receipt_path(
+        repo_root, authorization_receipt_path
+    )
     observed = _now(as_of)
     jobs = flatten_campaign_jobs(manifest)
     if job_id not in jobs:
@@ -206,11 +248,9 @@ def build_execution_evidence_snapshot(
     job = jobs[job_id]
     manifest_path = repo_root / "docs/campaigns/dad-high-value-recovery/campaign.json"
     manifest_digest = file_digest(manifest_path)
-    receipt_digest = file_digest(authorization_receipt_path)
-    authorization = _strict_json_loads(authorization_receipt_path.read_text(encoding="utf-8"))
-    verifier_path = (
-        repo_root / "docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py"
-    )
+    receipt_digest = file_digest(decision_receipt_path)
+    authorization = _strict_json_loads(decision_receipt_path.read_text(encoding="utf-8"))
+    verifier_path = repo_root / CANONICAL_RECEIPT_VERIFIER
     verification_errors: list[str] = []
     case_binding_table: dict[str, Any] = {}
     case_binding_provenance: dict[str, Any] = {}
@@ -534,8 +574,11 @@ def prepare_dry_run(
     ).resolve()
     if manifest_path.resolve() != canonical_manifest_path:
         raise ValueError("manifest must be the canonical repository campaign.json")
+    canonical_decision_receipt = _canonical_decision_receipt_path(
+        repo_root, decision_receipt_path
+    )
     manifest = load_campaign_manifest(manifest_path)
-    decision = _strict_json_loads(decision_receipt_path.read_text(encoding="utf-8"))
+    decision = _strict_json_loads(canonical_decision_receipt.read_text(encoding="utf-8"))
     attestations = _load_authority_attestations(repo_root, authority_attestation_paths)
     evidence = build_execution_evidence_snapshot(
         repo_root,
@@ -589,7 +632,7 @@ def prepare_dry_run(
         decision,
         state=state,
         source_revision=str(evidence.get("source_revision", "")),
-        authorization_receipt_digest=file_digest(decision_receipt_path),
+        authorization_receipt_digest=file_digest(canonical_decision_receipt),
         as_of=observed,
     )
     result["adapter"] = build_local_host_snapshot(repo_root)
@@ -663,7 +706,7 @@ def main() -> int:
         payload = prepare_dry_run(
             repo_root,
             args.manifest.resolve(),
-            args.decision_receipt.resolve(),
+            args.decision_receipt,
             job_id=args.job,
             source_revision=args.source_revision,
             authority_attestation_paths=args.attestation,

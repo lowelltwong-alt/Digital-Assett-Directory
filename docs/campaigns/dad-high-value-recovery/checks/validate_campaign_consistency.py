@@ -8,10 +8,10 @@ evaluate evidence truth, or authorize any repository/external effect.
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 import re
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 
@@ -19,6 +19,12 @@ CAMPAIGN_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = CAMPAIGN_ROOT.parents[2]
 MANIFEST_PATH = CAMPAIGN_ROOT / "campaign.json"
 MESH_PATH = CAMPAIGN_ROOT / "mesh" / "agent-mesh.plan.v1.json"
+CANONICAL_RECEIPT_VERIFIER = Path(
+    "docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py"
+)
+CANONICAL_RECEIPT_VERIFIER_DIGEST = (
+    "sha256:0d41455a37bbdb01d91d2d9a9db820fee309c135a708af9615f70f00952b27ac"
+)
 RECEIPT_TEMPLATE = CAMPAIGN_ROOT / "checks" / "evidence-receipt.template.json"
 PACKET_ID = re.compile(r"^(J-[0-9]{3})_")
 LEASE_LINE = re.compile(
@@ -31,7 +37,7 @@ OPERATIONAL_BASELINE = (
 )
 RECEIPT_BOUND_DIGEST = "receipt-bound-output-digest:"
 EXPECTED_REVISION = "7-atomic-terminal-navigation-candidate-20260826"
-EXPECTED_ADAPTER_REVISION = "dad-campaign-codex-shell-adapter:0.3.0-prelaunch"
+EXPECTED_ADAPTER_REVISION = "dad-campaign-codex-shell-adapter:0.3.1-prelaunch"
 ATOMIC_SLOT_SCHEMA = "dad.campaign.atomic_case_slots.v2"
 CASE_BINDING_TABLE_SCHEMA = "dad.campaign.atomic_case_binding_table.v2"
 COHORT_CLOSURES = {
@@ -173,12 +179,29 @@ def _phase(manifest: dict[str, Any], phase_id: str) -> dict[str, Any]:
     return next(phase for phase in manifest["phases"] if phase["id"] == phase_id)
 
 
-def _load_receipt_checker() -> Any:
-    path = CAMPAIGN_ROOT / "checks" / "verify_receipt_durability.py"
-    spec = importlib.util.spec_from_file_location("receipt_checker", path)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
+def _load_receipt_checker() -> ModuleType:
+    root = REPO_ROOT.resolve(strict=True)
+    path = root / CANONICAL_RECEIPT_VERIFIER
+    try:
+        resolved = path.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError("canonical receipt durability verifier is missing or unreadable") from exc
+    if resolved != path or root not in resolved.parents or not resolved.is_file():
+        raise ValueError("receipt durability verifier path drifted or traverses a symlink")
+    try:
+        source = resolved.read_bytes()
+    except OSError as exc:
+        raise ValueError("canonical receipt durability verifier is unreadable") from exc
+    observed_digest = "sha256:" + hashlib.sha256(source).hexdigest()
+    if observed_digest != CANONICAL_RECEIPT_VERIFIER_DIGEST:
+        raise ValueError("receipt durability verifier digest mismatch")
+    module = ModuleType("receipt_checker")
+    module.__file__ = str(resolved)
+    try:
+        code = compile(source, str(resolved), "exec")
+        exec(code, module.__dict__)
+    except Exception as exc:
+        raise ValueError("verified receipt durability verifier could not be loaded") from exc
     return module
 
 
@@ -190,7 +213,7 @@ def validate() -> list[str]:
         errors.append("campaign revision is not the frozen revision-7 candidate")
     adapter = manifest.get("execution", {}).get("adapter", {})
     if adapter.get("revision") != EXPECTED_ADAPTER_REVISION:
-        errors.append("campaign adapter revision is not the frozen 0.3 candidate")
+        errors.append("campaign adapter revision is not the frozen 0.3.1 candidate")
     if (
         manifest.get("execution", {}).get("mode") != "specification_only"
         or manifest.get("execution", {}).get("execution_authorized") is not False
