@@ -32,6 +32,10 @@ boundary, and stopping rules before pilot outcomes are visible.
 - exact child-slot binding table for `J-510-C01..C10`, `J-520-C01..C20`, and
   `J-530-C01..C40`, including case digests, dependency order, idempotency,
   checkpoint, receipt, lease, and reissue rules;
+- binding-table schema `dad.campaign.atomic_case_binding_table.v2` with exactly
+  70 rows containing `job_id`, `case_id`, `case_digest`, `sequence`,
+  `depends_on`, `idempotency_key`, `checkpoint_path`, `receipt_path`, and the
+  unique `envelope_path`;
 - checker and human approval receipts under `checks/evidence/pilot/`.
 
 ## Procedure
@@ -51,10 +55,15 @@ boundary, and stopping rules before pilot outcomes are visible.
 7. Name producer, checker, sampled human calibrator, and independence basis.
 8. Define privacy-safe metadata fields and forbid raw content/transcripts.
 9. Define early stops and the rule against enlarging a valid disappointing pilot.
-10. Bind each enumerated manifest child slot to one case digest. Child IDs,
-    idempotency keys, checkpoints, and receipt paths are immutable after binding;
-    only one child may hold a lease at a time.
-11. Hash/freeze the protocol, case bank, and binding table; obtain local repo
+10. Bind each enumerated manifest child slot to one unique case ID and case
+    digest. Child IDs, sequence/dependencies, idempotency keys, checkpoints,
+    receipts, and envelope paths are immutable after binding; only one child may
+    hold a lease at a time.
+11. Set each envelope to
+    `processed/reports/dad-high-value-recovery/pilot-case-envelopes/{job_id}.json`.
+    Record that children materialize `{case_digest}` in memory and may request no
+    parent aggregate, closure, navigation, or checker-evidence path.
+12. Hash/freeze the protocol, case bank, and binding table; obtain local repo
     approvals and an independent manifest-consistency receipt.
 
 ## Acceptance checks
@@ -65,11 +74,17 @@ boundary, and stopping rules before pilot outcomes are visible.
   post-outcome metric, estimator, denominator, or eligibility substitution is
   possible.
 - All 70 child slots have unique immutable IDs, case digests, idempotency keys,
-  checkpoints, receipts, and serial dependency order before J-510 dispatch.
+  checkpoints, receipts, envelope paths, and serial dependency order before
+  J-510 dispatch; there are no missing or extra rows.
+- The accepted binding-table digest is declared as mandatory material in every
+  child packet, lease, dispatch projection, checkpoint, and receipt. Duplicate,
+  rebound, skipped, stale, unbound, or outcome-visible reordered slots fail.
 - Every case has an independent evaluation path.
 - Maximum three exact repos and only approved workflow slices are included.
 - No downstream write or real task starts from this planning job alone.
-- Checker and Lowell approve exact protocol/case digests.
+- Checker and Lowell approve exact protocol/case/binding-table digests. The
+  producer-attempt digest is frozen before checker fields; a separate checker
+  record binds it with disposition `pass` or `challenge`.
 
 ## Failure and repair
 

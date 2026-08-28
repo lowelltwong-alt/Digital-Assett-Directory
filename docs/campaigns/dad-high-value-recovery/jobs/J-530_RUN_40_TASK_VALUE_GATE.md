@@ -27,30 +27,43 @@ value to justify continued investment.
 - append-only case and voluntary-use evidence;
 - `processed/reports/dad-high-value-recovery/pilot-value-gate-40.json`
 - `processed/reports/dad-high-value-recovery/pilot-value-gate-40.md`
+- `processed/reports/dad-high-value-recovery/pilot-value-gate-40-closure.json`
 - independent/human calibration receipts under `checks/evidence/pilot/`.
 
 ## Procedure
 
 J-530 is a cohort reconciliation gate. The controller leases the forty frozen
-`J-530-Cxx` child records one at a time and accepts no whole-cohort lease.
+`J-530-Cxx` child records one at a time and accepts no whole-cohort lease. It
+materializes `{case_digest}` in memory and requires the accepted v2 binding-table
+digest in the packet, lease, dispatch projection, checkpoint, and receipt. Each
+child writes only its unique
+`processed/reports/dad-high-value-recovery/pilot-case-envelopes/{job_id}.json`;
+it cannot request parent aggregate, closure, navigation, or checker paths.
 
 1. Continue only the frozen eligible case design; no post-hoc success metric.
 2. Complete at least 40 comparable real cases across at least three repos.
 3. Observe two weeks in which approved participants can voluntarily use or
    decline the workflow; invocation alone is not voluntary-value proof.
-4. Reconcile and independently verify every case.
+4. Freeze every canonical producer-attempt digest, obtain its distinct
+   digest-bound checker record, and reconcile every case.
 5. Compute overall and per-slice primary outcome, guardrails, cost, operator
    attention, voluntary use, missingness, and uncertainty.
 6. Run blind/sample human calibration and document disagreement.
 7. Apply early-stop rules immediately and preserve negative evidence.
 8. Issue a pass/fail/inconclusive receipt without selecting the lifecycle
    decision; J-600 owns that decision.
+9. With parent action `validate` only, write aggregate reports after the closure
+   artifact exactly partitions all forty slots, independently verifies started
+   children, enumerates immutable unstarted/withdrawn reasons, releases every
+   lease, reconciles effects, and proves no post-stop receipt or lease.
 
 ## Acceptance checks
 
 - At least 40 real comparable tasks and three repos are reconciled.
 - Allocation meets at least 10 cases per repo, 8 per selected slice, and 16 per
   arm or matched-pair equivalent; every child slot and eligible case reconciles.
+- All forty v2 slots have unique matching envelopes and binding-table digests,
+  and closure is complete. Partial closure never passes.
 - Two weeks of voluntary-use evidence exists.
 - The H-005 primary metric meets its frozen P5C threshold; no secondary metric
   or post-result estimator substitutes.
@@ -64,10 +77,17 @@ J-530 is a cohort reconciliation gate. The controller leases the forty frozen
 ## Failure and repair
 
 Evidence computation may be corrected with an append-only receipt. A valid
-failure is terminal for `scale` and proceeds to J-600. Evidence invalidity is
-`inconclusive` and supports only `re-audit`.
+complete failure is terminal for `scale`; after closure,
+`p5c-valid-terminal` permits only `narrow` or `retire`. Evidence invalidity,
+missing/stale/unjoinable data, metric corruption, or checker-integrity failure
+is `inconclusive`; after complete control-plane closure,
+`p5c-inconclusive` permits only `re-audit`. A passing complete result uses
+`p5c-pass`.
 
 ## Handoff
 
-Index all cohort/result/guardrail/cost/attention/voluntary-use evidence,
-counterevidence, checker disagreement, and P5C receipt for J-600.
+The controller projects but does not perform navigation. A separately leased
+`campaign-navigation-writer` and distinct `independent-checker` must accept
+exactly one route before
+J-600. J-600 binds only this predecessor receipt, closure, checker record,
+navigation receipt, trigger class, and permitted-decision set.

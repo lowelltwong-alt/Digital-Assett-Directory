@@ -28,13 +28,19 @@ claiming workflow value.
 - append-only privacy-safe case envelopes;
 - `processed/reports/dad-high-value-recovery/pilot-shadow-10.json`
 - `processed/reports/dad-high-value-recovery/pilot-shadow-10.md`
+- `processed/reports/dad-high-value-recovery/pilot-shadow-10-closure.json`
 - independent case/gate receipts under `checks/evidence/pilot/`.
 
 ## Procedure
 
 J-510 is a cohort reconciliation gate. The controller materializes and leases
 the ten `J-510-Cxx` child records already bound by J-500; it never leases J-510
-as one 10-case work unit.
+as one 10-case work unit. Materialization replaces `{case_digest}` in memory,
+and each child writes only
+`processed/reports/dad-high-value-recovery/pilot-case-envelopes/{job_id}.json`.
+The accepted binding-table digest must match the packet, lease, dispatch
+projection, checkpoint, and receipt. Children cannot request parent aggregates,
+closure, navigation metadata, or checker evidence.
 
 For each case:
 
@@ -46,16 +52,24 @@ For each case:
    retries/reviews, and missingness through the Phase 03 contract.
 5. Have the distinct checker verify actual final state, not the agent's claim.
 6. Close within seven days or record an unresolved reason.
-7. Append the receipt; never rewrite an earlier case.
+7. Freeze the canonical producer-attempt digest, obtain a distinct checker's
+   separately digest-bound `pass` or `challenge` record, and append the final
+   receipt; never rewrite an earlier case.
 
 After 10 cases, reconcile eligible/completed/closed/excluded/unknown counts,
-compute metric reproducibility, and sample human disagreement.
+compute metric reproducibility, and sample human disagreement. The parent action
+is `validate` only and it may write aggregate reports only after the closure
+artifact exactly partitions all ten slots, independently verifies every started
+child, enumerates unstarted/withdrawn slots with immutable reasons, releases all
+leases, reconciles every effect, and proves no post-stop receipt or lease.
 
 ## Acceptance checks
 
 - Exactly 10 eligible real cases are accounted for.
 - Ten unique child receipts match the frozen slot/case digests; no duplicate,
   rebound, skipped, or whole-cohort execution is accepted.
+- The v2 binding-table digest and unique envelope path agree across every child
+  artifact, and the closure is complete. Partial closure never passes.
 - 100% have structurally valid joinable envelopes or the gate fails.
 - Metric recomputation matches stored results.
 - Producer/checker independence holds.
@@ -65,11 +79,18 @@ compute metric reproducibility, and sample human disagreement.
 
 ## Failure and repair
 
-One envelope repair may append a correction for structural mistakes. A privacy,
-source-authority, or checker-integrity breach stops the pilot slice. Valid but
-disappointing results are preserved.
+One envelope repair may append a correction for structural mistakes. A
+confirmed privacy, source-authority, harmful, or material-safety breach with
+complete evidence produces a valid terminal result; after complete closure it
+may use only `p5a-valid-terminal` to `narrow` or `retire`. Missing, stale,
+unjoinable, metric-corrupt, checker-integrity, or partial evidence is
+`inconclusive`; after complete control-plane closure it may use only
+`p5a-inconclusive` to `re-audit`.
 
 ## Handoff
 
-Index every case receipt, reconciliation, disagreements, limitations, and the
-P5A go/no-go decision. J-520 needs exact accepted protocol and P5A receipt.
+The controller may project the selected successor but performs no navigation
+write. A separately leased `campaign-navigation-writer` and distinct
+`independent-checker` must accept
+the route before J-520 or J-600. J-520 needs exact accepted protocol, P5A
+receipt, closure, checker record, and navigation receipt.

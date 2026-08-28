@@ -19,13 +19,28 @@ until I explicitly approve that exact launch revision or its digest.
 After launch approval, complete one job at a time. Before each job, verify its
 dependencies, input digests, authority, lease, exact write paths, budget, and
 checker independence. Run the job's deterministic checks and independent gate,
-write only privacy-safe evidence receipts, update 07_EVIDENCE_INDEX.md and
-handoff.md, and stop on any blocked, inconclusive, stale, unsafe, or terminal
-result. Never infer a pass from missing data.
+and write only the job's privacy-safe declared outputs. The producer must first
+freeze a canonical producer-attempt digest; a distinct checker writes and binds
+its own pass-or-challenge record. Never infer a pass from missing data, and do
+not confuse checker acceptance of faithful evidence with a favorable outcome.
 At J-500, bind every enumerated pilot child slot to an exact case digest and
-validate the binding table. Lease one child case at a time; never execute a
-10-, 20-, or 40-case cohort under one lease or select a success metric after
-outcomes.
+the accepted binding-table digest. Materialize each child packet in memory,
+lease one child case at a time, and permit only its unique case-envelope output;
+never execute a 10-, 20-, or 40-case cohort under one lease or select a success
+metric after outcomes. Before a parent aggregate, produce a complete closure
+that accounts for every started, unstarted, and withdrawn slot and proves no
+active lease or unreconciled effect remains.
+
+On blocked or stale authority, stop. On an accepted terminal or inconclusive
+pilot outcome, stop that branch, complete its closure, and select only the exact
+declared Phase 06 route. The controller and shell adapter may project that route
+but may not dispatch or write navigation. Require a separately leased
+`campaign-navigation-writer` and distinct `independent-checker` to update
+07_EVIDENCE_INDEX.md and handoff.md; permit 08_SUPERSESSION_AND_ARCHIVE_MAP.md
+only after signed J-600. Reject missing, stale, mismatched, partial,
+projection-only, or unaccepted navigation evidence. Bind J-600 to exactly the
+selected predecessor, its closure and checker digests, the route receipt, and
+that route's permitted decisions.
 
 Do not publish, push, merge, deploy, change GitHub settings, enroll or mutate a
 downstream repository, install a plugin, activate recurring automation, access

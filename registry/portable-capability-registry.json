@@ -350,7 +350,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.29",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.30",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -458,7 +458,7 @@
     "tests/test_portfolio_attempt_journal.py",
         "tests/test_synthetic_silver_program.py"
       ],
-      "content_digest": "sha256:117893afb292b237f9a3446da62762f6978476e8d098d053c69a5daf6c2acde6",
+      "content_digest": "sha256:d4ade0d218cfb06d6012dda524722c38c2dc738063a27055c0c7ecbd48ed3dc7",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -2795,7 +2795,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:library-campaign-packet-controller",
-      "revision_id": "portability-card-revision:library-campaign-packet-controller:0.2.0",
+      "revision_id": "portability-card-revision:library-campaign-packet-controller:0.3.0",
       "artifact_id": "library:campaign-packet-controller",
       "artifact_kind": "library",
       "binding_class": "portable_core",
@@ -2810,7 +2810,7 @@
         "docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py",
         "tests/test_portfolio_execution_control.py"
       ],
-      "content_digest": "sha256:a01551c5368cf55d96d91fbab4765da969839524cf32c1c617fe23b28714ebfe",
+      "content_digest": "sha256:813acc27f61c20d1dbdf0b6d44e4819badd18b09081846136344869bb388e8dd",
       "contract_digests": {
         "input": "sha256:93d5611a045b1e6eecd83806efb7de0d594ac66ce306757f329533124953c604",
         "output": "sha256:d4f054f8b0a7d0eb736cd518139ce41d4d98bfb68bdf1305492e3b9430ed5fea",
@@ -2836,13 +2836,19 @@
         "signed_public_fold_ready_manual_proof",
         "fully_verified_durable_budget_aggregation",
         "strict_duplicate_key_rejection",
-        "stable_evidence_binding_with_nonbinding_observation_metadata"
+        "stable_evidence_binding_with_nonbinding_observation_metadata",
+        "atomic_case_binding_table_v2_validation",
+        "atomic_case_envelope_projection",
+        "cohort_closure_validation",
+        "terminal_dependency_route_projection",
+        "producer_checker_record_binding",
+        "navigation_projection_with_separate_writer_gate"
       ],
       "tool_ids": [
         "repository-files",
         "json"
       ],
-      "context_contract": "Canonical repository manifest, measured source revision, exact authorization and named approver, explicit repository-local signed attestations, verified Portfolio approval identities, resolved input/dependency digests, distinct revision-bound qualifications, durable Portfolio lease/dispatch/attempt projections, fully file-verified budget receipts, outputs, acceptance evidence, checkpoints, privacy-safe receipts, and stable evidence digests that exclude non-authoritative observation-time metadata only.",
+      "context_contract": "Canonical repository manifest, measured source revision, exact authorization and named approver, explicit repository-local signed attestations, verified Portfolio approval identities, resolved input/dependency digests, distinct revision-bound qualifications, exact atomic case-binding-table and unique-envelope projections, complete cohort-closure evidence, canonical producer-attempt digests with separate independent checker records, selected terminal-route bindings, immutable navigation receipts, durable Portfolio lease/dispatch/attempt projections, fully file-verified budgets, outputs, acceptance evidence, checkpoints, privacy-safe receipts, and stable evidence digests that exclude non-authoritative observation-time metadata only.",
       "privacy_classes": [
         "public",
         "internal",
@@ -2867,25 +2873,25 @@
         "dad-high-value-recovery-campaign"
       ],
       "adapter_revision_ids": [
-        "portability-card-revision:adapter-campaign-codex-shell-inert:0.2.0"
+        "portability-card-revision:adapter-campaign-codex-shell-inert:0.3.0"
       ],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
         "tests/test_campaign_controller.py",
         "tests/test_portfolio_execution_control.py",
         "docs/campaigns/dad-high-value-recovery/checks/test_verify_receipt_durability.py",
-        "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/prelaunch-revision-6.json"
+        "docs/campaigns/dad-high-value-recovery/checks/ACCEPTANCE_MATRIX.md"
       ],
       "fresh_until": "2026-11-19T23:59:59-05:00",
       "rollback_ref": "Remove the candidate controller and inert adapter bindings while preserving the campaign specification and qualification evidence.",
       "candidate_only": true,
       "execution_authorized": false,
-      "authority_boundary": "This core treats local authorization JSON as a claim and requires exact Ed25519-verified Portfolio approval identities and the same named approver in the Portfolio OS authority projection. It builds blocked or ready-manual candidates only; it cannot launch workers, execute jobs, write state, make dispatch available, or grant authority."
+      "authority_boundary": "This core treats local authorization JSON as a claim and requires exact Ed25519-verified Portfolio approval identities and the same named approver in the Portfolio OS authority projection. It builds blocked or ready-manual job, terminal-route, and navigation candidates only. It cannot launch workers, execute jobs, write state or navigation artifacts, make dispatch available, act as the separately leased navigation writer, or grant authority."
     },
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:adapter-campaign-codex-shell-inert",
-      "revision_id": "portability-card-revision:adapter-campaign-codex-shell-inert:0.2.0",
+      "revision_id": "portability-card-revision:adapter-campaign-codex-shell-inert:0.3.0",
       "artifact_id": "adapter:campaign-codex-shell-inert",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
@@ -2893,7 +2899,7 @@
       "owner": "DAD and Lowell",
       "status": "schema_validated",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "core_revision_id": "portability-card-revision:library-campaign-packet-controller:0.2.0",
+      "core_revision_id": "portability-card-revision:library-campaign-packet-controller:0.3.0",
       "target_capability_predicate": {
         "runtime_adapter_id": "adapter:codex-host",
         "manual_host_only": true,
@@ -2905,7 +2911,7 @@
         "launch_available": false,
         "execution_authorized": false
       },
-      "adapter_interface_digest": "sha256:611a8eebe2a1bd582286f2452691cb091bccb67d0fd0de5d3e9367f0bd21c5ba",
+      "adapter_interface_digest": "sha256:d19ea7962e9df3aeba02b484265a9b3ea0d0874faf144dc20629d15dc5f6274f",
       "adapter_interface_sources": [
         "src/digital_asset_directory/campaign_codex_shell_adapter.py",
         "src/digital_asset_directory/campaign_controller.py",
@@ -2926,7 +2932,7 @@
       "compatibility_evidence": [
         "tests/test_campaign_controller.py",
         "tests/test_portfolio_execution_control.py",
-        "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/prelaunch-revision-6.json"
+        "docs/campaigns/dad-high-value-recovery/checks/ACCEPTANCE_MATRIX.md"
       ],
       "target_runtime_classes": [
         "codex_manual_shell_host"
@@ -2938,7 +2944,7 @@
       "rollback_ref": "Remove this candidate adapter binding; no campaign job or state depends on it before separate activation approval.",
       "candidate_only": true,
       "execution_authorized": false,
-      "authority_boundary": "This adapter reads only the canonical repository campaign, explicit repository-local attestation envelopes, fully verified receipt logs, and existing Portfolio journals. It normalizes dry-run and shutdown candidates only and cannot invoke Codex, a shell, Git, a network, continuity hooks, or any campaign job."
+      "authority_boundary": "This adapter reads only the canonical repository campaign, explicit repository-local attestation envelopes, fully verified producer/checker and closure receipts, selected terminal-route evidence, immutable navigation receipts, and existing Portfolio journals. It normalizes dry-run, shutdown, terminal-route, and navigation-requirement candidates only and cannot invoke Codex, a shell, Git, a network, continuity hooks, the separate navigation writer, or any campaign job."
     }
   ],
   "candidate_only": true,

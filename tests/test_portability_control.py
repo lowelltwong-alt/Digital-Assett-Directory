@@ -257,9 +257,10 @@ def test_campaign_bridge_core_and_adapter_are_revision_bound_and_host_decoupled(
         for card in registry["cards"]
         if card["artifact_id"] == "adapter:campaign-codex-shell-inert"
     )
-    assert core["revision_id"].endswith(":0.2.0")
-    assert adapter["revision_id"].endswith(":0.2.0")
+    assert core["revision_id"].endswith(":0.3.0")
+    assert adapter["revision_id"].endswith(":0.3.0")
     assert adapter["core_revision_id"] == core["revision_id"]
+    assert core["adapter_revision_ids"] == [adapter["revision_id"]]
     assert adapter["target_capability_predicate"] == {
         "runtime_adapter_id": "adapter:codex-host",
         "manual_host_only": True,
@@ -271,7 +272,23 @@ def test_campaign_bridge_core_and_adapter_are_revision_bound_and_host_decoupled(
         "launch_available": False,
         "execution_authorized": False,
     }
-    assert "portfolio_execution_control_binding" in core["capability_ids"]
+    assert {
+        "portfolio_execution_control_binding",
+        "atomic_case_binding_table_v2_validation",
+        "atomic_case_envelope_projection",
+        "cohort_closure_validation",
+        "terminal_dependency_route_projection",
+        "producer_checker_record_binding",
+        "navigation_projection_with_separate_writer_gate",
+    } <= set(core["capability_ids"])
+    assert core["content_digest"] == pc._portable_files_digest(ROOT, core)
+    assert adapter["content_digest"] == pc._portable_files_digest(ROOT, adapter)
+    assert adapter["adapter_interface_digest"] == pc._adapter_interface_digest(
+        ROOT, adapter
+    )
+    assert adapter["preserved_contract_digests"] == core["contract_digests"]
+    assert core["candidate_only"] is True
+    assert adapter["candidate_only"] is True
     assert core["execution_authorized"] is False
     assert adapter["execution_authorized"] is False
 

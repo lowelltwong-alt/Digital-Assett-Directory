@@ -14,10 +14,24 @@ at `76c268d191d40dd66016e7f41ad5fa79ffbd5f29`, with parent
 The frozen revision-6 review remains immutable; only its `git diff --check`
 cleanliness assertion is superseded by
 `checks/evidence/launch/prelaunch-evidence-correction-revision-6-postcommit.json`
-and the checker-owned companion review. This is an evidence-coverage correction,
-not a runtime or execution-control failure. Revision-6 controls remain accepted
-and inert; H-010, J-100, launch, staging, commit, and external effects remain
-blocked pending their separate gates.
+and the checker-owned companion review. That accepted correction is committed
+locally at `8bf364301af66a5931d830fa5fad4222944736f9`, with parent `76c268d...`;
+the later commit is the clean entry anchor for this bounded status and
+current-candidate reconciliation. It is an entry anchor, not a mutable-current-
+HEAD assertion. Live Git identity and workspace state must always be measured
+directly.
+
+The reconciliation evidence is written to
+`checks/evidence/launch/prelaunch-current-head-reconciliation-revision-6-postcommit.json`;
+its disposition lives only in the independently authored
+`checks/evidence/launch/independent-current-head-reconciliation-review-revision-6-postcommit.json`.
+Those receipts reconcile navigation and qualification evidence only. They do
+not alter the immutable `76c268d...` finding inventory or prove business value.
+Revision-6 controls remain accepted historical evidence. Revision 7 adds the
+atomic-slot, closure, checker-binding, and terminal-navigation specification,
+but remains inert and unqualified. H-010, J-100, launch, any new staging or
+commit, and every external effect remain blocked behind their separate exact
+gates.
 
 This directory turns the August 2026 DAD audit into an ordered, resumable build
 campaign. It is intentionally not another operating system, dashboard, radar,
@@ -45,19 +59,31 @@ truthful baseline
 ## How to use this package
 
 1. Copy the goal from `GOAL_PROMPT.md` into a new Codex goal.
-2. The current package includes the bounded prelaunch repairs authorized after
-   revision 3; it still cannot execute J-100.
-3. Lowell reviews the remaining blockers and explicitly approves the new exact
-   activation manifest revision and digest. The revision-3 H-010 is superseded.
+2. The package includes the committed bounded revision-6 repairs, their accepted
+   postcommit correction/reconciliation evidence, and a revision-7 prelaunch
+   specification candidate; it still cannot execute J-100.
+3. Honor the reconciliation checker's actual disposition. Only an accepted,
+   exact-byte candidate may be proposed for a separate local commit decision;
+   only after the committed candidate passes its postcommit gates may Lowell be
+   asked to approve a new exact activation revision and manifest digest. The
+   revision-3 H-010 remains non-transferable.
 4. Execute the numbered phase files in order. Within each phase, execute the
    listed `jobs/J-*.md` packets in order.
-5. Do not advance on `blocked_human`, `inconclusive`, `fail_terminal`, a stale
-   input digest, or missing independent evidence.
-6. After every job, append only evidence pointers to `07_EVIDENCE_INDEX.md` and
-   update `handoff.md`. Never rewrite raw observations to make a metric pass.
-7. Before pilot execution, J-500 binds all 70 case slots. The controller leases
-   one child case at a time; cohort jobs only reconcile their child receipts.
-8. Campaign completion is a signed Phase 06 decision backed by valid pilot data;
+5. On `blocked_human`, stale input, or missing independent evidence, stop. On an
+   accepted terminal or inconclusive pilot result, stop the affected branch,
+   complete its closure, and follow only its exact declared Phase 06 route.
+6. Ordinary job writers never edit `07_EVIDENCE_INDEX.md`, `handoff.md`,
+   `08_SUPERSESSION_AND_ARCHIVE_MAP.md`, or navigation evidence. The inert
+   controller projects a route only; a separately leased
+   `campaign-navigation-writer` and distinct `independent-checker` apply and
+   accept the authorized metadata transition.
+7. Before pilot execution, J-500 binds all 70 case slots and the binding-table
+   digest. The controller materializes and leases one unique-envelope child at
+   a time; cohort parents validate closure before writing aggregates.
+8. J-600 receives exactly one selected predecessor and only that route's
+   permitted decisions. Missing, stale, partial, or unaccepted navigation
+   evidence fails closed.
+9. Campaign completion is a signed Phase 06 decision backed by valid pilot data;
    activity volume, graph centrality, asset count, or daemon uptime is not enough.
 
 ## Required reading and execution order
@@ -87,6 +113,12 @@ truthful baseline
   secrets, or activate recurring automation.
 - Every implementation job gets one bounded writer and a distinct checker.
 - Producer identity cannot be the sole evaluator identity.
+- A checker `pass` accepts faithful evidence; it never changes the producer's
+  `fail_terminal`, `blocked_human`, or `inconclusive` result into success.
+- Each started pilot child writes only its unique case envelope. Parent cohort
+  reports are produced only after an exact complete closure artifact.
+- The controller and shell adapter are projection-only and never dispatch or
+  perform navigation writes.
 - Raw observations are immutable. Legacy bad rows may be quarantined from
   aggregates, never silently rewritten or deleted.
 - `coverage_unavailable`, `unknown`, and `unverified` are valid results and must

@@ -61,5 +61,12 @@
   "revalidation_triggers": [],
   "case_binding": null,
   "case_binding_table_digest": null,
+  "case_envelope_path": null,
+  "cohort_closure_digest": null,
+  "terminal_route": null,
+  "navigation_receipt_digest": null,
+  "producer_attempt_digest": "sha256:replace",
+  "checker_record_path": "replace",
+  "checker_record_digest": "sha256:replace",
   "authority_boundary": "This receipt is evidence for one gate only and does not authorize external, destructive, publication, merge, deployment, or downstream effects."
 }

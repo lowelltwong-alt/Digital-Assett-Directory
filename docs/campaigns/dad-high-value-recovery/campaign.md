@@ -181,6 +181,27 @@ Phase 05 waits for both Phase 04 and four consecutive scheduled passes.
 J-500 also binds the manifest's case-execution slots to exact case-bank digests.
 The controller then leases exactly one atomic case child at a time; J-510,
 J-520, and J-530 are cohort reconciliation gates, not whole-cohort work leases.
+Revision 7 binds all 70 slots exactly once under the accepted J-500 binding-table
+digest. The controller materializes each child packet in memory, replaces only
+its `{case_digest}` placeholder, and limits that child to the unique envelope
+`processed/reports/dad-high-value-recovery/pilot-case-envelopes/{job_id}.json`.
+The binding-table digest must remain identical in the packet, lease, dispatch
+projection, checkpoint, and receipt. Duplicate, rebound, skipped, unbound,
+stale, or outcome-visible reordered slots fail closed.
+
+Each cohort parent has action `validate` only. It may aggregate its declared
+parent reports only after a complete cohort-closure artifact accounts for every
+slot as independently verified started work or as an immutable unstarted or
+withdrawn item with an exact reason. Closure also requires no active lease, no
+unreconciled effect, no receipt or lease after a stop, and a bound stop trigger
+and digest. `closure_complete` is control-plane accounting; it does not turn
+partial or unavailable outcome coverage into evidence completeness.
+
+An accepted terminal or inconclusive pilot result stops further work on that
+pilot branch, closes it, and selects one of the declared Phase 06 routes. It is
+not permission to skip closure or to execute a later cohort. J-600 receives a
+runtime projection containing exactly the selected predecessor, never every
+possible predecessor.
 
 ### Target calendar (planning target, not acceptance evidence)
 
@@ -199,7 +220,10 @@ is not weakened to preserve the schedule.
 Lowell recorded H-001 through H-010 for revision
 `3-launch-candidate-20260821` in the candidate decision receipt. H-001 through
 H-009 remain the selected campaign parameters. H-010 does not carry forward to
-the changed activation candidate, so launch remains unapproved. Revision 6
+the changed activation candidate, so launch remains unapproved. Revision 7
+preserves the accepted revision-6 controls and their evidence as historical,
+adds atomic closure and terminal navigation, and remains unqualified and inert.
+Revision 6
 retains revision 5 and its hook-latency evidence immutably, repairs the prior
 authorization inversion, and adds a non-dispatching execution-control bridge.
 The bridge accepts only an exact, current, unexpired execution-authorization
@@ -209,7 +233,7 @@ evidence. Its only outcomes are `blocked` and `ready-manual`; both keep
 `execution_authorized:false` and `dispatch_allowed:false`. This prelaunch
 evidence is candidate evidence and grants no execution authority.
 
-| Decision ID | Required decision | Current selected value | Status for revision 6 |
+| Decision ID | Required decision | Current selected value | Status for revision 7 |
 |---|---|---|---|
 | H-001 | Campaign owner | Lowell | recorded |
 | H-002 | Campaign expiry/review date | 2026-11-19 | recorded |
@@ -220,13 +244,13 @@ evidence is candidate evidence and grants no execution authority.
 | H-007 | Pilot repositories | `repo:dad`, `repo:mock-trial`, `repo:lawfirm-os` | selection only; downstream approval still required |
 | H-008 | Legacy invalid-row treatment | immutable quarantine from aggregates | recorded |
 | H-009 | Worktree and stale-branch treatment | review-only classification | recorded |
-| H-010 | Launch revision | revision 3 and digest `sha256:1ed2bb5a715ec61d9b92899016fabe90fa835511b079abd3615811a7fdf90a3c` | superseded; no revision-6 execution authorization exists |
+| H-010 | Launch revision | revision 3 and digest `sha256:1ed2bb5a715ec61d9b92899016fabe90fa835511b079abd3615811a7fdf90a3c` | superseded; no revision-7 execution authorization exists |
 
 No launch receipt may authorize deletion, push, merge, publication, deployment,
 global settings, plugin installation, secret access, or downstream mutation by
 implication.
 
-### Revision-6 execution-control and host-gate boundary
+### Revision-7 execution-control and host-gate boundary
 
 Portfolio OS remains the sole lease and manual-packet authority projection.
 Campaign bindings are strict, immutable material inside its existing lease and
@@ -240,6 +264,38 @@ cannot substitute for the campaign execution-authorization, Portfolio OS lease,
 or manual dispatch evidence. Conversely, a campaign bridge result does not
 qualify Codex project trust, hook discovery, host delivery, or continuity value.
 
+### Producer, checker, and terminal-navigation boundary
+
+A producer first emits immutable attempt material. Its canonical
+`producer_attempt_digest` covers binding revisions, idempotency, source and
+input/dependency digests, outputs and evidence, outcome/state/coverage, budgets,
+lease and effects, case/closure/route bindings, limitations, and affected paths,
+before checker fields exist. A distinct checker then writes a separate record
+that binds that digest, its identity and independence basis, a `pass` or
+`challenge` disposition, timestamp, limitations, and its own canonical digest.
+The final receipt binds the checker-record path and digest. The producer cannot
+write its checker record, and a checker `pass` means the attempt was represented
+faithfully; it does not change an unfavorable job result into `pass`.
+
+The controller and shell adapter remain projection-only and cannot dispatch or
+write terminal navigation. After a predecessor receipt, closure, and checker
+record validate, the controller may project a navigation packet. The existing
+Portfolio OS may separately lease a task-local `campaign-navigation-writer`; a
+distinct `independent-checker` owns the immutable route receipt at
+`checks/evidence/navigation/{route_id}.json`. That writer may update
+`07_EVIDENCE_INDEX.md`
+and `handoff.md` only under the exact route lease. It may update
+`08_SUPERSESSION_AND_ARCHIVE_MAP.md` only after a signed J-600 decision. No
+ordinary job writer may request those paths or the navigation-receipt root.
+The pre-J-600 receipt binds the projection digest, stage, and exact applied
+paths. Final navigation creates a second immutable
+`checks/evidence/navigation/{route_id}-post-j600.json` receipt that additionally
+binds the signed J-600 receipt and the 08 path. The two receipts cannot overwrite
+or substitute for one another.
+Successors reject a missing, stale, mismatched, partial, projection-only, or
+unaccepted navigation receipt. This is a role contract, not a new job, command,
+queue, scheduler, or automation.
+
 ## 8. Authority and effect classes
 
 ### Allowed after an exact launch approval
@@ -249,6 +305,9 @@ qualify Codex project trust, hook discovery, host delivery, or continuity value.
 - privacy-safe campaign reports and evidence pointers;
 - independent read-only review;
 - reversible quarantine from aggregates while preserving raw rows.
+
+Terminal metadata navigation additionally requires its own Portfolio OS lease,
+exact route packet, independent checker, and accepted route receipt.
 
 ### Separate exact approval required
 
@@ -317,6 +376,10 @@ Stop, checkpoint, release the lease, and ask the named owner when:
 - the original attempt plus one bounded repair fails;
 - evidence would have to be rewritten, relabeled, or selectively omitted to pass.
 
+A valid terminal pilot result stops only its affected pilot branch. After exact
+closure and checker acceptance, it follows the declared navigation route to
+J-600; it does not authorize another pilot cohort or any external effect.
+
 ## 11. Completion definition
 
 This campaign is complete only when all of the following are true:
@@ -329,10 +392,13 @@ This campaign is complete only when all of the following are true:
 4. Every legacy outcome is classified `joinable`, `invalid`, or `unknown`, and
    aggregates exclude invalid/unknown rows.
 5. Operational thresholds needed for pilot validity are met.
-6. The 10-, 20-, and 40-task gates have complete, independently checked evidence
-   or a human-approved early stop for failure.
-7. Phase 06 has a signed `scale`, `narrow`, `retire`, or `re-audit` decision.
-8. DAD postflight and workspace lifecycle disposition are recorded.
+6. The 10-, 20-, and 40-task branches have complete control-plane closure,
+   independently checked evidence, or an accepted exact terminal route.
+7. The selected route binds J-600 to exactly one predecessor and permitted
+   decision set through an accepted navigation receipt.
+8. Phase 06 has a signed `scale`, `narrow`, `retire`, or `re-audit` decision.
+9. Final navigation, DAD postflight, and workspace lifecycle disposition are
+   recorded.
 
 Disappointing evidence is not an incomplete campaign. A defensible narrow or
 retire decision is a successful completion.

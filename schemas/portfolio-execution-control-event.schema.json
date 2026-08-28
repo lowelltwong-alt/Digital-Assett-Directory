@@ -77,6 +77,12 @@
         "dependency_receipt_digests": {"$ref": "#/$defs/digest_map"},
         "qualification_evidence_digests": {"$ref": "#/$defs/digest_map"},
         "idempotency_key": {"type": "string", "minLength": 1},
+        "dependency_route_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,127}$"},
+        "case_id": {"type": "string", "minLength": 1},
+        "case_digest": {"$ref": "#/$defs/sha256_digest"},
+        "case_binding_table_digest": {"$ref": "#/$defs/sha256_digest"},
+        "case_envelope_path": {"type": "string", "pattern": "^processed/reports/dad-high-value-recovery/pilot-case-envelopes/J-(?:510|520|530)-C[0-9]{2}\\.json$"},
+        "cohort_reconciliation_projection_digest": {"$ref": "#/$defs/sha256_digest"},
         "worker_revision_id": {"type": "string", "minLength": 1},
         "checker_revision_id": {"type": "string", "minLength": 1},
         "action_class": {"enum": ["inspect", "plan", "implement", "validate"]},
@@ -99,7 +105,46 @@
         "reissue_of_attempt_id": {"type": "string"},
         "prior_reconciliation_digest": {"type": "string", "pattern": "^$|^sha256:[0-9a-f]{64}$"},
         "partial_effects_reconciled": {"const": true}
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["job_id"],
+            "properties": {"job_id": {"const": "J-600"}}
+          },
+          "then": {"required": ["dependency_route_id"]},
+          "else": {"not": {"required": ["dependency_route_id"]}}
+        },
+        {
+          "if": {
+            "required": ["job_id"],
+            "properties": {"job_id": {"pattern": "^J-(?:510|520|530)-C[0-9]{2}$"}}
+          },
+          "then": {
+            "required": ["case_id", "case_digest", "case_binding_table_digest", "case_envelope_path"]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {"required": ["case_id"]},
+                {"required": ["case_digest"]},
+                {"required": ["case_binding_table_digest"]},
+                {"required": ["case_envelope_path"]}
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["job_id"],
+            "properties": {"job_id": {"enum": ["J-510", "J-520", "J-530"]}}
+          },
+          "then": {"required": ["cohort_reconciliation_projection_digest"]},
+          "else": {
+            "not": {"required": ["cohort_reconciliation_projection_digest"]}
+          }
+        }
+      ]
     },
     "lease_request": {
       "type": "object", "additionalProperties": false,

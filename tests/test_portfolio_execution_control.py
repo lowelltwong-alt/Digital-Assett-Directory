@@ -743,6 +743,246 @@ def test_execution_event_builder_uses_strict_v2_schema() -> None:
     assert envelope_problems(event)
 
 
+def test_dependency_route_id_is_required_only_for_j600_campaign_bindings() -> None:
+    from digital_asset_directory.portfolio_execution import lease_scope_digest
+
+    binding = {
+        **_campaign_binding(),
+        "job_id": "J-600",
+        "dependency_route_id": "p5c-pass",
+    }
+    payload = {
+        "workstream_id": "dad:portfolio-workstream:route-schema-test",
+        "lease_id": "dad:portfolio-lease:00000000-0000-0000-0000-000000000071",
+        "owner_id": "agent",
+        "owner_kind": "agent",
+        "repo_binding_id": "binding:repo",
+        "action_classes": ["validate"],
+        "requested_paths": ["tests"],
+        "not_before": T0.isoformat(),
+        "expires_at": (T0 + timedelta(hours=1)).isoformat(),
+        "return_state": "paused",
+        "rationale_code": "terminal-route-schema-test",
+        "supersedes_lease_id": "",
+        "campaign_binding": binding,
+    }
+    payload["scope_digest"] = lease_scope_digest(payload)
+    event, _ = build_event(
+        event_kind="execution_lease_requested",
+        stream_id=payload["workstream_id"],
+        payload=payload,
+        prev_event_id="",
+        recorded_at=T0.isoformat(),
+        command_id="terminal-route-schema-test",
+    )
+    assert envelope_problems(event) == []
+
+    missing = {**event, "payload": {**event["payload"]}}
+    missing["payload"]["campaign_binding"] = {
+        key: value
+        for key, value in event["payload"]["campaign_binding"].items()
+        if key != "dependency_route_id"
+    }
+    assert any("dependency_route_id" in problem for problem in envelope_problems(missing))
+
+    ordinary = {**event, "payload": {**event["payload"]}}
+    ordinary["payload"]["campaign_binding"] = {
+        **event["payload"]["campaign_binding"],
+        "job_id": "J-100",
+    }
+    assert any("dependency_route_id" in problem for problem in envelope_problems(ordinary))
+
+    for invalid in (None, "P5C_PASS", "9bad-route"):
+        malformed = {**event, "payload": {**event["payload"]}}
+        malformed["payload"]["campaign_binding"] = {
+            **event["payload"]["campaign_binding"],
+            "dependency_route_id": invalid,
+        }
+        assert any(
+            "dependency_route_id" in problem
+            for problem in envelope_problems(malformed)
+        )
+
+
+def test_atomic_case_binding_is_required_for_lease_and_dispatch_only() -> None:
+    from digital_asset_directory.portfolio_execution import (
+        dispatch_scope_digest,
+        lease_scope_digest,
+    )
+
+    digest = "sha256:" + "b" * 64
+    atomic_fields = {
+        "case_id": "case:shadow:001",
+        "case_digest": digest,
+        "case_binding_table_digest": digest,
+        "case_envelope_path": (
+            "processed/reports/dad-high-value-recovery/"
+            "pilot-case-envelopes/J-510-C01.json"
+        ),
+    }
+    binding = {
+        **_campaign_binding(),
+        "job_id": "J-510-C01",
+        "idempotency_key": f"campaign:test:J-510-C01:{digest}:r1",
+        **atomic_fields,
+    }
+    lease_payload = {
+        "workstream_id": "dad:portfolio-workstream:atomic-schema-test",
+        "lease_id": "dad:portfolio-lease:00000000-0000-0000-0000-000000000072",
+        "owner_id": "agent",
+        "owner_kind": "agent",
+        "repo_binding_id": "binding:repo",
+        "action_classes": ["implement"],
+        "requested_paths": [atomic_fields["case_envelope_path"]],
+        "not_before": T0.isoformat(),
+        "expires_at": (T0 + timedelta(hours=1)).isoformat(),
+        "return_state": "paused",
+        "rationale_code": "atomic-schema-test",
+        "supersedes_lease_id": "",
+        "campaign_binding": binding,
+    }
+    lease_payload["scope_digest"] = lease_scope_digest(lease_payload)
+    lease_event, _ = build_event(
+        event_kind="execution_lease_requested",
+        stream_id=lease_payload["workstream_id"],
+        payload=lease_payload,
+        prev_event_id="",
+        recorded_at=T0.isoformat(),
+        command_id="atomic-lease-schema-test",
+    )
+    assert envelope_problems(lease_event) == []
+
+    dispatch_payload = {
+        "workstream_id": lease_payload["workstream_id"],
+        "dispatch_revision_id": (
+            "dad:portfolio-dispatch:00000000-0000-0000-0000-000000000072"
+        ),
+        "lease_id": lease_payload["lease_id"],
+        "repo_binding_id": "binding:repo",
+        "action": "implement",
+        "worker_revision_id": "role:builder:v1",
+        "checker_revision_id": "role:checker:v1",
+        "task_summary": "Validate exact atomic binding propagation.",
+        "requested_paths": [atomic_fields["case_envelope_path"]],
+        "acceptance_refs": ["gate:atomic"],
+        "validation_commands": ["pytest atomic"],
+        "authority_refs": ["human:atomic"],
+        "expected_repo_snapshot": digest,
+        "forbidden_actions": ["external effects"],
+        "campaign_binding": binding,
+    }
+    dispatch_payload["scope_digest"] = dispatch_scope_digest(dispatch_payload)
+    dispatch_event, _ = build_event(
+        event_kind="dispatch_intent_proposed",
+        stream_id=dispatch_payload["workstream_id"],
+        payload=dispatch_payload,
+        prev_event_id="",
+        recorded_at=T0.isoformat(),
+        command_id="atomic-dispatch-schema-test",
+    )
+    assert envelope_problems(dispatch_event) == []
+
+    for field in atomic_fields:
+        omitted = {**lease_event, "payload": {**lease_event["payload"]}}
+        omitted_binding = dict(lease_event["payload"]["campaign_binding"])
+        omitted_binding.pop(field)
+        omitted["payload"]["campaign_binding"] = omitted_binding
+        assert any(field in problem for problem in envelope_problems(omitted))
+
+        null_value = {**lease_event, "payload": {**lease_event["payload"]}}
+        null_binding = dict(lease_event["payload"]["campaign_binding"])
+        null_binding[field] = None
+        null_value["payload"]["campaign_binding"] = null_binding
+        assert any(field in problem for problem in envelope_problems(null_value))
+
+    ordinary = {**lease_event, "payload": {**lease_event["payload"]}}
+    ordinary["payload"]["campaign_binding"] = {
+        **lease_event["payload"]["campaign_binding"],
+        "job_id": "J-100",
+    }
+    assert any("case_" in problem for problem in envelope_problems(ordinary))
+
+
+def test_cohort_reconciliation_digest_is_required_only_for_parent_jobs() -> None:
+    from digital_asset_directory.portfolio_execution import lease_scope_digest
+
+    digest = "sha256:" + "c" * 64
+    binding = {
+        **_campaign_binding(),
+        "job_id": "J-510",
+        "cohort_reconciliation_projection_digest": digest,
+    }
+    payload = {
+        "workstream_id": "dad:portfolio-workstream:cohort-schema-test",
+        "lease_id": "dad:portfolio-lease:00000000-0000-0000-0000-000000000073",
+        "owner_id": "agent",
+        "owner_kind": "agent",
+        "repo_binding_id": "binding:repo",
+        "action_classes": ["validate"],
+        "requested_paths": ["processed/reports/dad-high-value-recovery"],
+        "not_before": T0.isoformat(),
+        "expires_at": (T0 + timedelta(hours=1)).isoformat(),
+        "return_state": "paused",
+        "rationale_code": "cohort-schema-test",
+        "supersedes_lease_id": "",
+        "campaign_binding": binding,
+    }
+    payload["scope_digest"] = lease_scope_digest(payload)
+    event, _ = build_event(
+        event_kind="execution_lease_requested",
+        stream_id=payload["workstream_id"],
+        payload=payload,
+        prev_event_id="",
+        recorded_at=T0.isoformat(),
+        command_id="cohort-schema-test",
+    )
+    assert envelope_problems(event) == []
+
+    for parent_id in ("J-510", "J-520", "J-530"):
+        parent = {**event, "payload": {**event["payload"]}}
+        parent["payload"]["campaign_binding"] = {
+            **event["payload"]["campaign_binding"],
+            "job_id": parent_id,
+        }
+        assert envelope_problems(parent) == []
+
+    missing = {**event, "payload": {**event["payload"]}}
+    missing_binding = dict(event["payload"]["campaign_binding"])
+    missing_binding.pop("cohort_reconciliation_projection_digest")
+    missing["payload"]["campaign_binding"] = missing_binding
+    assert any(
+        "cohort_reconciliation_projection_digest" in problem
+        for problem in envelope_problems(missing)
+    )
+
+    for job_id, extras in (
+        ("J-100", {}),
+        ("J-600", {"dependency_route_id": "p5c-pass"}),
+        (
+            "J-510-C01",
+            {
+                "case_id": "case:shadow:001",
+                "case_digest": digest,
+                "case_binding_table_digest": digest,
+                "case_envelope_path": (
+                    "processed/reports/dad-high-value-recovery/"
+                    "pilot-case-envelopes/J-510-C01.json"
+                ),
+            },
+        ),
+    ):
+        forbidden = {**event, "payload": {**event["payload"]}}
+        forbidden["payload"]["campaign_binding"] = {
+            **event["payload"]["campaign_binding"],
+            "job_id": job_id,
+            **extras,
+        }
+        assert any(
+            "cohort_reconciliation_projection_digest" in problem
+            for problem in envelope_problems(forbidden)
+        )
+
+
 def test_cli_execution_is_deny_all_and_missing_packet_fails(tmp_path: Path, monkeypatch) -> None:
     runner = CliRunner()
     monkeypatch.setattr(cli, "_cfg", lambda *_args, **_kwargs: SimpleNamespace(repo_root=tmp_path))

@@ -68,6 +68,16 @@ Do not store raw conversations, secrets, client rows, or private source content.
 - Bind every case to an enumerated manifest child slot before its lease. A case
   cannot be rebound, duplicated, reordered after outcome visibility, or executed
   under a whole-cohort lease.
+- The accepted binding artifact uses
+  `dad.campaign.atomic_case_binding_table.v2` and contains exactly 70 rows. Each
+  row binds `job_id`, `case_id`, `case_digest`, `sequence`, `depends_on`,
+  `idempotency_key`, `checkpoint_path`, `receipt_path`, and `envelope_path`.
+- The controller materializes `{case_digest}` in memory and propagates the one
+  accepted binding-table digest through the child packet, lease, dispatch
+  projection, checkpoint, and receipt. Every child may write only
+  `processed/reports/dad-high-value-recovery/pilot-case-envelopes/{job_id}.json`.
+- Cohort parents have action `validate`, never `implement`. Children cannot
+  request a parent JSON, Markdown, JSONL, closure, navigation, or evidence path.
 - Separate model/runtime changes from DAD workflow changes.
 - Report medians and distributions, not only averages.
 - Synthetic fixtures validate plumbing and negative controls only.
@@ -91,6 +101,13 @@ Pass to P5B only when:
 - no privacy, source-authority, or harmful-action breach occurred;
 - classification disagreement is resolved or reported as uncertainty;
 - operational gates remain at Phase 04 thresholds.
+
+The parent must also emit
+`processed/reports/dad-high-value-recovery/pilot-shadow-10-closure.json`. It is
+complete only when all ten slots form an exact partition of independently
+verified started children and immutable unstarted/withdrawn records, with no
+active lease, unreconciled effect, post-stop receipt or lease, or unbound stop
+trigger. A partial closure never passes P5A.
 
 ## P5B — 20-task comparative pilot
 
@@ -127,6 +144,11 @@ Additional required evidence:
 If no benefit threshold passes, stop for Phase 06 `narrow`/`retire`; do not grow
 the sample merely to hunt for a favorable result unless the evidence is invalid.
 
+Before either P5C or Phase 06 navigation, the parent must emit
+`processed/reports/dad-high-value-recovery/pilot-comparison-20-closure.json`
+under the same exact-partition, independent-verification, released-lease,
+reconciled-effect, and no-post-stop rules.
+
 ## P5C — 40-task value gate
 
 Purpose: decide whether any slice deserves continued investment.
@@ -153,17 +175,46 @@ Guardrails:
 - all synthetic evidence excluded from success counts;
 - at least two assets retain independently evidenced cross-repo reuse.
 
+Before Phase 06 navigation, the parent must emit
+`processed/reports/dad-high-value-recovery/pilot-value-gate-40-closure.json`
+under the same closure rules.
+
 ## Early stopping
 
 Stop the affected slice immediately for a privacy/source-authority breach,
 harmful rate at or above 2% with adequate denominator, repeated checker-integrity
 failure, metric corruption, or a material safety regression. Preserve evidence
-and proceed to Phase 06; failure is an acceptable result.
+and close every slot. A valid terminal result may proceed only through its exact
+Phase 06 route; metric corruption, checker-integrity failure, missing, stale, or
+unjoinable evidence is `inconclusive` and permits only `re-audit`.
+
+## Terminal routes
+
+- `p5c-pass`: accepted J-530 `pass/complete/complete` with complete closure;
+  permits `scale`, `narrow`, `retire`, or `re-audit`.
+- `p5a-valid-terminal`: accepted J-510
+  `fail_terminal/failed/complete` caused by a confirmed privacy,
+  source-authority, harmful, or material-safety trigger; permits `narrow` or
+  `retire`.
+- `p5a-inconclusive`: accepted J-510 `inconclusive` or `blocked_human` with
+  `partial` or `coverage_unavailable` coverage and complete control-plane closure; permits
+  only `re-audit`.
+- `p5b-valid-terminal` and `p5c-valid-terminal`: accepted complete-coverage
+  terminal failures at J-520 or J-530; permit `narrow` or `retire`.
+- `p5b-inconclusive` and `p5c-inconclusive`: accepted `partial` or
+  `coverage_unavailable` evidence with complete control-plane closure; permit
+  only `re-audit`.
+
+No route exists without complete closure and an independent checker disposition
+of `pass` for the exact predecessor attempt. That disposition accepts evidence
+fidelity, not outcome favorability.
 
 ## Acceptance
 
 - P5A, P5B, and P5C each have frozen protocols, complete case reconciliation,
   independent receipts, counterevidence, limitations, and corrections.
+- Every started child has a canonical producer-attempt digest and a separate,
+  digest-bound checker record written by a distinct identity.
 - A value claim is made only if P5C passes.
 - Slice-level failures are not hidden by aggregate success.
 - Cost and operator attention are included in the decision packet.

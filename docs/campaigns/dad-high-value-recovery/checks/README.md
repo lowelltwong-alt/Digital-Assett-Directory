@@ -18,6 +18,7 @@ checks/
     phase-3/
     phase-4/
     pilot/
+    navigation/
     decision/
 ```
 
@@ -35,18 +36,38 @@ not need placeholder files before launch.
 - `inconclusive`: evidence is missing, stale, unjoinable, or cannot distinguish
   pass from fail. The campaign does not advance.
 
-Every receipt must include the campaign/job/gate/attempt revisions, input and
-dependency digests, source revision, producer/checker identities, adapter and
-capability evidence, released lease, command or external query, timestamps,
-exit/result, evidence/output digests, affected paths, measured budgets, privacy
-class, state, next action, and revalidation triggers.
+Every producer attempt must include the campaign/job/gate/attempt and binding
+revisions, idempotency, source/input/dependency digests, adapter/capability
+evidence, outputs/evidence, outcome/state/coverage, measured budgets, lease and
+effects, case/closure/route bindings, limitations, affected paths, privacy class,
+and revalidation triggers. Canonicalize that immutable material before any
+checker field and record its `producer_attempt_digest`.
+
+A distinct checker writes a separate record binding the exact producer digest,
+checker identity and independence basis, disposition `pass` or `challenge`,
+timestamp, limitations, and the checker record's canonical digest. The final
+receipt binds the checker-record path and digest. Producer and checker identities
+must differ, and the producer cannot write the checker record. Missing, stale,
+malformed, challenged, self-checked, mismatched, or circular bindings fail
+closed. A dependency is accepted only when its job result satisfies the declared
+outcome contract and its checker disposition is `pass`. Checker `pass` means
+faithful evidence, not a favorable job outcome.
+
+Terminal-route evidence lives under `checks/evidence/navigation/`. The campaign
+controller and shell adapter can produce only an inert projection. An existing
+Portfolio OS lease must separately authorize a task-local
+`campaign-navigation-writer`, and a distinct `independent-checker` owns the
+immutable `checks/evidence/navigation/{route_id}.json` receipt. Ordinary job
+writers may never write the navigation root, `07_EVIDENCE_INDEX.md`,
+`handoff.md`, or `08_SUPERSESSION_AND_ARCHIVE_MAP.md`.
 
 `verify_receipt_durability.py` loads `campaign.json` and fails closed on missing
 fields, placeholder identities, stale pass inputs, unresolved dependency
-digests, producer/checker identity reuse, incomplete pass coverage, undeclared
-paths, weak digests, or a receipt that omits the gate evidence/revalidation
-contract. It proves shape and linkage only; the independent checker still owns
-truth evaluation.
+digests, producer/checker identity reuse, missing checker-record bindings,
+incomplete pass coverage, incomplete cohort closure, undeclared paths, weak
+digests, or a receipt that omits the gate evidence/revalidation contract. It
+proves shape and linkage only; the independent checker still owns truth
+evaluation.
 
 Run the checker contract tests before launch:
 

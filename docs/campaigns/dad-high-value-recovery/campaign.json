@@ -1,12 +1,13 @@
 {
   "schema_version": "long_run_campaign.v2",
   "campaign_id": "dad-high-value-recovery-v1",
-  "revision": "6-execution-control-bridge-candidate-20260823",
+  "revision": "7-atomic-terminal-navigation-candidate-20260826",
   "title": "DAD High-Value Recovery: evidence, enforcement, outcomes, closure, pilot, and scale-or-shrink",
   "objective": "Repair DAD's value spine and enforcement, then require comparable real-task evidence for a human scale, narrow, retire, or re-audit decision.",
   "completion_evidence": [
     "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/J-600-acceptance.json",
     "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/signed-human-decision.json",
+    "docs/campaigns/dad-high-value-recovery/checks/evidence/navigation/final-navigation-after-J-600.json",
     "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/final-postflight-and-worktree-disposition.json"
   ],
   "scope": {
@@ -42,7 +43,7 @@
     },
     {
       "path": "docs/campaigns/dad-high-value-recovery/campaign.md",
-      "digest": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362"
+      "digest": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6"
     },
     {
       "path": "docs/campaigns/dad-high-value-recovery/09_RESEARCH_BENCHMARK_AND_DESIGN_PRINCIPLES.md",
@@ -96,10 +97,10 @@
     "durability_command": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py",
     "adapter": {
       "name": "dad-campaign-codex-shell-inert",
-      "revision": "dad-campaign-codex-shell-adapter:0.2.0-prelaunch"
+      "revision": "dad-campaign-codex-shell-adapter:0.3.0-prelaunch"
     },
     "readiness_contract": {
-      "schema_version": "dad.campaign.execution_control_binding.v1",
+      "schema_version": "dad.campaign.execution_control_binding.v2",
       "outcomes": [
         "blocked",
         "ready-manual"
@@ -109,14 +110,17 @@
       "machine_gates": [
         "exact current unexpired named-human authorization bound to campaign revision, manifest digest, job, and approved effects",
         "current source and resolved job-input digests",
-        "accepted direct dependency receipt log digests and PASS rows",
+        "accepted direct dependency result contract plus an independent checker-record disposition of pass",
         "current digest-bound worker, checker, and adapter qualifications",
         "one current lease, fresh heartbeat, safe supersession, and reconciled reissue",
         "campaign and job budget headroom",
         "idempotency and write-conflict rejection",
         "declared paths, effects, outputs, checkpoint, receipt, evidence, and durability verifier",
         "repair limit and stop-state enforcement",
-        "dispatch revoke, lease release, and partial-effect reconciliation on shutdown"
+        "dispatch revoke, lease release, and partial-effect reconciliation on shutdown",
+        "atomic v2 case binding-table digest continuity through packet, lease, dispatch projection, checkpoint, and receipt",
+        "complete cohort closure before aggregation, terminal routing, or successor eligibility",
+        "exactly one accepted terminal route and separately accepted navigation receipt before J-600 projection"
       ],
       "execution_authorized": false,
       "dispatch_allowed": false
@@ -132,7 +136,217 @@
     "qualification_evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/prelaunch-revision-6.json",
     "dry_run_evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/prelaunch-dry-run-revision-6.json",
     "authorization_receipt": "not-authorized",
-    "independent_launch_review": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/independent-launch-review-revision-6.json"
+    "independent_launch_review": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/independent-launch-review-revision-6.json",
+    "revision_6_evidence_status": "historical-predecessor-evidence-only",
+    "controller_projection_only": true
+  },
+  "producer_checker_contract": {
+    "schema_version": "dad.campaign.producer_checker_binding.v1",
+      "producer_attempt_digest_algorithm": "sha256-canonical-json",
+      "producer_attempt_digest_fields": [
+        "adapter",
+        "affected_paths",
+        "attempt_id",
+        "authority_boundary",
+        "campaign_id",
+        "campaign_revision",
+        "case_binding",
+        "case_binding_table_digest",
+        "case_envelope_path",
+        "checkpoint_path",
+        "cohort_closure_digest",
+        "command_or_query",
+        "completed_at",
+        "coverage",
+        "dependency_receipt_digests",
+        "evidence_digests",
+        "evidence_paths",
+        "exit_code",
+        "gate_id",
+        "gate_revision",
+        "heartbeat_minutes",
+        "idempotency_key",
+        "input_digests",
+        "job_id",
+        "lease",
+        "lease_minutes",
+        "limitations",
+        "measured_budgets",
+        "navigation_receipt_digest",
+        "next_action",
+        "output_digests",
+        "privacy_class",
+        "producer_identity",
+        "producer_role",
+        "receipt_path",
+        "result",
+        "revalidation_triggers",
+        "schema_version",
+        "source_revision",
+        "started_at",
+        "state",
+        "synthetic_or_fixture",
+        "terminal_route",
+        "worker_capability"
+      ],
+    "checker_record": {
+      "writer_role": "independent-checker",
+      "producer_checker_must_differ": true,
+      "dispositions": [
+        "pass",
+        "challenge"
+      ],
+      "required_fields": [
+        "producer_attempt_digest",
+        "checker_identity",
+        "independence_basis",
+          "disposition",
+          "checked_at",
+          "limitations",
+          "record_digest"
+        ],
+        "record_digest_semantics": "sha256-canonical-json-excluding-record-digest",
+        "final_receipt_bindings": [
+          "checker_record_path",
+          "checker_record_digest"
+        ],
+        "final_receipt_checker_record_digest_semantics": "sha256-file-bytes",
+      "pass_meaning": "evidence-faithful-not-outcome-favorable"
+    },
+    "dependency_acceptance": "declared-result-contract-and-checker-disposition-pass",
+    "reject": [
+      "missing-checker-record",
+      "stale-checker-record",
+      "malformed-checker-record",
+      "checker-challenge",
+      "self-check",
+      "producer-digest-mismatch",
+      "checker-digest-mismatch",
+      "circular-binding"
+    ]
+  },
+  "terminal_navigation": {
+    "schema_version": "dad.campaign.terminal_navigation.v1",
+    "controller_role": "campaign-controller",
+    "controller_mode": "projection_only",
+    "dispatch_allowed": false,
+    "writer_role": "campaign-navigation-writer",
+    "checker_role": "independent-checker",
+    "writer_checker_distinct": true,
+    "authority_source": "existing Portfolio OS separate task-local lease",
+    "receipt_root": "docs/campaigns/dad-high-value-recovery/checks/evidence/navigation/",
+    "receipt_path_template": "docs/campaigns/dad-high-value-recovery/checks/evidence/navigation/{route_id}.json",
+    "post_j600_receipt_path_template": "docs/campaigns/dad-high-value-recovery/checks/evidence/navigation/{route_id}-post-j600.json",
+    "receipt_contract": {
+      "immutable_stage_specific_receipts": true,
+      "pre_j600_stage": "accepted-terminal-route",
+      "post_j600_stage": "post-j600-signed-decision",
+      "required_projection_bindings": [
+        "projection_digest",
+        "navigation_stage",
+        "navigation_paths",
+        "output_digests",
+        "dependency_route_id",
+        "predecessor_receipt_digest",
+        "closure_digest"
+      ],
+      "post_j600_additional_bindings": [
+        "navigation_receipt_digest",
+        "j600_receipt_digest"
+      ],
+      "overwrite_or_cross_stage_reuse_forbidden": true
+    },
+    "protected_paths": [
+      "docs/campaigns/dad-high-value-recovery/07_EVIDENCE_INDEX.md",
+      "docs/campaigns/dad-high-value-recovery/handoff.md",
+      "docs/campaigns/dad-high-value-recovery/08_SUPERSESSION_AND_ARCHIVE_MAP.md",
+      "docs/campaigns/dad-high-value-recovery/checks/evidence/navigation/"
+    ],
+    "post_j600_only_paths": [
+      "docs/campaigns/dad-high-value-recovery/08_SUPERSESSION_AND_ARCHIVE_MAP.md"
+    ],
+    "routes": [
+      {
+        "route_id": "p5c-pass",
+        "predecessor_job_id": "J-530",
+        "result": ["pass"],
+        "state": ["complete"],
+        "coverage": ["complete"],
+        "trigger_class": ["value-gate-pass"],
+        "closure_path": "processed/reports/dad-high-value-recovery/pilot-value-gate-40-closure.json",
+        "permitted_decisions": ["scale", "narrow", "retire", "re-audit"]
+      },
+      {
+        "route_id": "p5a-valid-terminal",
+        "predecessor_job_id": "J-510",
+        "result": ["fail_terminal"],
+        "state": ["failed"],
+        "coverage": ["complete"],
+        "trigger_class": ["privacy", "source-authority", "harmful", "material-safety"],
+        "closure_path": "processed/reports/dad-high-value-recovery/pilot-shadow-10-closure.json",
+        "permitted_decisions": ["narrow", "retire"]
+      },
+      {
+        "route_id": "p5a-inconclusive",
+        "predecessor_job_id": "J-510",
+        "result": ["inconclusive", "blocked_human"],
+        "state": ["blocked"],
+        "coverage": ["partial", "coverage_unavailable"],
+        "trigger_class": ["missing", "stale", "unjoinable", "metric-corruption", "checker-integrity"],
+        "closure_path": "processed/reports/dad-high-value-recovery/pilot-shadow-10-closure.json",
+        "permitted_decisions": ["re-audit"]
+      },
+      {
+        "route_id": "p5b-valid-terminal",
+        "predecessor_job_id": "J-520",
+        "result": ["fail_terminal"],
+        "state": ["failed"],
+        "coverage": ["complete"],
+        "trigger_class": ["frozen-benefit-failure", "safety", "authority"],
+        "closure_path": "processed/reports/dad-high-value-recovery/pilot-comparison-20-closure.json",
+        "permitted_decisions": ["narrow", "retire"]
+      },
+      {
+        "route_id": "p5b-inconclusive",
+        "predecessor_job_id": "J-520",
+        "result": ["inconclusive", "blocked_human"],
+        "state": ["blocked"],
+        "coverage": ["partial", "coverage_unavailable"],
+        "trigger_class": ["missing", "stale", "unjoinable", "metric-corruption", "checker-integrity"],
+        "closure_path": "processed/reports/dad-high-value-recovery/pilot-comparison-20-closure.json",
+        "permitted_decisions": ["re-audit"]
+      },
+      {
+        "route_id": "p5c-valid-terminal",
+        "predecessor_job_id": "J-530",
+        "result": ["fail_terminal"],
+        "state": ["failed"],
+        "coverage": ["complete"],
+        "trigger_class": ["frozen-benefit-failure", "guardrail-failure", "safety", "authority"],
+        "closure_path": "processed/reports/dad-high-value-recovery/pilot-value-gate-40-closure.json",
+        "permitted_decisions": ["narrow", "retire"]
+      },
+      {
+        "route_id": "p5c-inconclusive",
+        "predecessor_job_id": "J-530",
+        "result": ["inconclusive", "blocked_human"],
+        "state": ["blocked"],
+        "coverage": ["partial", "coverage_unavailable"],
+        "trigger_class": ["missing", "stale", "unjoinable", "metric-corruption", "checker-integrity"],
+        "closure_path": "processed/reports/dad-high-value-recovery/pilot-value-gate-40-closure.json",
+        "permitted_decisions": ["re-audit"]
+      }
+    ],
+    "j600_dependency_projection": "exactly-one-selected-predecessor",
+    "successor_rejects": [
+      "missing-navigation-receipt",
+      "stale-navigation-receipt",
+      "mismatched-route-binding",
+      "partial-navigation",
+      "projection-only-navigation",
+      "unaccepted-navigation-receipt"
+    ],
+    "new_job_or_command_created": false
   },
   "specialist_mesh": {
     "synthetic_world_artifacts": false,
@@ -216,7 +430,7 @@
                     "docs/campaigns/dad-high-value-recovery/jobs/J-100_REPRODUCIBLE_BASELINE.md"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/01_BASELINE_AND_FREEZE.md": "sha256:3e37859df7d52b455e5027fdff540d2742bcb56639e2d91f54978499bc775d55",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-100_REPRODUCIBLE_BASELINE.md": "sha256:bf4c0171653a81c1f278d1f5154c7a6f9618adb88593c98b9eed21254956043a"
                   },
@@ -346,7 +560,7 @@
                     "AGENTS.md"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/01_BASELINE_AND_FREEZE.md": "sha256:3e37859df7d52b455e5027fdff540d2742bcb56639e2d91f54978499bc775d55",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-110_TEMPORARY_EXPANSION_FREEZE.md": "sha256:33c4e97c74c86bb8e488e9bbf9ef772ed6e482a51133d111dd408c4e889b04c0",
                     "AGENTS.md": "sha256:686d11cac8f4f6fc06757ce365b80b34f12ef7c1fd19f2eb7858ee4af7c36742"
@@ -504,7 +718,7 @@
                     ".github/workflows/scheduled-full-regression.yml"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/02_CI_AND_ENFORCEMENT_RECOVERY.md": "sha256:cfc67c4c12832742cfd2db6e84b1e7c1cd93769bf2a62bfeb02bdc9a09a44a7d",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-200_REPAIR_LOCAL_AND_SCHEDULED_REGRESSION.md": "sha256:cf0e92193fdef7a5d5e1b9a9448aee3638b524daef98e68321cde9b0fca0f4d4",
                     ".github/workflows/scheduled-full-regression.yml": "sha256:f2cdb8bdb3c82b95f2c03379327ac00cbf1856054c3a9f81952cd43a8edbcbbd"
@@ -635,7 +849,7 @@
                     ".github/workflows/dad-contract-check.yml"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/02_CI_AND_ENFORCEMENT_RECOVERY.md": "sha256:cfc67c4c12832742cfd2db6e84b1e7c1cd93769bf2a62bfeb02bdc9a09a44a7d",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-210_BIND_REQUIRED_CHECKS_AND_PROTECTION.md": "sha256:0aceede50d17b7b1e45013e46b67e6b4365482b733ff28dbaea110357ec6f6d9",
                     ".github/workflows/dad-contract-check.yml": "sha256:b8bf439b3de8981aa52825fdae7672c7d7df1f575525453ee0305c81c2bc2971"
@@ -772,7 +986,7 @@
                     ".github/workflows/dad-contract-check.yml"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/02_CI_AND_ENFORCEMENT_RECOVERY.md": "sha256:cfc67c4c12832742cfd2db6e84b1e7c1cd93769bf2a62bfeb02bdc9a09a44a7d",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-215_OBSERVE_FOUR_WEEK_CI_STABILITY.md": "sha256:d233cfc900e4ec3864f95e2ef452a3932e2bd20f17158fdedc314bbf59bb027d",
                     ".github/workflows/dad-contract-check.yml": "sha256:b8bf439b3de8981aa52825fdae7672c7d7df1f575525453ee0305c81c2bc2971"
@@ -996,7 +1210,7 @@
                     "src/digital_asset_directory/dad_library.py"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/03_OUTCOME_CONTRACT_AND_DATA_REPAIR.md": "sha256:ed1b7da561e52c41e941e25aa7eb21f2cf4283052d525401053d160155d0edee",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-300_ENFORCE_RECOMMENDATION_OUTCOME_CONTRACT.md": "sha256:c78bf39aaebc2394beda5a83160adfad7f84828bc8abdc63a1eb1f968d9ee77e",
                     "schemas/repo-asset-usage.schema.json": "sha256:2ddb59db6eff19641aac0ed61a0facc6667210b152634724aeae6ed679198561",
@@ -1150,7 +1364,7 @@
                     "docs/campaigns/dad-high-value-recovery/jobs/J-310_CLASSIFY_AND_QUARANTINE_LEGACY_OUTCOMES.md"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/03_OUTCOME_CONTRACT_AND_DATA_REPAIR.md": "sha256:ed1b7da561e52c41e941e25aa7eb21f2cf4283052d525401053d160155d0edee",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-310_CLASSIFY_AND_QUARANTINE_LEGACY_OUTCOMES.md": "sha256:1ee6685a8fa413d1badd945c8bdf90d50c2c1fed04eb20e4cc679de7ae07ab16"
                   },
@@ -1283,7 +1497,7 @@
                     "src/digital_asset_directory/learning_yield_report.py"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/03_OUTCOME_CONTRACT_AND_DATA_REPAIR.md": "sha256:ed1b7da561e52c41e941e25aa7eb21f2cf4283052d525401053d160155d0edee",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-320_CORRECT_LEARNING_YIELD_SEMANTICS.md": "sha256:02f0439fbee6666b9c8be7ff1a06e834d4f106f708c938ac9effb0b585b70d3e",
                     "src/digital_asset_directory/learning_yield_report.py": "sha256:26ccc2e80a8ac325b6c87e4ef81275c4d995efa023a000c3fea0ba5292c5273b"
@@ -1448,7 +1662,7 @@
                     "processed/reports/dad-high-value-recovery/operational-eligibility-baseline.json"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/04_OPERATOR_BACKLOG_AND_LIFECYCLE_RECOVERY.md": "sha256:a619ccf8e8c5e401b4a10a4a56ece22d46ab1757dbc589dabd2147dbdcf22dbe",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-400_CLOSE_OPERATIONAL_AND_WORKSPACE_DEBT.md": "sha256:8155e7fac2be2ff2e349ee484798dbf6bf3606a672170694f12c399b6154d595",
                     "src/digital_asset_directory/agent_session_reaper.py": "sha256:8c8e2411c060957f1ee2b154049165f15987ef39c38385d1a28e53ee7ed0795c",
@@ -1579,7 +1793,7 @@
                     "src/digital_asset_directory/daemon.py"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/04_OPERATOR_BACKLOG_AND_LIFECYCLE_RECOVERY.md": "sha256:a619ccf8e8c5e401b4a10a4a56ece22d46ab1757dbc589dabd2147dbdcf22dbe",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-410_RECONCILE_DAEMON_JOURNAL_AND_TASK_HEALTH.md": "sha256:3c9c8198fb737961098cd5e9b3231c790ec05e813e1b99ff6e89e1d8498dffa5",
                     "src/digital_asset_directory/daemon.py": "sha256:df3ad439421ba84c7d4a8685bf2bca82103e28fe657b247162f5f687126ecc7d"
@@ -1747,9 +1961,9 @@
                     "docs/campaigns/dad-high-value-recovery/jobs/J-500_FREEZE_PILOT_PROTOCOL_AND_CASES.md"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
-                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md": "sha256:b8337fa243339563cfd4f68c22429e0405d9792a7b1b70e38cabee4cb72f3611",
-                    "docs/campaigns/dad-high-value-recovery/jobs/J-500_FREEZE_PILOT_PROTOCOL_AND_CASES.md": "sha256:336cbf0758406b5572f6b52deb01bab1b402f40ba394d68e80f4a96b4d46a880"
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
+                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md": "sha256:f5a36c6e34686ca240db4c8c6e8a788e4dfe990b705c3f960bff30a69b484988",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-500_FREEZE_PILOT_PROTOCOL_AND_CASES.md": "sha256:678a0301f51fcb66ee674c25dca3ef63e925c57b2f6fdf63de3dd504f1257384"
                   },
                   "outputs": [
                     "processed/reports/dad-high-value-recovery/pilot-protocol.json",
@@ -1827,7 +2041,7 @@
                   "acceptance": [
                     {
                       "id": "G-J-500-ACCEPT",
-                      "revision": "2",
+                      "revision": "3",
                       "type": "human",
                       "checker_role": "independent-checker",
                       "inputs": [
@@ -1837,7 +2051,7 @@
                         "processed/reports/dad-high-value-recovery/pilot-case-bindings.json"
                       ],
                       "command": "not-applicable",
-                      "rubric": "Verify H-005 through H-007, one frozen primary estimator/denominator/threshold schedule, minimum repo/slice/arm allocation, exact repo-local approvals, and 70 uniquely bound serial child slots with independent evaluation.",
+                      "rubric": "Verify H-005 through H-007, one frozen primary estimator/denominator/threshold schedule, minimum repo/slice/arm allocation, exact repo-local approvals, and a dad.campaign.atomic_case_binding_table.v2 artifact with exactly 70 unique immutable rows, envelopes, serial dependencies, and independent evaluation.",
                       "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/J-500-acceptance.json",
                       "result_semantics": {
                         "pass": "required evidence is current and satisfies the gate",
@@ -1857,6 +2071,44 @@
                       ]
                     }
                   ],
+                  "binding_table_contract": {
+                    "schema_version": "dad.campaign.atomic_case_binding_table.v2",
+                    "path": "processed/reports/dad-high-value-recovery/pilot-case-bindings.json",
+                    "exact_row_count": 70,
+                    "required_row_fields": [
+                      "job_id",
+                      "case_id",
+                      "case_digest",
+                      "sequence",
+                      "depends_on",
+                      "idempotency_key",
+                      "checkpoint_path",
+                      "receipt_path",
+                      "envelope_path"
+                    ],
+                    "case_digest_algorithm": "sha256",
+                    "case_ids_unique": true,
+                    "case_digests_unique": true,
+                    "job_ids_unique": true,
+                    "envelope_paths_unique": true,
+                    "binding_table_digest_propagates_to": [
+                      "child-packet",
+                      "lease",
+                      "dispatch-projection",
+                      "checkpoint",
+                      "receipt"
+                    ],
+                    "materialization_mode": "in-memory-case-digest-substitution-only",
+                    "case_envelope_path_template": "processed/reports/dad-high-value-recovery/pilot-case-envelopes/{job_id}.json",
+                    "rejections": [
+                      "duplicate",
+                      "rebound",
+                      "skipped",
+                      "reordered-after-outcome",
+                      "stale",
+                      "unbound"
+                    ]
+                  },
                   "pilot_metric_contract": {
                     "success_rule": "Only the H-005 selected primary metric can satisfy P5B/P5C benefit. Predeclared secondary metrics cannot substitute.",
                     "required_frozen_fields": [
@@ -1929,24 +2181,28 @@
                     "J-500": "receipt-digest:resolve-after-J-500-acceptance"
                   },
                   "inputs": [
-                    "docs/campaigns/dad-high-value-recovery/campaign.md",
-                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md",
-                    "docs/campaigns/dad-high-value-recovery/jobs/J-510_RUN_10_TASK_SHADOW_CALIBRATION.md"
+                      "docs/campaigns/dad-high-value-recovery/campaign.md",
+                      "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md",
+                      "docs/campaigns/dad-high-value-recovery/jobs/J-510_RUN_10_TASK_SHADOW_CALIBRATION.md",
+                      "processed/reports/dad-high-value-recovery/pilot-case-bindings.json"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
-                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md": "sha256:b8337fa243339563cfd4f68c22429e0405d9792a7b1b70e38cabee4cb72f3611",
-                    "docs/campaigns/dad-high-value-recovery/jobs/J-510_RUN_10_TASK_SHADOW_CALIBRATION.md": "sha256:767492993864057233ebd6d7ecea2f9f9ac63b49c5b55e28e21a7b53cd0ca252"
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
+                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md": "sha256:f5a36c6e34686ca240db4c8c6e8a788e4dfe990b705c3f960bff30a69b484988",
+                      "docs/campaigns/dad-high-value-recovery/jobs/J-510_RUN_10_TASK_SHADOW_CALIBRATION.md": "sha256:709bcdb219e16513a21c543e87e965b786586ac8ceb2d5c67f0d724ca80bdb0e",
+                      "processed/reports/dad-high-value-recovery/pilot-case-bindings.json": "receipt-bound-output-digest:resolve-from-accepted-J-500"
                   },
                   "outputs": [
                     "processed/reports/dad-high-value-recovery/pilot-cases-shadow-10.jsonl",
                     "processed/reports/dad-high-value-recovery/pilot-shadow-10.json",
-                    "processed/reports/dad-high-value-recovery/pilot-shadow-10.md"
+                    "processed/reports/dad-high-value-recovery/pilot-shadow-10.md",
+                    "processed/reports/dad-high-value-recovery/pilot-shadow-10-closure.json"
                   ],
                   "allowed_paths": [
                     "processed/reports/dad-high-value-recovery/pilot-cases-shadow-10.jsonl",
                     "processed/reports/dad-high-value-recovery/pilot-shadow-10.json",
-                    "processed/reports/dad-high-value-recovery/pilot-shadow-10.md"
+                    "processed/reports/dad-high-value-recovery/pilot-shadow-10.md",
+                    "processed/reports/dad-high-value-recovery/pilot-shadow-10-closure.json"
                   ],
                   "prohibited_actions": [
                     "publish or merge",
@@ -2012,16 +2268,17 @@
                   "acceptance": [
                     {
                       "id": "G-J-510-ACCEPT",
-                      "revision": "2",
+                      "revision": "3",
                       "type": "independent",
                       "checker_role": "independent-checker",
                       "inputs": [
                         "processed/reports/dad-high-value-recovery/pilot-cases-shadow-10.jsonl",
                         "processed/reports/dad-high-value-recovery/pilot-shadow-10.json",
-                        "processed/reports/dad-high-value-recovery/pilot-shadow-10.md"
+                        "processed/reports/dad-high-value-recovery/pilot-shadow-10.md",
+                        "processed/reports/dad-high-value-recovery/pilot-shadow-10-closure.json"
                       ],
                       "command": "not-applicable",
-                      "rubric": "Verify ten unique bound atomic child receipts, 100% valid envelopes, reproducible metrics, negative cases, no duplicate/rebind/whole-cohort lease, and no value claim.",
+                      "rubric": "Verify ten unique bound atomic v2 child receipts, binding-table digest continuity, unique envelopes, producer/checker digest separation, complete closure, reproducible metrics, negative cases, no duplicate/rebind/whole-cohort lease, and no value claim.",
                       "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/J-510-acceptance.json",
                       "result_semantics": {
                         "pass": "required evidence is current and satisfies the gate",
@@ -2042,11 +2299,17 @@
                     }
                   ],
                   "case_execution": {
-                    "schema_version": "dad.campaign.atomic_case_slots.v1",
+                    "schema_version": "dad.campaign.atomic_case_slots.v2",
                     "parent_semantics": "cohort-reconciliation-gate-only",
+                    "parent_action": "validate",
                     "binding_job": "J-500",
                     "binding_table": "processed/reports/dad-high-value-recovery/pilot-case-bindings.json",
                     "binding_gate": "G-J-500-ACCEPT",
+                    "binding_table_schema": "dad.campaign.atomic_case_binding_table.v2",
+                    "binding_table_digest_source": "accepted-J-500-output-digest",
+                    "case_envelope_path_template": "processed/reports/dad-high-value-recovery/pilot-case-envelopes/{job_id}.json",
+                    "closure_path": "processed/reports/dad-high-value-recovery/pilot-shadow-10-closure.json",
+                    "materialization_mode": "in-memory-case-digest-substitution-only",
                     "controller_max_concurrency": 1,
                     "child_owner_role": "pilot-producer",
                     "child_checker_role": "independent-checker",
@@ -2058,8 +2321,23 @@
                     "output_ceiling_mb_per_child": 2,
                     "binding_rule": "Before a lease, case_binding must be a SHA-256 case digest signed in the accepted J-500 binding table; rebinding after first lease is terminal.",
                     "reissue_rule": "Expire the lease, reconcile source/effects/checkpoint/receipt by idempotency key, then reissue only the same slot and case digest.",
+                    "binding_table_digest_required_in": ["child-packet", "lease", "dispatch-projection", "checkpoint", "receipt"],
+                    "child_forbidden_output_classes": ["parent-aggregate", "parent-closure", "navigation-metadata", "checker-record"],
+                    "closure_contract": {
+                      "complete_required_before_parent_aggregate_or_navigation": true,
+                      "started_children_independently_verified": true,
+                      "unstarted_or_withdrawn_reason_immutable": true,
+                      "exact_slot_partition": true,
+                      "no_active_lease": true,
+                      "no_unreconciled_effect": true,
+                      "no_post_stop_receipt_or_lease": true,
+                      "stop_trigger_and_digest_bound": true,
+                      "partial_never_passes": true
+                    },
                     "child_acceptance": {
-                      "revision": "1",
+                      "revision": "2",
+                      "producer_attempt_digest_required": true,
+                      "checker_record_digest_required": true,
                       "evidence_path_template": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/{job_id}-acceptance.json",
                       "revalidation_triggers": [
                         "case binding or binding-table digest change",
@@ -2217,24 +2495,28 @@
                     "J-510": "receipt-digest:resolve-after-J-510-acceptance"
                   },
                   "inputs": [
-                    "docs/campaigns/dad-high-value-recovery/campaign.md",
-                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md",
-                    "docs/campaigns/dad-high-value-recovery/jobs/J-520_RUN_20_TASK_COMPARATIVE_PILOT.md"
+                      "docs/campaigns/dad-high-value-recovery/campaign.md",
+                      "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md",
+                      "docs/campaigns/dad-high-value-recovery/jobs/J-520_RUN_20_TASK_COMPARATIVE_PILOT.md",
+                      "processed/reports/dad-high-value-recovery/pilot-case-bindings.json"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
-                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md": "sha256:b8337fa243339563cfd4f68c22429e0405d9792a7b1b70e38cabee4cb72f3611",
-                    "docs/campaigns/dad-high-value-recovery/jobs/J-520_RUN_20_TASK_COMPARATIVE_PILOT.md": "sha256:ab139a5194415e85802d0cbec6e879174c8bae306c805522edbbe77fbee240dd"
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
+                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md": "sha256:f5a36c6e34686ca240db4c8c6e8a788e4dfe990b705c3f960bff30a69b484988",
+                      "docs/campaigns/dad-high-value-recovery/jobs/J-520_RUN_20_TASK_COMPARATIVE_PILOT.md": "sha256:e0f0e6806d3eac90e6ba52e2e75f448b7044a79ecede4344870cf4976e5ebee9",
+                      "processed/reports/dad-high-value-recovery/pilot-case-bindings.json": "receipt-bound-output-digest:resolve-from-accepted-J-500"
                   },
                   "outputs": [
                     "processed/reports/dad-high-value-recovery/pilot-cases-comparison-20.jsonl",
                     "processed/reports/dad-high-value-recovery/pilot-comparison-20.json",
-                    "processed/reports/dad-high-value-recovery/pilot-comparison-20.md"
+                    "processed/reports/dad-high-value-recovery/pilot-comparison-20.md",
+                    "processed/reports/dad-high-value-recovery/pilot-comparison-20-closure.json"
                   ],
                   "allowed_paths": [
                     "processed/reports/dad-high-value-recovery/pilot-cases-comparison-20.jsonl",
                     "processed/reports/dad-high-value-recovery/pilot-comparison-20.json",
-                    "processed/reports/dad-high-value-recovery/pilot-comparison-20.md"
+                    "processed/reports/dad-high-value-recovery/pilot-comparison-20.md",
+                    "processed/reports/dad-high-value-recovery/pilot-comparison-20-closure.json"
                   ],
                   "prohibited_actions": [
                     "publish or merge",
@@ -2300,16 +2582,17 @@
                   "acceptance": [
                     {
                       "id": "G-J-520-ACCEPT",
-                      "revision": "2",
+                      "revision": "3",
                       "type": "independent",
                       "checker_role": "independent-checker",
                       "inputs": [
                         "processed/reports/dad-high-value-recovery/pilot-cases-comparison-20.jsonl",
                         "processed/reports/dad-high-value-recovery/pilot-comparison-20.json",
-                        "processed/reports/dad-high-value-recovery/pilot-comparison-20.md"
+                        "processed/reports/dad-high-value-recovery/pilot-comparison-20.md",
+                        "processed/reports/dad-high-value-recovery/pilot-comparison-20-closure.json"
                       ],
                       "command": "not-applicable",
-                      "rubric": "Verify twenty unique bound atomic child receipts, frozen primary population/allocation, the selected H-005 P5B threshold, every guardrail, exclusions, and cross-repo reuse evidence; no secondary metric may substitute.",
+                      "rubric": "Verify twenty unique bound atomic v2 child receipts, binding-table digest continuity, unique envelopes, producer/checker digest separation, complete closure, frozen primary population/allocation, the selected H-005 P5B threshold, every guardrail, exclusions, and cross-repo reuse evidence; no secondary metric may substitute.",
                       "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/J-520-acceptance.json",
                       "result_semantics": {
                         "pass": "required evidence is current and satisfies the gate",
@@ -2330,11 +2613,17 @@
                     }
                   ],
                   "case_execution": {
-                    "schema_version": "dad.campaign.atomic_case_slots.v1",
+                    "schema_version": "dad.campaign.atomic_case_slots.v2",
                     "parent_semantics": "cohort-reconciliation-gate-only",
+                    "parent_action": "validate",
                     "binding_job": "J-500",
                     "binding_table": "processed/reports/dad-high-value-recovery/pilot-case-bindings.json",
                     "binding_gate": "G-J-500-ACCEPT",
+                    "binding_table_schema": "dad.campaign.atomic_case_binding_table.v2",
+                    "binding_table_digest_source": "accepted-J-500-output-digest",
+                    "case_envelope_path_template": "processed/reports/dad-high-value-recovery/pilot-case-envelopes/{job_id}.json",
+                    "closure_path": "processed/reports/dad-high-value-recovery/pilot-comparison-20-closure.json",
+                    "materialization_mode": "in-memory-case-digest-substitution-only",
                     "controller_max_concurrency": 1,
                     "child_owner_role": "pilot-producer",
                     "child_checker_role": "independent-checker",
@@ -2346,8 +2635,23 @@
                     "output_ceiling_mb_per_child": 2,
                     "binding_rule": "Before a lease, case_binding must be a SHA-256 case digest signed in the accepted J-500 binding table; rebinding after first lease is terminal.",
                     "reissue_rule": "Expire the lease, reconcile source/effects/checkpoint/receipt by idempotency key, then reissue only the same slot and case digest.",
+                    "binding_table_digest_required_in": ["child-packet", "lease", "dispatch-projection", "checkpoint", "receipt"],
+                    "child_forbidden_output_classes": ["parent-aggregate", "parent-closure", "navigation-metadata", "checker-record"],
+                    "closure_contract": {
+                      "complete_required_before_parent_aggregate_or_navigation": true,
+                      "started_children_independently_verified": true,
+                      "unstarted_or_withdrawn_reason_immutable": true,
+                      "exact_slot_partition": true,
+                      "no_active_lease": true,
+                      "no_unreconciled_effect": true,
+                      "no_post_stop_receipt_or_lease": true,
+                      "stop_trigger_and_digest_bound": true,
+                      "partial_never_passes": true
+                    },
                     "child_acceptance": {
-                      "revision": "1",
+                      "revision": "2",
+                      "producer_attempt_digest_required": true,
+                      "checker_record_digest_required": true,
                       "evidence_path_template": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/{job_id}-acceptance.json",
                       "revalidation_triggers": [
                         "case binding or binding-table digest change",
@@ -2635,24 +2939,28 @@
                     "J-520": "receipt-digest:resolve-after-J-520-acceptance"
                   },
                   "inputs": [
-                    "docs/campaigns/dad-high-value-recovery/campaign.md",
-                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md",
-                    "docs/campaigns/dad-high-value-recovery/jobs/J-530_RUN_40_TASK_VALUE_GATE.md"
+                      "docs/campaigns/dad-high-value-recovery/campaign.md",
+                      "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md",
+                      "docs/campaigns/dad-high-value-recovery/jobs/J-530_RUN_40_TASK_VALUE_GATE.md",
+                      "processed/reports/dad-high-value-recovery/pilot-case-bindings.json"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
-                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md": "sha256:b8337fa243339563cfd4f68c22429e0405d9792a7b1b70e38cabee4cb72f3611",
-                    "docs/campaigns/dad-high-value-recovery/jobs/J-530_RUN_40_TASK_VALUE_GATE.md": "sha256:f18582f1482df209c5347a9f3da06cd01a4f8842438f9d67182cd110079dfd4b"
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
+                    "docs/campaigns/dad-high-value-recovery/05_THREE_WORKFLOW_PILOT.md": "sha256:f5a36c6e34686ca240db4c8c6e8a788e4dfe990b705c3f960bff30a69b484988",
+                      "docs/campaigns/dad-high-value-recovery/jobs/J-530_RUN_40_TASK_VALUE_GATE.md": "sha256:688c13f53242040aac71d2d61823ce1a275850b05234e77c44e1c7ec3d9c75ac",
+                      "processed/reports/dad-high-value-recovery/pilot-case-bindings.json": "receipt-bound-output-digest:resolve-from-accepted-J-500"
                   },
                   "outputs": [
                     "processed/reports/dad-high-value-recovery/pilot-cases-value-40.jsonl",
                     "processed/reports/dad-high-value-recovery/pilot-value-gate-40.json",
-                    "processed/reports/dad-high-value-recovery/pilot-value-gate-40.md"
+                    "processed/reports/dad-high-value-recovery/pilot-value-gate-40.md",
+                    "processed/reports/dad-high-value-recovery/pilot-value-gate-40-closure.json"
                   ],
                   "allowed_paths": [
                     "processed/reports/dad-high-value-recovery/pilot-cases-value-40.jsonl",
                     "processed/reports/dad-high-value-recovery/pilot-value-gate-40.json",
-                    "processed/reports/dad-high-value-recovery/pilot-value-gate-40.md"
+                    "processed/reports/dad-high-value-recovery/pilot-value-gate-40.md",
+                    "processed/reports/dad-high-value-recovery/pilot-value-gate-40-closure.json"
                   ],
                   "prohibited_actions": [
                     "publish or merge",
@@ -2718,16 +3026,17 @@
                   "acceptance": [
                     {
                       "id": "G-J-530-ACCEPT",
-                      "revision": "2",
+                      "revision": "3",
                       "type": "independent",
                       "checker_role": "independent-checker",
                       "inputs": [
                         "processed/reports/dad-high-value-recovery/pilot-cases-value-40.jsonl",
                         "processed/reports/dad-high-value-recovery/pilot-value-gate-40.json",
-                        "processed/reports/dad-high-value-recovery/pilot-value-gate-40.md"
+                        "processed/reports/dad-high-value-recovery/pilot-value-gate-40.md",
+                        "processed/reports/dad-high-value-recovery/pilot-value-gate-40-closure.json"
                       ],
                       "command": "not-applicable",
-                      "rubric": "Verify forty unique bound atomic real-case receipts, frozen repo/slice/arm allocation, three repos, two-week voluntary use, the selected H-005 P5C threshold, every guardrail, zero confirmed harm at this sample, and synthetic exclusion.",
+                      "rubric": "Verify forty unique bound atomic v2 real-case receipts, binding-table digest continuity, unique envelopes, producer/checker digest separation, complete closure, frozen repo/slice/arm allocation, three repos, two-week voluntary use, the selected H-005 P5C threshold, every guardrail, zero confirmed harm at this sample, and synthetic exclusion.",
                       "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/J-530-acceptance.json",
                       "result_semantics": {
                         "pass": "required evidence is current and satisfies the gate",
@@ -2748,11 +3057,17 @@
                     }
                   ],
                   "case_execution": {
-                    "schema_version": "dad.campaign.atomic_case_slots.v1",
+                    "schema_version": "dad.campaign.atomic_case_slots.v2",
                     "parent_semantics": "cohort-reconciliation-gate-only",
+                    "parent_action": "validate",
                     "binding_job": "J-500",
                     "binding_table": "processed/reports/dad-high-value-recovery/pilot-case-bindings.json",
                     "binding_gate": "G-J-500-ACCEPT",
+                    "binding_table_schema": "dad.campaign.atomic_case_binding_table.v2",
+                    "binding_table_digest_source": "accepted-J-500-output-digest",
+                    "case_envelope_path_template": "processed/reports/dad-high-value-recovery/pilot-case-envelopes/{job_id}.json",
+                    "closure_path": "processed/reports/dad-high-value-recovery/pilot-value-gate-40-closure.json",
+                    "materialization_mode": "in-memory-case-digest-substitution-only",
                     "controller_max_concurrency": 1,
                     "child_owner_role": "pilot-producer",
                     "child_checker_role": "independent-checker",
@@ -2764,8 +3079,23 @@
                     "output_ceiling_mb_per_child": 2,
                     "binding_rule": "Before a lease, case_binding must be a SHA-256 case digest signed in the accepted J-500 binding table; rebinding after first lease is terminal.",
                     "reissue_rule": "Expire the lease, reconcile source/effects/checkpoint/receipt by idempotency key, then reissue only the same slot and case digest.",
+                    "binding_table_digest_required_in": ["child-packet", "lease", "dispatch-projection", "checkpoint", "receipt"],
+                    "child_forbidden_output_classes": ["parent-aggregate", "parent-closure", "navigation-metadata", "checker-record"],
+                    "closure_contract": {
+                      "complete_required_before_parent_aggregate_or_navigation": true,
+                      "started_children_independently_verified": true,
+                      "unstarted_or_withdrawn_reason_immutable": true,
+                      "exact_slot_partition": true,
+                      "no_active_lease": true,
+                      "no_unreconciled_effect": true,
+                      "no_post_stop_receipt_or_lease": true,
+                      "stop_trigger_and_digest_bound": true,
+                      "partial_never_passes": true
+                    },
                     "child_acceptance": {
-                      "revision": "1",
+                      "revision": "2",
+                      "producer_attempt_digest_required": true,
+                      "checker_record_digest_required": true,
                       "evidence_path_template": "docs/campaigns/dad-high-value-recovery/checks/evidence/pilot/{job_id}-acceptance.json",
                       "revalidation_triggers": [
                         "case binding or binding-table digest change",
@@ -3333,11 +3663,24 @@
                     "destructive cleanup or raw-observation rewrite",
                     "unrelated refactoring or feature-family expansion"
                   ],
-                  "depends_on": [
-                    "J-530"
-                  ],
-                  "dependency_digests": {
-                    "J-530": "receipt-digest:resolve-after-J-530-acceptance"
+                  "depends_on": [],
+                  "dependency_digests": {},
+                  "dependency_projection": {
+                    "mode": "exactly-one-selected-terminal-route",
+                    "route_source": "accepted-navigation-receipt",
+                    "required_runtime_fields": [
+                      "dependency_route_id",
+                      "predecessor_job_id",
+                      "predecessor_receipt_digest",
+                      "predecessor_result",
+                      "predecessor_state",
+                      "predecessor_coverage",
+                      "trigger_class",
+                      "closure_digest",
+                      "navigation_receipt_digest",
+                      "permitted_decisions"
+                    ],
+                    "static_execution_allowed": false
                   },
                   "inputs": [
                     "docs/campaigns/dad-high-value-recovery/campaign.md",
@@ -3345,9 +3688,9 @@
                     "docs/campaigns/dad-high-value-recovery/jobs/J-600_ISSUE_SCALE_NARROW_RETIRE_DECISION.md"
                   ],
                   "input_digests": {
-                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
-                    "docs/campaigns/dad-high-value-recovery/06_SCALE_OR_SHRINK_DECISION.md": "sha256:b92b783476785feba6c949cca00246612c1dc96ee6b7b31940e23242ef70e199",
-                    "docs/campaigns/dad-high-value-recovery/jobs/J-600_ISSUE_SCALE_NARROW_RETIRE_DECISION.md": "sha256:e2ef97634b01e88902db720f0af680ace42e237081ddaf5d3bb632ee1b9a550d"
+                    "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
+                    "docs/campaigns/dad-high-value-recovery/06_SCALE_OR_SHRINK_DECISION.md": "sha256:48249a043586710348714dfc2567fc60f13714e91ea77fca114da3b86bf6bf4b",
+                    "docs/campaigns/dad-high-value-recovery/jobs/J-600_ISSUE_SCALE_NARROW_RETIRE_DECISION.md": "sha256:6ca4b76a631b7871d39d395c81dd39c8737a3baa76e090ee85abbd585c0b8347"
                   },
                   "outputs": [
                     "processed/reports/dad-high-value-recovery/scale-or-shrink-decision.json",
@@ -3362,7 +3705,8 @@
                     "deploy or change external systems without exact approval",
                     "delete, move, prune, reset, or clean worktrees or branches",
                     "edit controller state or checker evidence",
-                    "store secrets, raw conversations, client rows, or private payloads"
+                    "store secrets, raw conversations, client rows, or private payloads",
+                    "edit 07_EVIDENCE_INDEX.md, handoff.md, 08_SUPERSESSION_AND_ARCHIVE_MAP.md, or checks/evidence/navigation/"
                   ],
                   "owner_role": "campaign-owner",
                   "checker_role": "independent-checker",
@@ -3421,7 +3765,7 @@
                   "acceptance": [
                     {
                       "id": "G-J-600-ACCEPT",
-                      "revision": "1",
+                      "revision": "2",
                       "type": "human",
                       "checker_role": "independent-checker",
                       "inputs": [
@@ -3429,7 +3773,7 @@
                         "processed/reports/dad-high-value-recovery/scale-or-shrink-decision.md"
                       ],
                       "command": "not-applicable",
-                      "rubric": "Verify one allowed decision, frozen-threshold integrity, complete counterevidence/cost/attention, component dispositions, and no follow-on effects.",
+                      "rubric": "Verify exactly one accepted terminal route and selected predecessor, bound result/state/coverage/trigger/closure/navigation digests, decision membership in the route's permitted set, frozen-threshold integrity, complete counterevidence/cost/attention, component dispositions, and no navigation or follow-on effects by the J-600 writer.",
                       "evidence": "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/J-600-acceptance.json",
                       "result_semantics": {
                         "pass": "required evidence is current and satisfies the gate",

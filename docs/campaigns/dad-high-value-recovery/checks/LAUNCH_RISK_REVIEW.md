@@ -31,6 +31,22 @@ execution-control failure. The bounded revision-6 control acceptance remains in
 force, while launch, H-010, J-100, staging, commit, and every external effect
 remain blocked.
 
+## Status and current-candidate reconciliation
+
+The accepted six-path evidence correction is committed locally at
+`8bf364301af66a5931d830fa5fad4222944736f9`, whose parent is the immutable
+`76c268d...` 100-file packet. This commit is the clean entry anchor for the
+bounded reconciliation, not a claim about mutable current HEAD. Git must be
+queried live for HEAD, branch, index, and working-tree status.
+
+The writer's reconciliation receipt is
+`checks/evidence/launch/prelaunch-current-head-reconciliation-revision-6-postcommit.json`.
+The correction disposition is authoritative only in the distinct checker
+receipt at
+`checks/evidence/launch/independent-current-head-reconciliation-review-revision-6-postcommit.json`.
+Neither receipt can grant staging, commit, H-010, J-100, launch, campaign-state
+creation, dispatch, or an external effect.
+
 ## Decision under review
 
 Whether the bounded local revision-6 execution-control bridge, host-gate
@@ -92,9 +108,11 @@ seven prohibited effects.
 - Direct portability validation: valid, zero hard findings, one unrelated
   archival `nonroutable_stale_evidence` warning.
 - Relevant Ruff checks and `git diff --check`: pass.
-- Full repository suite and repository validator were not rerun in this
-  bounded revision-6 lane. Existing untracked campaign-pointer authority
-  remains a known repository-level blocker.
+- The current reconciliation reruns the full repository suite, repository and
+  roadmap validation, campaign/mesh/receipt checks, the inert J-100
+  qualification, and the already available bundled-runtime signed integration
+  test. Exact commands and results live in the writer/checker receipts; this
+  mutable navigation document is not test authority.
 
 ## Independent review
 
@@ -117,9 +135,13 @@ and J-100 `BLOCK`. The machine-readable review is
    launch operation exists in the bridge.
 4. Atomic child execution binding is intentionally unimplemented and fails
    closed.
-5. Campaign files remain untracked. Repository source-authority validation
-   cannot be treated as green before a separately authorized atomic tracking
-   operation and full validation.
+5. The 100-file campaign packet is committed at `76c268d...`, and its accepted
+   evidence correction is committed at the `8bf3643...` reconciliation entry
+   anchor. Any later six-path reconciliation candidate must match its
+   checker-accepted exact-byte digest and receive separate atomic commit
+   authority before becoming committed source authority. Live Git state, not
+   this document, determines whether that conditional gate is pending or
+   complete.
 6. The standard project Python environment lacks the optional Ed25519 backend;
    a launch environment would need an explicitly reviewed dependency/runtime
    decision.
@@ -149,9 +171,18 @@ effects, privacy/security concern, or independent reviewer challenge.
 
 ## Required next decision
 
-Do not treat this risk review as launch authority. After final independent
-acceptance, the only next repository action that may be proposed is a separate
-bounded atomic-tracking/commit decision. H-010 and J-100 remain later, distinct
-decisions after all machine and repository gates pass. Staging, commit, push,
+Do not treat this risk review as launch authority. Apply the next gate from
+fresh state:
+
+1. If the reconciliation checker does not record `ACCEPT`, stop for bounded
+   repair or human review.
+2. If its exact six-path candidate is not committed, the only repository action
+   that may be proposed is a separate digest-bound atomic commit decision.
+3. If that exact commit and its postcommit gates pass, a new H-010 request may
+   name the exact revision and manifest digest.
+4. J-100 remains a later, distinct decision after H-010 and every machine and
+   repository gate pass.
+
+Until the applicable gate is separately authorized, staging, commit, push,
 merge, deployment, GitHub changes, downstream mutation, plugins, global
 settings, automation, branch deletion, and cleanup remain prohibited.
