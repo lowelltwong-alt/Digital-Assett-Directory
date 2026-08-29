@@ -11,8 +11,16 @@ import pytest
 
 import digital_asset_directory.campaign_codex_shell_adapter as shell_adapter
 import digital_asset_directory.portability_control as pc
+from digital_asset_directory.campaign_controller import (
+    campaign_source_digest,
+    file_digest,
+    load_campaign_manifest,
+)
 from digital_asset_directory.harness_engineering import validate_harness_revision
-from digital_asset_directory.portfolio_execution import request_execution_lease
+from digital_asset_directory.portfolio_execution import (
+    CAMPAIGN_BINDING_SCHEMA,
+    request_execution_lease,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -276,9 +284,9 @@ def test_campaign_bridge_core_and_adapter_are_revision_bound_and_host_decoupled(
         for card in registry["cards"]
         if card["artifact_id"] == "adapter:campaign-codex-shell-inert"
     )
-    assert core["revision_id"].endswith(":0.3.1")
-    assert adapter["revision_id"].endswith(":0.3.1")
-    assert shell_adapter.revision == "dad-campaign-codex-shell-adapter:0.3.1-prelaunch"
+    assert core["revision_id"].endswith(":0.3.2")
+    assert adapter["revision_id"].endswith(":0.3.2")
+    assert shell_adapter.revision == "dad-campaign-codex-shell-adapter:0.3.2-prelaunch"
     assert shell_adapter.revision == manifest["execution"]["adapter"]["revision"]
     assert adapter["core_revision_id"] == core["revision_id"]
     assert core["adapter_revision_ids"] == [adapter["revision_id"]]
@@ -308,7 +316,7 @@ def test_campaign_bridge_core_and_adapter_are_revision_bound_and_host_decoupled(
         ROOT, adapter
     )
     assert adapter["adapter_interface_digest"] == (
-        "sha256:3e9b1c94d09701579113f3fe615e623330759387922071ba3f52f00fa805ad01"
+        "sha256:f55e2ca0f8c3226ce50bf79d6ce6e13f563dd96786b0ea585fccc4c397199662"
     )
     assert adapter["preserved_contract_digests"] == core["contract_digests"]
     assert core["candidate_only"] is True
@@ -636,3 +644,66 @@ def test_exception_candidate_never_creates_reviewed_exception() -> None:
     candidate = pc.exception_candidate("skill:bound", "requires certified hardware")
     assert candidate["reviewed_exception_created"] is False
     assert candidate["execution_authorized"] is False
+
+def test_campaign_source_digest_is_newline_stable_and_raw_digest_is_not(
+    tmp_path: Path,
+) -> None:
+    candidate = tmp_path / "campaign-source.json"
+    lf = b'{"value":"alpha"}\n'
+    crlf = lf.replace(b"\n", b"\r\n")
+    candidate.write_bytes(lf)
+    canonical = campaign_source_digest(candidate)
+    raw = file_digest(candidate)
+    static_digest = runpy.run_path(str(CAMPAIGN_CONSISTENCY_CHECK))["_sha256"]
+    assert static_digest(candidate) == canonical
+
+    candidate.write_bytes(crlf)
+    assert campaign_source_digest(candidate) == canonical
+    assert static_digest(candidate) == canonical
+    assert file_digest(candidate) != raw
+
+    candidate.write_bytes(crlf.replace(b"alpha", b"beta"))
+    assert campaign_source_digest(candidate) != canonical
+    assert static_digest(candidate) != canonical
+
+
+def test_campaign_readiness_contract_matches_runtime_binding(
+    tmp_path: Path,
+) -> None:
+    manifest = json.loads(CAMPAIGN_MANIFEST.read_text(encoding="utf-8"))
+    assert manifest["execution"]["readiness_contract"]["schema_version"] == (
+        CAMPAIGN_BINDING_SCHEMA
+    )
+
+    stale = deepcopy(manifest)
+    stale["execution"]["readiness_contract"]["schema_version"] = (
+        "dad.campaign.execution_control_binding.v2"
+    )
+    path = tmp_path / "campaign.json"
+    path.write_text(json.dumps(stale), encoding="utf-8")
+    with pytest.raises(ValueError, match="readiness contract"):
+        load_campaign_manifest(path)
+
+
+def test_intent_continuity_core_and_adapter_bind_current_sources() -> None:
+    registry = pc.load_registry(ROOT)
+    core = next(
+        card
+        for card in registry["cards"]
+        if card["artifact_id"] == "skill:personal-project-management-ops"
+    )
+    adapter = next(
+        card
+        for card in registry["cards"]
+        if card["artifact_id"] == "adapter:intent-continuity-codex-host"
+    )
+    assert core["revision_id"].endswith(":0.4.18")
+    assert adapter["revision_id"].endswith(":0.3.21")
+    assert adapter["core_revision_id"] == core["revision_id"]
+    assert core["adapter_revision_ids"] == [adapter["revision_id"]]
+    assert core["content_digest"] == pc._portable_files_digest(ROOT, core)
+    assert adapter["adapter_interface_digest"] == pc._adapter_interface_digest(
+        ROOT, adapter
+    )
+    assert adapter["adapter_interface_digest"] == "sha256:31663336b3f1917a81ce341b751392cae741aed6e9da2a86a9869c80759da628"
+

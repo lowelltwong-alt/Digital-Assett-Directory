@@ -5,7 +5,7 @@
   "revision_id": "dad:agent-mesh-revision:dad-high-value-recovery:v7",
   "phase": "execution",
   "status": "blocked",
-  "source_snapshot_digest": "sha256:149c32b199ac1efbf32a8d62b859f72af3067ae1ec725900473a1ef5b4cd0e89",
+  "source_snapshot_digest": "sha256:fb96ddbc45748c018e2332999926690995ba36db69da711ea410406293fb5737",
   "authority": {
     "source_authority": "The DAD repository, AGENTS.md, global workspace lifecycle policy, source-repository contracts, and named human decisions retain authority.",
     "execution_authority": false,
@@ -332,7 +332,7 @@
       "status": "open"
     }
   ],
-  "manifest_digest": "sha256:18c11fecf304aa190638c89e25f2e78d1a3b7798c5017331533e175e9dcf38e8",
+  "manifest_digest": "sha256:922b72fee8c72badc140e7de1e084755d9a97ed1ff8ac5a3f3616d0c9d926b56",
   "supersedes_revision_id": "dad:agent-mesh-revision:dad-high-value-recovery:v6",
   "reconciliations": [
     {

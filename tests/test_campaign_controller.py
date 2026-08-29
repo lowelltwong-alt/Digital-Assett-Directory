@@ -30,6 +30,7 @@ from digital_asset_directory.campaign_controller import (
     EVIDENCE_SNAPSHOT_SCHEMA,
     build_campaign_dry_run,
     build_execution_control_binding_candidate,
+    campaign_source_digest,
     build_navigation_projection,
     canonical_digest,
     evidence_snapshot_digest,
@@ -74,7 +75,8 @@ def _observed_source_revision(manifest: dict) -> str:
         {
             "manifest_digest": file_digest(CAMPAIGN),
             "source_authority": {
-                row["path"]: file_digest(ROOT / row["path"]) for row in manifest["source_authority"]
+                row["path"]: campaign_source_digest(ROOT / row["path"])
+                for row in manifest["source_authority"]
             },
         }
     )

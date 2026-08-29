@@ -32,14 +32,14 @@ AUTHORITY_BOUNDARY = (
 LOCK_STALE_SECONDS = 30.0
 LEDGER_INDEX_SCHEMA_VERSION = "dad.continuity_ledger_index.v1"
 RECEIPT_SCHEMA_SHA256 = (
-    "sha256:2ec61a000024713cc274f08a7797d7c3152426740f37b209a65b07a5af289d0b"
+    "sha256:77f66f512fe3ad8fa1a51c7a97a9c3f49c2d722c67613e7403d784a142abc11d"
 )
 EVENT_SCHEMA_SHA256 = (
-    "sha256:fff909315e767a078c409d8eb19d74f6cbe7af3558fea36bf1eca1ee668654d5"
+    "sha256:5c6b007f3353cf8faebeb29bf9d11897bc43e3e7087d8c86bdae6d81d5ce8ca0"
 )
 _CODEX_FAST_ADAPTER_ID = "adapter:intent-continuity-shadow"
 _CODEX_FAST_ADAPTER_REVISION_ID = (
-    "adapter-revision:intent-continuity-codex-host:0.3.10"
+    "adapter-revision:intent-continuity-codex-host:0.3.11"
 )
 
 _DENIED_FIELD_PARTS = frozenset(
@@ -108,7 +108,8 @@ def _validator(name: str) -> Any:
 
 
 def _schema_digest(name: str) -> str:
-    return "sha256:" + hashlib.sha256(_schema_path(name).read_bytes()).hexdigest()
+    data = _schema_path(name).read_bytes().replace(b"\r\n", b"\n")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def _assert_fast_schema_contract() -> None:

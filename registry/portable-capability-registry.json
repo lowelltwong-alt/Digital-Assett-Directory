@@ -1475,7 +1475,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-personal-project-management-ops",
-      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.17",
+      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.18",
       "artifact_id": "skill:personal-project-management-ops",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -1529,7 +1529,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:a2fe4133ce4d7b795960abae0663ade32ac31bdc9d9e6c9dd4e07424babafc9e",
+      "content_digest": "sha256:5aeac001ce1b0c72ab61bc256576b65a8b7a707d2c7d5bc375131021d99fd6aa",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1580,7 +1580,7 @@
         "capability-os-cockpit"
       ],
       "adapter_revision_ids": [
-        "portability-card-revision:adapter-intent-continuity-codex-host:0.3.16"
+        "portability-card-revision:adapter-intent-continuity-codex-host:0.3.21"
       ],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
@@ -1597,20 +1597,20 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:adapter-intent-continuity-codex-host",
-      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.20",
+      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.21",
       "artifact_id": "adapter:intent-continuity-codex-host",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
       "source_authority": "config/intent-continuity-shadow-hooks.json",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.17",
+      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.18",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "target_capability_predicate": {
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:751a7439821d93304475cb1f906136dc10afbe16d8a7aea21381aaaa9718ad0b",
+      "adapter_interface_digest": "sha256:31663336b3f1917a81ce341b751392cae741aed6e9da2a86a9869c80759da628",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -2795,7 +2795,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:library-campaign-packet-controller",
-      "revision_id": "portability-card-revision:library-campaign-packet-controller:0.3.1",
+      "revision_id": "portability-card-revision:library-campaign-packet-controller:0.3.2",
       "artifact_id": "library:campaign-packet-controller",
       "artifact_kind": "library",
       "binding_class": "portable_core",
@@ -2810,7 +2810,7 @@
         "docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py",
         "tests/test_portfolio_execution_control.py"
       ],
-      "content_digest": "sha256:813acc27f61c20d1dbdf0b6d44e4819badd18b09081846136344869bb388e8dd",
+      "content_digest": "sha256:b05265811e6f020550f79b50fc55777b2998bedde1e367cda9a39e895c72e41c",
       "contract_digests": {
         "input": "sha256:93d5611a045b1e6eecd83806efb7de0d594ac66ce306757f329533124953c604",
         "output": "sha256:d4f054f8b0a7d0eb736cd518139ce41d4d98bfb68bdf1305492e3b9430ed5fea",
@@ -2873,7 +2873,7 @@
         "dad-high-value-recovery-campaign"
       ],
       "adapter_revision_ids": [
-        "portability-card-revision:adapter-campaign-codex-shell-inert:0.3.1"
+        "portability-card-revision:adapter-campaign-codex-shell-inert:0.3.2"
       ],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
@@ -2891,7 +2891,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:adapter-campaign-codex-shell-inert",
-      "revision_id": "portability-card-revision:adapter-campaign-codex-shell-inert:0.3.1",
+      "revision_id": "portability-card-revision:adapter-campaign-codex-shell-inert:0.3.2",
       "artifact_id": "adapter:campaign-codex-shell-inert",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
@@ -2899,7 +2899,7 @@
       "owner": "DAD and Lowell",
       "status": "schema_validated",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "core_revision_id": "portability-card-revision:library-campaign-packet-controller:0.3.1",
+      "core_revision_id": "portability-card-revision:library-campaign-packet-controller:0.3.2",
       "target_capability_predicate": {
         "runtime_adapter_id": "adapter:codex-host",
         "manual_host_only": true,
@@ -2911,7 +2911,7 @@
         "launch_available": false,
         "execution_authorized": false
       },
-      "adapter_interface_digest": "sha256:3e9b1c94d09701579113f3fe615e623330759387922071ba3f52f00fa805ad01",
+      "adapter_interface_digest": "sha256:f55e2ca0f8c3226ce50bf79d6ce6e13f563dd96786b0ea585fccc4c397199662",
       "adapter_interface_sources": [
         "src/digital_asset_directory/campaign_codex_shell_adapter.py",
         "src/digital_asset_directory/campaign_controller.py",

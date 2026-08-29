@@ -22,6 +22,7 @@ from .campaign_controller import (
     build_cohort_reconciliation_projection,
     build_navigation_projection,
     build_stop_checkpoint,
+    campaign_source_digest,
     canonical_digest,
     evidence_snapshot_digest,
     file_digest,
@@ -37,7 +38,7 @@ from .portfolio_execution import (
 
 
 adapter_id = "adapter:codex-host"
-revision = "dad-campaign-codex-shell-adapter:0.3.1-prelaunch"
+revision = "dad-campaign-codex-shell-adapter:0.3.2-prelaunch"
 AUTHORITY_BOUNDARY = (
     "This manual host adapter normalizes inert, repository-local candidate "
     "evidence only. It cannot launch Codex, execute a campaign job, invoke a "
@@ -387,7 +388,7 @@ def build_execution_evidence_snapshot(
             continue
         path = _safe_path(repo_root, relative)
         if path.is_file():
-            resolved_inputs[relative] = file_digest(path)
+            resolved_inputs[relative] = campaign_source_digest(path)
         else:
             verification_errors.append(f"input-missing:{relative}")
 
@@ -414,7 +415,7 @@ def build_execution_evidence_snapshot(
         relative = str(source.get("path", ""))
         path = _safe_path(repo_root, relative)
         if path.is_file():
-            authority_sources[relative] = file_digest(path)
+            authority_sources[relative] = campaign_source_digest(path)
     effective_source_revision = canonical_digest(
         {
             "manifest_digest": manifest_digest,

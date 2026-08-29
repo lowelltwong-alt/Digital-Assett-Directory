@@ -187,6 +187,13 @@ def file_digest(path: Path) -> str:
     return SHA256_PREFIX + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def campaign_source_digest(path: Path) -> str:
+    """Hash governed campaign text with Git-stable newline canonicalization."""
+
+    data = path.read_bytes().replace(b"\r\n", b"\n")
+    return SHA256_PREFIX + hashlib.sha256(data).hexdigest()
+
+
 def _strict_json_loads(text: str) -> Any:
     def reject_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
@@ -231,6 +238,12 @@ def load_campaign_manifest(path: Path) -> dict[str, Any]:
         raise ValueError("campaign manifest must explicitly deny execution before activation")
     if execution.get("mode") != "specification_only":
         raise ValueError("prelaunch bridge accepts specification_only manifests only")
+    readiness = execution.get("readiness_contract", {})
+    if (
+        not isinstance(readiness, Mapping)
+        or readiness.get("schema_version") != CAMPAIGN_BINDING_SCHEMA
+    ):
+        raise ValueError("campaign readiness contract does not match runtime binding schema")
     return manifest
 
 
@@ -1691,10 +1704,11 @@ def validate_job_ready(
     for source in manifest.get("source_authority", []):
         raw = str(source.get("path", ""))
         path = _safe_relative_path(repo_root, raw)
-        if not path.is_file() or file_digest(path) != source.get("digest"):
+        observed_digest = campaign_source_digest(path) if path.is_file() else ""
+        if not observed_digest or observed_digest != source.get("digest"):
             reasons.append(f"source_stale:{raw}")
-        elif path.is_file():
-            observed_source_authority[raw] = file_digest(path)
+        else:
+            observed_source_authority[raw] = observed_digest
 
     snapshot = state.get("evidence_snapshot", {})
     if not isinstance(snapshot, Mapping):

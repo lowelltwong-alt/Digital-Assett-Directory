@@ -321,3 +321,38 @@ def test_all_codex_event_receipts_pass_full_and_fast_oracles(event_name: str) ->
         repository_id="dad",
     )
     _assert_receipt_parity(receipt, accepted=True)
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        (
+            "portfolio-continuity-adapter-receipt.schema.json",
+            "sha256:77f66f512fe3ad8fa1a51c7a97a9c3f49c2d722c67613e7403d784a142abc11d",
+        ),
+        (
+            "portfolio-continuity-event.schema.json",
+            "sha256:5c6b007f3353cf8faebeb29bf9d11897bc43e3e7087d8c86bdae6d81d5ce8ca0",
+        ),
+    ],
+)
+def test_fast_schema_digest_is_newline_stable_and_content_bound(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    name: str,
+    expected: str,
+) -> None:
+    canonical = (ROOT / "schemas" / name).read_bytes().replace(b"\r\n", b"\n")
+    candidate = tmp_path / name
+    monkeypatch.setattr(continuity_events, "_schema_path", lambda _name: candidate)
+
+    candidate.write_bytes(canonical)
+    assert continuity_events._schema_digest(name) == expected
+
+    candidate.write_bytes(canonical.replace(b"\n", b"\r\n"))
+    assert continuity_events._schema_digest(name) == expected
+
+    mutated = canonical.replace(b'"title": "', b'"title": "changed ', 1)
+    assert mutated != canonical
+    candidate.write_bytes(mutated)
+    assert continuity_events._schema_digest(name) != expected
+

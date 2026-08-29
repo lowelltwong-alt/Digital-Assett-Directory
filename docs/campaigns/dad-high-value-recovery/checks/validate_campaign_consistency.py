@@ -37,7 +37,8 @@ OPERATIONAL_BASELINE = (
 )
 RECEIPT_BOUND_DIGEST = "receipt-bound-output-digest:"
 EXPECTED_REVISION = "7-atomic-terminal-navigation-candidate-20260826"
-EXPECTED_ADAPTER_REVISION = "dad-campaign-codex-shell-adapter:0.3.1-prelaunch"
+EXPECTED_ADAPTER_REVISION = "dad-campaign-codex-shell-adapter:0.3.2-prelaunch"
+EXPECTED_READINESS_SCHEMA = "dad.campaign.execution_control_binding.v1"
 ATOMIC_SLOT_SCHEMA = "dad.campaign.atomic_case_slots.v2"
 CASE_BINDING_TABLE_SCHEMA = "dad.campaign.atomic_case_binding_table.v2"
 COHORT_CLOSURES = {
@@ -162,7 +163,8 @@ EXPECTED_TERMINAL_ROUTES = {
 
 
 def _sha256(path: Path) -> str:
-    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+    data = path.read_bytes().replace(b"\r\n", b"\n")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def _jobs(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -213,7 +215,13 @@ def validate() -> list[str]:
         errors.append("campaign revision is not the frozen revision-7 candidate")
     adapter = manifest.get("execution", {}).get("adapter", {})
     if adapter.get("revision") != EXPECTED_ADAPTER_REVISION:
-        errors.append("campaign adapter revision is not the frozen 0.3.1 candidate")
+        errors.append("campaign adapter revision is not the frozen 0.3.2 candidate")
+    readiness = manifest.get("execution", {}).get("readiness_contract", {})
+    if (
+        not isinstance(readiness, dict)
+        or readiness.get("schema_version") != EXPECTED_READINESS_SCHEMA
+    ):
+        errors.append("campaign readiness contract does not match runtime binding schema")
     if (
         manifest.get("execution", {}).get("mode") != "specification_only"
         or manifest.get("execution", {}).get("execution_authorized") is not False

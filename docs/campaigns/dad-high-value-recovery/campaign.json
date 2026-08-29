@@ -39,7 +39,7 @@
   "source_authority": [
     {
       "path": "AGENTS.md",
-      "digest": "sha256:686d11cac8f4f6fc06757ce365b80b34f12ef7c1fd19f2eb7858ee4af7c36742"
+      "digest": "sha256:96187b6dfb882ba0c5d7d99922befe129b4feffb53d9e3d64f3cd77adb76e898"
     },
     {
       "path": "docs/campaigns/dad-high-value-recovery/campaign.md",
@@ -51,11 +51,11 @@
     },
     {
       "path": "docs/SELF_LEARNING_IMPROVEMENT_SYSTEM_PLAN.md",
-      "digest": "sha256:7e9a9dd5f99ad06c1e604dba9f53cde9aa6b7a318fa3e6033d959f43f93080e1"
+      "digest": "sha256:e6621f902d2de2dca0b3b3a82e749ae7205068690665e0c262ad70f916507f2b"
     },
     {
       "path": "docs/DAD_PORTFOLIO_AI_OPERATING_SYSTEM_PLAN.md",
-      "digest": "sha256:238782f90fe25bb350c8099f4a1b7f29ad18c7a4cdf97a7386d576115ec09b0d"
+      "digest": "sha256:d4851b047459825be612631258832a908fa9ba7a6ee3ee4be13af1493df8fbfc"
     }
   ],
   "authority": {
@@ -97,10 +97,10 @@
     "durability_command": "python docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py",
     "adapter": {
       "name": "dad-campaign-codex-shell-inert",
-      "revision": "dad-campaign-codex-shell-adapter:0.3.1-prelaunch"
+      "revision": "dad-campaign-codex-shell-adapter:0.3.2-prelaunch"
     },
     "readiness_contract": {
-      "schema_version": "dad.campaign.execution_control_binding.v2",
+      "schema_version": "dad.campaign.execution_control_binding.v1",
       "outcomes": [
         "blocked",
         "ready-manual"
@@ -563,7 +563,7 @@
                     "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/01_BASELINE_AND_FREEZE.md": "sha256:3e37859df7d52b455e5027fdff540d2742bcb56639e2d91f54978499bc775d55",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-110_TEMPORARY_EXPANSION_FREEZE.md": "sha256:33c4e97c74c86bb8e488e9bbf9ef772ed6e482a51133d111dd408c4e889b04c0",
-                    "AGENTS.md": "sha256:686d11cac8f4f6fc06757ce365b80b34f12ef7c1fd19f2eb7858ee4af7c36742"
+                    "AGENTS.md": "sha256:96187b6dfb882ba0c5d7d99922befe129b4feffb53d9e3d64f3cd77adb76e898"
                   },
                   "outputs": [
                     "docs/DAD_HIGH_VALUE_RECOVERY_FREEZE.md",
@@ -721,7 +721,7 @@
                     "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/02_CI_AND_ENFORCEMENT_RECOVERY.md": "sha256:cfc67c4c12832742cfd2db6e84b1e7c1cd93769bf2a62bfeb02bdc9a09a44a7d",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-200_REPAIR_LOCAL_AND_SCHEDULED_REGRESSION.md": "sha256:cf0e92193fdef7a5d5e1b9a9448aee3638b524daef98e68321cde9b0fca0f4d4",
-                    ".github/workflows/scheduled-full-regression.yml": "sha256:f2cdb8bdb3c82b95f2c03379327ac00cbf1856054c3a9f81952cd43a8edbcbbd"
+                    ".github/workflows/scheduled-full-regression.yml": "sha256:3ec1e49ae537d10cbdd3b90a5e4788c20d8666d974df2b08ae055f75144d8dae"
                   },
                   "outputs": [
                     ".github/workflows/scheduled-full-regression.yml",
@@ -852,7 +852,7 @@
                     "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/02_CI_AND_ENFORCEMENT_RECOVERY.md": "sha256:cfc67c4c12832742cfd2db6e84b1e7c1cd93769bf2a62bfeb02bdc9a09a44a7d",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-210_BIND_REQUIRED_CHECKS_AND_PROTECTION.md": "sha256:0aceede50d17b7b1e45013e46b67e6b4365482b733ff28dbaea110357ec6f6d9",
-                    ".github/workflows/dad-contract-check.yml": "sha256:b8bf439b3de8981aa52825fdae7672c7d7df1f575525453ee0305c81c2bc2971"
+                    ".github/workflows/dad-contract-check.yml": "sha256:ed7b2abf8db39cfd3126fc273cd7b4d968635def0b93233fe93c4bb5eff54c9a"
                   },
                   "outputs": [
                     ".github/workflows/dad-contract-check.yml",
@@ -989,7 +989,7 @@
                     "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/02_CI_AND_ENFORCEMENT_RECOVERY.md": "sha256:cfc67c4c12832742cfd2db6e84b1e7c1cd93769bf2a62bfeb02bdc9a09a44a7d",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-215_OBSERVE_FOUR_WEEK_CI_STABILITY.md": "sha256:d233cfc900e4ec3864f95e2ef452a3932e2bd20f17158fdedc314bbf59bb027d",
-                    ".github/workflows/dad-contract-check.yml": "sha256:b8bf439b3de8981aa52825fdae7672c7d7df1f575525453ee0305c81c2bc2971"
+                    ".github/workflows/dad-contract-check.yml": "sha256:ed7b2abf8db39cfd3126fc273cd7b4d968635def0b93233fe93c4bb5eff54c9a"
                   },
                   "outputs": [
                     "processed/reports/dad-high-value-recovery/ci-stability-4-week.json",
@@ -1213,10 +1213,10 @@
                     "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/03_OUTCOME_CONTRACT_AND_DATA_REPAIR.md": "sha256:ed1b7da561e52c41e941e25aa7eb21f2cf4283052d525401053d160155d0edee",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-300_ENFORCE_RECOMMENDATION_OUTCOME_CONTRACT.md": "sha256:c78bf39aaebc2394beda5a83160adfad7f84828bc8abdc63a1eb1f968d9ee77e",
-                    "schemas/repo-asset-usage.schema.json": "sha256:2ddb59db6eff19641aac0ed61a0facc6667210b152634724aeae6ed679198561",
-                    "schemas/capability-recommendation.schema.json": "sha256:d02c2d08e1cd4821950ae84419b11fa949114a1332529ee73f979614f2deffda",
-                    "schemas/workflow-run-event.schema.json": "sha256:1373b2d620fb161c95bacefa77e27473a8aa5d89515c3ecb9058b7955af9a65a",
-                    "src/digital_asset_directory/dad_library.py": "sha256:2b6cf285c87970d66af00d26b63ff6123fb9d9d8e0ba120202446210aa07a75b"
+                    "schemas/repo-asset-usage.schema.json": "sha256:319ab44e08c9205dbe53d9ed137f7a612b329d1a01fd9e779611c0cd12e6ef0b",
+                    "schemas/capability-recommendation.schema.json": "sha256:a088ce460edf75740f6a6c8227b98f05ca0b43ac46a2c734a1e730ec2d2d8b41",
+                    "schemas/workflow-run-event.schema.json": "sha256:47d0b600c10eb9fb02173b38c83ff327022cd26964229e85dae3d36eb99d2af7",
+                    "src/digital_asset_directory/dad_library.py": "sha256:118cf51825e6b671e2cb81b813a37a495feb9307ec0504196001a543156132cf"
                   },
                   "outputs": [
                     "schemas/repo-asset-usage.schema.json",
@@ -1500,7 +1500,7 @@
                     "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/03_OUTCOME_CONTRACT_AND_DATA_REPAIR.md": "sha256:ed1b7da561e52c41e941e25aa7eb21f2cf4283052d525401053d160155d0edee",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-320_CORRECT_LEARNING_YIELD_SEMANTICS.md": "sha256:02f0439fbee6666b9c8be7ff1a06e834d4f106f708c938ac9effb0b585b70d3e",
-                    "src/digital_asset_directory/learning_yield_report.py": "sha256:26ccc2e80a8ac325b6c87e4ef81275c4d995efa023a000c3fea0ba5292c5273b"
+                    "src/digital_asset_directory/learning_yield_report.py": "sha256:f350ac1fda26405c247d8747d26175e44a3dcc301ab7657991ac4838b1206f32"
                   },
                   "outputs": [
                     "src/digital_asset_directory/learning_yield_report.py",
@@ -1665,8 +1665,8 @@
                     "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/04_OPERATOR_BACKLOG_AND_LIFECYCLE_RECOVERY.md": "sha256:a619ccf8e8c5e401b4a10a4a56ece22d46ab1757dbc589dabd2147dbdcf22dbe",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-400_CLOSE_OPERATIONAL_AND_WORKSPACE_DEBT.md": "sha256:8155e7fac2be2ff2e349ee484798dbf6bf3606a672170694f12c399b6154d595",
-                    "src/digital_asset_directory/agent_session_reaper.py": "sha256:8c8e2411c060957f1ee2b154049165f15987ef39c38385d1a28e53ee7ed0795c",
-                    "src/digital_asset_directory/lifecycle_janitor.py": "sha256:c7a43efe3b63a01c80897198681a7f82d3ddc1701ac91e20fd97d708d2ad2387",
+                    "src/digital_asset_directory/agent_session_reaper.py": "sha256:2b329d392afb4f0e99a419bf28e1c17a37a8958b7da26249d69f6afa8c3e9336",
+                    "src/digital_asset_directory/lifecycle_janitor.py": "sha256:fc12116d1f418f0e8ff6d4fc3b83650a6c6926bb3a6fd4a6cf5ed8995438bb64",
                     "processed/reports/dad-high-value-recovery/operational-eligibility-baseline.json": "receipt-bound-output-digest:resolve-from-accepted-J-100"
                   },
                   "outputs": [
@@ -1796,7 +1796,7 @@
                     "docs/campaigns/dad-high-value-recovery/campaign.md": "sha256:d8dae01993e967c813a3d62638c7b856438cc361a153064e63f4d3d776c027c6",
                     "docs/campaigns/dad-high-value-recovery/04_OPERATOR_BACKLOG_AND_LIFECYCLE_RECOVERY.md": "sha256:a619ccf8e8c5e401b4a10a4a56ece22d46ab1757dbc589dabd2147dbdcf22dbe",
                     "docs/campaigns/dad-high-value-recovery/jobs/J-410_RECONCILE_DAEMON_JOURNAL_AND_TASK_HEALTH.md": "sha256:3c9c8198fb737961098cd5e9b3231c790ec05e813e1b99ff6e89e1d8498dffa5",
-                    "src/digital_asset_directory/daemon.py": "sha256:df3ad439421ba84c7d4a8685bf2bca82103e28fe657b247162f5f687126ecc7d"
+                    "src/digital_asset_directory/daemon.py": "sha256:61c7f0e9b9238dd560830485fc2ae36fb4304d9a93a885b8759e3dd0e59e88e8"
                   },
                   "outputs": [
                     "src/digital_asset_directory/daemon.py",
