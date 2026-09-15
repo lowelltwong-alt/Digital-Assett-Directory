@@ -13,6 +13,10 @@ This record keeps material limits visible so a future reviewer can distinguish p
 
 **Editor staging near miss.** A browser editor fill operation appended duplicated content in an unsent editor. It was detected by rendered occurrence checks before submission; no remote mutation occurred. The tab was closed, the connector path was used, and the corrective control is reset → fresh paste → rendered count/heading/path checks → submit only after read-back.
 
+
+
+**Receipt-binding staging near miss.** A local release receipt edit briefly held two lineage rows because an append was used where an exact replacement was required. The malformed draft was caught before the connector write. Remote state remained unchanged. The correction now uses exact row replacement and an assertion that each repository path occurs once. The privacy-safe learning candidate is retained for DAD review; it does not auto-promote a global rule.
+
 **DAD validation blocker.** The general `validate` workflow for draft PR #97 failed before suite selection because the existing `c8-copilot-pointer-scope` exception is incomplete, expired, or unreviewed. The dedicated DAD contract check passed; the local full-suite result was derivative. Inputs were unchanged, so the failed validation was not rerun. Repair belongs to a DAD owner in its own lane.
 
 **Joshua capacity hold.** A Terra/high integration attempt and a Luna/medium reroute both stopped before execution when the account Codex limit was reached. A deterministic structural comparison and deterministic checker were saved instead. They verified hashes, role counts, span retention, and hold preservation; they did not perform semantic adjudication and do not replace the pending independent semantic checker.
