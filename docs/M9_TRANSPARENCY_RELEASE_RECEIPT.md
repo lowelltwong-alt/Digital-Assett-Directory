@@ -3,7 +3,7 @@
 **Repository:** `lowelltwong-alt/Digital-Assett-Directory` (private)  
 **Branch:** `codex/m9-bible-chunking-workflow`  
 **PR:** [#97](https://github.com/lowelltwong-alt/Digital-Assett-Directory/pull/97)  
-**Head after publication:** `9bac17a9fcd3d5f9ffaad10d843275c8af6696ac`  
+**Head observed before adding this receipt commit:** `9bac17a9fcd3d5f9ffaad10d843275c8af6696ac`  
 **Recorded:** 2026-09-15
 
 ## Published files
@@ -19,7 +19,7 @@
 ## Verification
 
 - Connector read-back matched every published document byte-for-byte with its staged UTF-8 content.
-- `AI_TABLE_OF_CONTENTS.md` contains exactly one pointer for each published document; its remote blob is `0372d85bd96fb5ce0779981a06e9ff2a2567a78a`.
+- `AI_TABLE_OF_CONTENTS.md` contains exactly one pointer for each published document; its remote blob after the receipt navigation row is `5145fd645ae8436f90c501731a2f2600328049bc`.
 - The baseline privacy path/content scan over the exact five-document release candidate returned no findings and no skipped files.
 - The PR is open, draft, and unmerged. No merge, promotion, production, scheduler, or canonical qualification is implied.
 
