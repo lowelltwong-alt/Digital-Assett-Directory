@@ -21,6 +21,7 @@
 - Connector read-back matched every published document byte-for-byte with its staged UTF-8 content.
 - `AI_TABLE_OF_CONTENTS.md` contains exactly one pointer for each published document; its remote blob after the receipt navigation row is `5145fd645ae8436f90c501731a2f2600328049bc`.
 - The baseline privacy path/content scan over the exact six-document transparency pack returned no findings and no skipped files.
+- The lineage and limits blob hashes in the table are the values verified at this receipt update; later checkpoint additions are recorded as subsequent Git history.
 - The PR is open, draft, and unmerged. No merge, promotion, production, scheduler, or canonical qualification is implied.
 
 ## Public-surface boundary
