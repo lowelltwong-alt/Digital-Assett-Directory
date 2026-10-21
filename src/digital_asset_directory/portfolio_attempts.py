@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, timezone
+from functools import lru_cache
 from html import escape
 import hashlib
 import json
@@ -70,6 +71,22 @@ def _schema() -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=1)
+def _event_validator() -> Any:
+    """Compile the immutable attempt-event schema once per process.
+
+    Claim attempts still validate every existing ledger event while holding the
+    cross-process ledger lock.  Reusing only the compiled schema validator
+    removes repeated schema I/O and construction without weakening that full
+    chain validation.
+    """
+
+    schema = _schema()
+    validator_cls = validator_for(schema)
+    validator_cls.check_schema(schema)
+    return validator_cls(schema, format_checker=FormatChecker())
+
+
 def _event_id(event_without_id: dict[str, Any]) -> str:
     canonical = json.dumps(
         event_without_id,
@@ -81,13 +98,12 @@ def _event_id(event_without_id: dict[str, Any]) -> str:
 
 
 def _event_problems(event: Any) -> list[str]:
-    schema = _schema()
-    validator_cls = validator_for(schema)
-    validator_cls.check_schema(schema)
-    validator = validator_cls(schema, format_checker=FormatChecker())
     problems = [
         f"{'/'.join(str(part) for part in error.absolute_path) or '<root>'}:{error.message}"
-        for error in sorted(validator.iter_errors(event), key=lambda item: list(item.absolute_path))
+        for error in sorted(
+            _event_validator().iter_errors(event),
+            key=lambda item: list(item.absolute_path),
+        )
     ]
     if isinstance(event, dict):
         unsigned = {key: value for key, value in event.items() if key != "event_id"}

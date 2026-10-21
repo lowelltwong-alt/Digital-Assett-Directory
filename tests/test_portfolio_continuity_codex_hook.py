@@ -225,21 +225,24 @@ def test_windows_hook_command_is_silent_and_persists_minimized_event(
     init_data_root(data_root, hub_root=hub)
     hooks = json.loads((root / ".codex/hooks.json").read_text(encoding="utf-8"))["hooks"]
     command = hooks["Stop"][0]["hooks"][0]["commandWindows"]
-    command_body = (
-        "$payload = [Console]::In.ReadToEnd(); "
-        "$root = git rev-parse --show-toplevel; "
-        "$payload | "
-        "python (Join-Path $root '.codex/hooks/intent_continuity_shadow.py')"
+    assert command == (
+        'python "$(git rev-parse --show-toplevel)/.codex/hooks/'
+        'intent_continuity_shadow.py"'
     )
-    command_args = ["powershell", "-NoProfile", "-NonInteractive", "-Command", command_body]
-    assert command == subprocess.list2cmdline(command_args)
+    command_args = [
+        "powershell",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        command,
+    ]
     monkeypatch.setenv("DAD_HUB", str(hub))
     monkeypatch.setenv("DAD_DATA_ROOT", str(data_root))
     env = os.environ.copy()
 
     completed = subprocess.run(
         command_args,
-        cwd=root,
+        cwd=root / "tests",
         input=json.dumps(_input()),
         capture_output=True,
         text=True,

@@ -18,9 +18,6 @@ import secrets
 import time
 from typing import Any, Iterator, Mapping
 
-from jsonschema import FormatChecker
-from jsonschema.validators import validator_for
-
 from .transport import data_path, resolve_data_root
 from .utils import atomic_write_text, json_dumps
 
@@ -34,6 +31,16 @@ AUTHORITY_BOUNDARY = (
 )
 LOCK_STALE_SECONDS = 30.0
 LEDGER_INDEX_SCHEMA_VERSION = "dad.continuity_ledger_index.v1"
+RECEIPT_SCHEMA_SHA256 = (
+    "sha256:77f66f512fe3ad8fa1a51c7a97a9c3f49c2d722c67613e7403d784a142abc11d"
+)
+EVENT_SCHEMA_SHA256 = (
+    "sha256:5c6b007f3353cf8faebeb29bf9d11897bc43e3e7087d8c86bdae6d81d5ce8ca0"
+)
+_CODEX_FAST_ADAPTER_ID = "adapter:intent-continuity-shadow"
+_CODEX_FAST_ADAPTER_REVISION_ID = (
+    "adapter-revision:intent-continuity-codex-host:0.3.11"
+)
 
 _DENIED_FIELD_PARTS = frozenset(
     {
@@ -91,10 +98,32 @@ def _schema_path(name: str) -> Path:
 
 @lru_cache(maxsize=2)
 def _validator(name: str) -> Any:
+    from jsonschema import FormatChecker
+    from jsonschema.validators import validator_for
+
     schema = json.loads(_schema_path(name).read_text(encoding="utf-8"))
     validator_class = validator_for(schema)
     validator_class.check_schema(schema)
     return validator_class(schema, format_checker=FormatChecker())
+
+
+def _schema_digest(name: str) -> str:
+    data = _schema_path(name).read_bytes().replace(b"\r\n", b"\n")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def _assert_fast_schema_contract() -> None:
+    expected = {
+        "portfolio-continuity-adapter-receipt.schema.json": RECEIPT_SCHEMA_SHA256,
+        "portfolio-continuity-event.schema.json": EVENT_SCHEMA_SHA256,
+    }
+    stale = [
+        name for name, digest in expected.items() if _schema_digest(name) != digest
+    ]
+    if stale:
+        raise ContinuityValidationError(
+            "Codex hook fast validation is stale for: " + ", ".join(stale)
+        )
 
 
 def _schema_problems(value: Any, name: str) -> list[str]:
@@ -229,6 +258,85 @@ def _receipt_payload_schema_contract() -> dict[str, Any]:
     return schema["properties"]["payload"]
 
 
+@lru_cache(maxsize=1)
+def _receipt_schema_contract() -> dict[str, Any]:
+    return json.loads(
+        _schema_path("portfolio-continuity-adapter-receipt.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+
+def _fast_string_rule_problems(value: str, rule: Mapping[str, Any], label: str) -> list[str]:
+    problems: list[str] = []
+    if len(value) < int(rule.get("minLength", 0)):
+        problems.append(f"{label} is too short")
+    if "maxLength" in rule and len(value) > int(rule["maxLength"]):
+        problems.append(f"{label} is too long")
+    if "pattern" in rule and re.fullmatch(str(rule["pattern"]), value) is None:
+        problems.append(f"{label} violates pattern")
+    return problems
+
+
+def _fast_receipt_schema_problems(receipt: Any) -> list[str]:
+    """Validate every rule in the pinned receipt schema without jsonschema."""
+
+    if not isinstance(receipt, dict):
+        return ["receipt is not an object"]
+    schema = _receipt_schema_contract()
+    required = set(schema["required"])
+    properties = schema["properties"]
+    problems = [f"missing required field {key}" for key in sorted(required - set(receipt))]
+    if schema.get("additionalProperties") is False:
+        problems.extend(
+            f"unexpected field {key}" for key in sorted(set(receipt) - set(properties))
+        )
+    for key, value in receipt.items():
+        rule = properties.get(key)
+        if not isinstance(rule, dict) or key == "payload":
+            continue
+        expected_type = rule.get("type")
+        if expected_type == "string" and not isinstance(value, str):
+            problems.append(f"field {key} has invalid type")
+            continue
+        if "const" in rule and value != rule["const"]:
+            problems.append(f"field {key} violates const")
+        if "enum" in rule and value not in rule["enum"]:
+            problems.append(f"field {key} violates enum")
+        if isinstance(value, str):
+            problems.extend(_fast_string_rule_problems(value, rule, f"field {key}"))
+    if "payload" in receipt:
+        problems.extend(_fast_payload_schema_problems(receipt["payload"]))
+    return problems
+
+
+def _validate_codex_hook_receipt_fast(receipt: Any) -> None:
+    _assert_fast_schema_contract()
+    privacy = _privacy_problems(receipt)
+    if privacy:
+        raise ContinuityValidationError("; ".join(privacy))
+    problems = _fast_receipt_schema_problems(receipt)
+    if problems:
+        raise ContinuityValidationError("Invalid continuity receipt: " + "; ".join(problems))
+    if (
+        receipt["adapter_id"] != _CODEX_FAST_ADAPTER_ID
+        or receipt["adapter_revision_id"] != _CODEX_FAST_ADAPTER_REVISION_ID
+        or receipt["source_kind"] != "runtime_hook"
+    ):
+        raise ContinuityValidationError(
+            "Codex hook fast validation is unavailable for this adapter receipt"
+        )
+
+
+def _normalize_codex_hook_receipt(receipt: Mapping[str, Any]) -> tuple[dict[str, Any], int]:
+    _validate_codex_hook_receipt_fast(receipt)
+    minimized, redaction_count = _minimize(dict(receipt))
+    if not isinstance(minimized, dict):
+        raise ContinuityValidationError("Continuity receipt must be an object")
+    _validate_codex_hook_receipt_fast(minimized)
+    return minimized, redaction_count
+
+
 def _fast_event_schema_problems(event: Any) -> list[str]:
     """Validate the simple top-level event schema without general JSON-Schema overhead."""
 
@@ -267,13 +375,6 @@ def _fast_event_schema_problems(event: Any) -> list[str]:
                 problems.append(f"field {key} is too long")
             if "pattern" in rule and re.fullmatch(str(rule["pattern"]), value) is None:
                 problems.append(f"field {key} violates pattern")
-            if rule.get("format") == "date-time":
-                try:
-                    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-                except ValueError:
-                    parsed = None
-                if parsed is None or parsed.tzinfo is None:
-                    problems.append(f"field {key} is not a timezone-aware date-time")
         if isinstance(value, int) and not isinstance(value, bool):
             if "minimum" in rule and value < int(rule["minimum"]):
                 problems.append(f"field {key} is below minimum")
@@ -322,15 +423,6 @@ def _fast_payload_schema_problems(payload: Any) -> list[str]:
                 str(field_rule["pattern"]), value
             ) is None:
                 problems.append(f"payload field {key} violates pattern")
-            if field_rule.get("format") == "date-time":
-                try:
-                    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-                except ValueError:
-                    parsed = None
-                if parsed is None or parsed.tzinfo is None:
-                    problems.append(
-                        f"payload field {key} is not a timezone-aware date-time"
-                    )
         if isinstance(value, list):
             if "maxItems" in field_rule and len(value) > int(field_rule["maxItems"]):
                 problems.append(f"payload field {key} has too many items")
@@ -368,6 +460,19 @@ def _validate_event_for_replay(event: Any) -> None:
         raise ContinuityValidationError("event_id does not match event material")
 
 
+def _validate_codex_hook_event_fast(event: Any) -> None:
+    _assert_fast_schema_contract()
+    _validate_event_for_replay(event)
+    if (
+        event["adapter_id"] != _CODEX_FAST_ADAPTER_ID
+        or event["adapter_revision_id"] != _CODEX_FAST_ADAPTER_REVISION_ID
+        or event["source_kind"] != "runtime_hook"
+    ):
+        raise ContinuityValidationError(
+            "Codex hook fast validation is unavailable for this event"
+        )
+
+
 def continuity_ledger_path(hub_root: Path) -> Path:
     return data_path(hub_root, "raw_portfolio_intents") / "continuity-events.jsonl"
 
@@ -395,6 +500,51 @@ def read_observation_events(ledger: Path) -> list[dict[str, Any]]:
             ) from exc
         if event["prev_event_id"] != prior:
             raise ContinuityIntegrityError(f"broken continuity ledger chain at line {line_number}")
+        command_id = str(event["command_id"])
+        prior_command = commands.get(command_id)
+        if prior_command is not None:
+            if _command_material(prior_command) != _command_material(event):
+                raise ContinuityIntegrityError(
+                    f"conflicting command_id in continuity ledger: {command_id}"
+                )
+            raise ContinuityIntegrityError(
+                f"duplicate command_id in continuity ledger: {command_id}"
+            )
+        commands[command_id] = event
+        events.append(event)
+        prior = str(event["event_id"])
+    return events
+
+
+def validate_continuity_ledger_full(ledger: Path) -> list[dict[str, Any]]:
+    """Replay one ledger through the authoritative JSON Schema validators."""
+
+    if not ledger.exists():
+        return []
+    events: list[dict[str, Any]] = []
+    prior = ""
+    commands: dict[str, dict[str, Any]] = {}
+    for line_number, raw in enumerate(
+        ledger.read_text(encoding="utf-8").splitlines(), start=1
+    ):
+        if not raw.strip():
+            raise ContinuityIntegrityError(f"blank ledger row at line {line_number}")
+        try:
+            event = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ContinuityIntegrityError(
+                f"invalid JSON at continuity ledger line {line_number}"
+            ) from exc
+        try:
+            validate_event(event)
+        except ContinuityValidationError as exc:
+            raise ContinuityIntegrityError(
+                f"invalid event at continuity ledger line {line_number}: {exc}"
+            ) from exc
+        if event["prev_event_id"] != prior:
+            raise ContinuityIntegrityError(
+                f"broken continuity ledger chain at line {line_number}"
+            )
         command_id = str(event["command_id"])
         prior_command = commands.get(command_id)
         if prior_command is not None:
@@ -745,21 +895,16 @@ def refresh_continuity_ledger_index(hub_root: Path) -> dict[str, Any]:
     return _refresh_continuity_ledger_path_index(continuity_ledger_path(hub_root))
 
 
-def _append_observation_to_ledger(
+def _append_normalized_observation_to_ledger(
     ledger: Path,
-    receipt: Mapping[str, Any],
+    normalized: Mapping[str, Any],
     *,
+    redaction_count: int,
+    validate_new_event: Any,
     recorded_at: str | None = None,
     lock_timeout_seconds: float = 5.0,
     retry_clock_tolerant: bool = False,
 ) -> dict[str, Any]:
-    """Append one receipt or return its exact prior event on replay.
-
-    ``recorded_at`` exists for deterministic low-level testing and imports.  The
-    silent runtime adapter supplies its own process clock.
-    """
-
-    normalized, redaction_count = normalize_receipt(receipt)
     command_id = "dad:continuity-command:" + _sha256(str(normalized["request_id"]))
     stream_id = "dad:continuity-stream:" + _sha256(
         "|".join(
@@ -814,7 +959,7 @@ def _append_observation_to_ledger(
             "redaction_count": redaction_count,
         }
         event["event_id"] = _expected_event_id(event)
-        validate_event(event)
+        validate_new_event(event)
         offset = int(index["ledger_size"])
         length = len((_canonical(event) + "\n").encode("utf-8"))
         _append_line(ledger, event)
@@ -827,6 +972,49 @@ def _append_observation_to_ledger(
         index["commands"][command_id] = [offset, length]
         _write_ledger_index(ledger, index)
     return {"status": "appended", "event": event}
+
+
+def _append_observation_to_ledger(
+    ledger: Path,
+    receipt: Mapping[str, Any],
+    *,
+    recorded_at: str | None = None,
+    lock_timeout_seconds: float = 5.0,
+    retry_clock_tolerant: bool = False,
+) -> dict[str, Any]:
+    """Append one fully validated receipt or return its exact prior event."""
+
+    normalized, redaction_count = normalize_receipt(receipt)
+    return _append_normalized_observation_to_ledger(
+        ledger,
+        normalized,
+        redaction_count=redaction_count,
+        validate_new_event=validate_event,
+        recorded_at=recorded_at,
+        lock_timeout_seconds=lock_timeout_seconds,
+        retry_clock_tolerant=retry_clock_tolerant,
+    )
+
+
+def _append_codex_hook_observation_to_ledger(
+    ledger: Path,
+    receipt: Mapping[str, Any],
+    *,
+    recorded_at: str | None = None,
+    lock_timeout_seconds: float = 5.0,
+) -> dict[str, Any]:
+    """Append only a native Codex hook receipt under the pinned fast contract."""
+
+    normalized, redaction_count = _normalize_codex_hook_receipt(receipt)
+    return _append_normalized_observation_to_ledger(
+        ledger,
+        normalized,
+        redaction_count=redaction_count,
+        validate_new_event=_validate_codex_hook_event_fast,
+        recorded_at=recorded_at,
+        lock_timeout_seconds=lock_timeout_seconds,
+        retry_clock_tolerant=True,
+    )
 
 
 def append_observation(
@@ -848,6 +1036,26 @@ def append_observation(
         receipt,
         lock_timeout_seconds=lock_timeout_seconds,
         retry_clock_tolerant=retry_clock_tolerant,
+    )
+
+
+def _append_codex_hook_observation(
+    hub_root: Path,
+    receipt: Mapping[str, Any],
+    *,
+    lock_timeout_seconds: float,
+) -> dict[str, Any]:
+    """Private production entrypoint for the schema-pinned Codex hook."""
+
+    _root, mode = resolve_data_root(hub_root)
+    if mode != "data_root":
+        raise ContinuityIntegrityError(
+            "Continuity writes require an initialized DAD_DATA_ROOT for this hub"
+        )
+    return _append_codex_hook_observation_to_ledger(
+        continuity_ledger_path(hub_root),
+        receipt,
+        lock_timeout_seconds=lock_timeout_seconds,
     )
 
 
@@ -900,6 +1108,7 @@ __all__ = [
     "normalize_receipt",
     "read_observation_events",
     "refresh_continuity_ledger_index",
+    "validate_continuity_ledger_full",
     "validate_adapter_receipt",
     "validate_event",
 ]

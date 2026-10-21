@@ -1,0 +1,403 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:dad-high-value-recovery",
+  "task_id": "dad-high-value-recovery-v1",
+  "revision_id": "dad:agent-mesh-revision:dad-high-value-recovery:v7",
+  "phase": "execution",
+  "status": "blocked",
+  "source_snapshot_digest": "sha256:fb96ddbc45748c018e2332999926690995ba36db69da711ea410406293fb5737",
+  "authority": {
+    "source_authority": "The DAD repository, AGENTS.md, global workspace lifecycle policy, source-repository contracts, and named human decisions retain authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "bounded-writer",
+  "checker_role_id": "independent-checker",
+  "non_overlap_statement": "Only bounded-writer carries the manifest's writer relation for one active job's exact repository write set. Campaign-navigation-writer is a temporally separate specialist that may receive only a separately approved Portfolio lease after predecessor closure; the two scopes may never overlap. Campaign-controller and the inert adapter remain read-only projections, independent-checker cannot edit producer or navigation outputs, and human-owner decides gates without acting as the producer's checker.",
+  "roles": [
+    {
+      "role_id": "campaign-controller",
+      "why_needed": "A resumable campaign needs deterministic dependency, lease, budget, stop, and receipt control separate from implementation.",
+      "mission": "Validate the current manifest, atomic case bindings, cohort closure, terminal route, producer/checker records, navigation receipt, and exact execution-control evidence; project only blocked or ready-manual candidates and never dispatch or write navigation state.",
+      "inputs": [
+        "approved campaign manifest revision",
+        "exact current execution-authorization receipt",
+        "accepted job and checker receipts",
+        "current source and dependency digests",
+        "exact atomic case-binding table and cohort-closure digests",
+        "selected terminal dependency route and accepted producer/checker records",
+        "immutable navigation receipt when a successor requires one"
+      ],
+      "dependencies": [
+        "human-owner"
+      ],
+      "authority": "Prelaunch bridge and adapter are read-only, non-writing, and non-dispatching. They may project a validated terminal route and navigation requirement only. Any future 07, handoff, conditional 08, or navigation-receipt write requires the separately leased campaign-navigation-writer and exact human authority.",
+      "model_effort_class": "deterministic",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": [
+        "No ready-manual candidate exists without exact current digests, authority, lease, heartbeat, reconciliation, budgets, qualifications, paths, effects, and checker.",
+        "Every stop releases leases and preserves receipts.",
+        "No atomic child is projected without one unique case binding, one unique envelope, and the exact binding-table digest.",
+        "No J-600 route or successor is projected without complete cohort closure, a passing independent checker record, and an accepted immutable navigation receipt when required."
+      ],
+      "stop_conditions": [
+        "Launch receipt is absent or expired.",
+        "Any digest, scope, authority, budget, binding, closure, checker, route, navigation, or evidence gate is stale or inconclusive."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "bounded-writer",
+          "independent-checker",
+          "campaign-navigation-writer"
+        ],
+        "deliverables": [
+          "exact job lease and input bundle",
+          "accepted dependency receipts",
+          "stop and budget state",
+          "validated terminal-route and navigation projection"
+        ],
+        "readiness_conditions": [
+        "Exact campaign/job execution-authorization receipt is current.",
+          "Static manifest and mesh validation pass."
+        ]
+      }
+    },
+    {
+      "role_id": "human-owner",
+      "why_needed": "The campaign contains launch, external-state, lifecycle, privacy, pilot, and scale-or-shrink decisions that cannot be delegated.",
+      "mission": "Resolve H-001 through H-010, approve only exact effects, review exceptions, and sign the terminal lifecycle decision.",
+      "inputs": [
+        "campaign charter",
+        "independent findings",
+        "privacy-safe evidence and counterevidence",
+        "exact proposed effect receipts"
+      ],
+      "dependencies": [],
+      "authority": "May approve or reject exact campaign decisions; no standing blanket approval is represented by this role.",
+      "model_effort_class": "frontier_manual",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": [
+        "Every approval names scope, effects, expiry, rollback, and prohibited effects.",
+        "Terminal decision addresses counterevidence, cost, attention, safety, and unknowns."
+      ],
+      "stop_conditions": [
+        "Evidence is incomplete or authority is ambiguous.",
+        "A requested effect exceeds the presented receipt."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "campaign-controller",
+          "independent-checker"
+        ],
+        "deliverables": [
+          "signed exact decision receipts",
+          "decision rationale and expiry"
+        ],
+        "readiness_conditions": [
+          "Independent evidence is available.",
+          "The exact manifest/effect revision is identified."
+        ]
+      }
+    },
+    {
+      "role_id": "bounded-writer",
+      "why_needed": "One accountable writer prevents overlapping changes and keeps each recovery job reversible.",
+      "mission": "Implement exactly one approved parent job or one in-memory-materialized atomic child packet, write only its exact output scope, run focused deterministic checks, and hand immutable producer-attempt evidence to the checker.",
+      "inputs": [
+        "exact current job packet and lease",
+        "accepted dependency receipts",
+        "pinned source inputs",
+        "approved write paths and stop conditions",
+        "exact case-binding-table digest for an atomic child",
+        "selected predecessor route digest for J-600 when applicable"
+      ],
+      "dependencies": [
+        "campaign-controller"
+      ],
+      "authority": "May edit only the current job's exact approved repository paths. An atomic child may write only its unique case envelope. It cannot write parent aggregates, 07, handoff, 08, the navigation-receipt root, controller state, checker records, or external/destructive effects.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": [
+        "Diff stays within the current lease.",
+        "Focused checks run and raw results are handed off without self-approving value.",
+        "Producer-attempt material is canonically digested before checker fields and binds case, closure, route, budgets, effects, outputs, and affected paths."
+      ],
+      "stop_conditions": [
+        "Scope, source, dependency, authority, privacy, or write set changes.",
+        "Original attempt plus one repair is exhausted.",
+        "A case is duplicate, rebound, skipped, reordered after outcome, stale, or unbound.",
+        "The requested scope includes a parent aggregate or any navigation-writer path."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "independent-checker",
+          "campaign-controller"
+        ],
+        "deliverables": [
+          "bounded diff or generated report",
+          "commands and raw results",
+          "limitations, unknowns, and rollback"
+        ],
+        "readiness_conditions": [
+          "Writer checks completed.",
+          "All outputs and unexpected changes are disclosed."
+        ]
+      }
+    },
+    {
+      "role_id": "campaign-navigation-writer",
+      "why_needed": "Terminal campaign navigation must be applied by a task-local, separately leased actor after accepted predecessor closure instead of being smuggled into the inert controller or a job writer.",
+      "mission": "Under a separate future Portfolio lease, apply only the exact validated navigation projection to 07 and handoff, apply 08 only after a signed J-600 decision, and emit one immutable route-bound navigation receipt.",
+      "inputs": [
+        "accepted predecessor producer receipt and independent checker record",
+        "complete cohort-closure artifact and digest",
+        "validated terminal dependency route and permitted decisions",
+        "exact human approval and separate Portfolio lease",
+        "controller-produced navigation projection"
+      ],
+      "dependencies": [
+        "campaign-controller",
+        "human-owner",
+        "independent-checker"
+      ],
+      "authority": "No current execution authority. A future exact lease may cover only docs/campaigns/dad-high-value-recovery/07_EVIDENCE_INDEX.md, docs/campaigns/dad-high-value-recovery/handoff.md, conditional signed-J-600 docs/campaigns/dad-high-value-recovery/08_SUPERSESSION_AND_ARCHIVE_MAP.md, and one immutable receipt under docs/campaigns/dad-high-value-recovery/checks/evidence/navigation/. It cannot dispatch, implement jobs, alter evidence, or infer launch authority.",
+      "model_effort_class": "deterministic",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": [
+        "The projection binds route ID, predecessor and closure digests, producer/checker acceptance, permitted decisions, navigation receipt digest, and exact paths.",
+        "07 and handoff reflect only the accepted terminal route; 08 remains untouched without the separately signed J-600 decision.",
+        "The immutable navigation receipt is independently consumable and no job-writer or controller path was used."
+      ],
+      "stop_conditions": [
+        "The separate lease or exact human approval is absent, expired, stale, or mismatched.",
+        "Closure is partial, checker disposition is not pass, route material is stale, or the projection requests any undeclared path.",
+        "This prelaunch repair is the active authority; it grants no navigation write."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "campaign-controller",
+          "independent-checker",
+          "human-owner"
+        ],
+        "deliverables": [
+          "exact navigation delta",
+          "immutable route-bound navigation receipt",
+          "limitations and stop evidence"
+        ],
+        "readiness_conditions": [
+          "Every predecessor, closure, checker, route, approval, lease, and path binding is current.",
+          "The job-writer lease is closed and no overlapping writer scope exists."
+        ]
+      }
+    },
+    {
+      "role_id": "independent-checker",
+      "why_needed": "DAD's core audit problem is false confidence; material work and value claims require a distinct evaluator.",
+      "mission": "Verify job acceptance, exact producer-attempt digest, separate checker record, case and closure reconciliation, terminal route, navigation receipt, authority, privacy, regression, independence, and counterevidence without editing producer outputs.",
+      "inputs": [
+        "writer outputs and raw permitted evidence",
+        "job acceptance contract",
+        "source and dependency digests",
+        "gold standards and negative controls",
+        "canonical producer-attempt material and claimed digest",
+        "case-binding, cohort-closure, terminal-route, and navigation-receipt evidence"
+      ],
+      "dependencies": [
+        "bounded-writer"
+      ],
+      "authority": "Read-only review of producer and navigation scope and evidence. Its separate checker record may be persisted only through the declared checker-evidence path by an authorized receipt mechanism; it cannot edit producer material, create circular self-approval, or authorize human/external effects.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": [
+        "Every gate receives one of the five declared result semantics with evidence.",
+        "False green, missing coverage, self-checking, stale or circular checker records, selective evidence, incomplete closure, and route mismatch are tested.",
+        "A pass means the producer evidence is faithfully bound and accepted; it does not mean the measured business outcome is favorable."
+      ],
+      "stop_conditions": [
+        "Checker is the writer or shares disqualifying outcome knowledge.",
+        "Evidence is stale, incomplete, private beyond scope, or irreconcilable.",
+        "Producer-attempt digest, checker identity, independence, disposition, or final receipt binding is missing, mismatched, challenged, self-authored, or circular."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "campaign-controller",
+          "human-owner"
+        ],
+        "deliverables": [
+          "independent gate receipt",
+          "findings, disagreements, counterevidence, and revalidation triggers"
+        ],
+        "readiness_conditions": [
+          "Raw permitted evidence and exact acceptance revision are available."
+        ]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "bounded-change",
+      "description": "Prove each writer stayed inside the approved exact write set and preserved unrelated user changes.",
+      "evidence_required": [
+        "final diff and path inventory",
+        "worktree status before and after",
+        "independent scope receipt"
+      ],
+      "owner_role_id": "bounded-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "truthful-enforcement",
+      "description": "Prove missing, failed, skipped, stale, cancelled, contradictory, or unavailable required evidence cannot render green.",
+      "evidence_required": [
+        "negative-control fixtures",
+        "deliberate remote required-check failure",
+        "protection and scheduled-run evidence"
+      ],
+      "owner_role_id": "bounded-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "value-spine-integrity",
+      "description": "Prove counted outcomes join recommendation revision through adoption, independent validation, and lifecycle decision.",
+      "evidence_required": [
+        "positive and negative end-to-end fixtures",
+        "legacy reconciliation and raw zero-write proof",
+        "yield semantic parity"
+      ],
+      "owner_role_id": "bounded-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "pilot-validity",
+      "description": "Prove pilot protocols were frozen, real cases reconciled, synthetic evidence excluded, and producer/checker independence preserved.",
+      "evidence_required": [
+        "frozen protocol and case digests",
+        "atomic case receipts and reconciliation",
+        "human calibration and counterevidence"
+      ],
+      "owner_role_id": "campaign-controller",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "decision-integrity",
+      "description": "Prove the terminal decision follows frozen thresholds or labels an explicit exception and performs no follow-on effect.",
+      "evidence_required": [
+        "scale-or-shrink memo and machine decision",
+        "component disposition map",
+        "signed human receipt and postflight/worktree disposition"
+      ],
+      "owner_role_id": "human-owner",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "terminal-navigation-integrity",
+      "description": "Prove terminal stop branches close every started or withdrawn atomic slot, select exactly one allowed predecessor route, and keep actual navigation behind a separate non-overlapping writer lease and immutable accepted receipt.",
+      "evidence_required": [
+        "complete cohort-closure artifact and exact partition proof",
+        "producer-attempt digest and separate passing checker record",
+        "terminal-route projection and immutable navigation receipt",
+        "before/after path inventory proving job writers and controller did not write navigation state"
+      ],
+      "owner_role_id": "campaign-navigation-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [
+    {
+      "decision_id": "activation-revision",
+      "summary": "A new exact execution authorization is required for revision 7-atomic-terminal-navigation-candidate-20260826 and its final manifest digest; no prior H-010 carries forward and no navigation-writer lease exists.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    },
+    {
+      "decision_id": "tracked-atomic-publication",
+      "summary": "Repository pointer liveness cannot pass until the complete reviewed campaign and repair set is atomically tracked; commit, push, and publication remain outside current authority.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    },
+    {
+      "decision_id": "independent-launch-review",
+      "summary": "A fresh independent checker must accept the frozen revision-7 prelaunch candidate after focused deterministic validation evidence is complete.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    }
+  ],
+  "manifest_digest": "sha256:922b72fee8c72badc140e7de1e084755d9a97ed1ff8ac5a3f3616d0c9d926b56",
+  "supersedes_revision_id": "dad:agent-mesh-revision:dad-high-value-recovery:v6",
+  "reconciliations": [
+    {
+      "prior_role_id": "campaign-controller",
+      "disposition": "blocked",
+      "current_role_ids": [
+        "campaign-controller"
+      ],
+      "reason": "The provider-neutral controller now projects exact case bindings, closure, producer/checker acceptance, terminal routes, and navigation requirements while remaining non-writing and non-dispatching. Execution and navigation remain denied pending new exact authority, atomic tracked publication authority, and independent acceptance.",
+      "evidence_refs": [
+        "src/digital_asset_directory/campaign_controller.py",
+        "src/digital_asset_directory/campaign_codex_shell_adapter.py",
+        "docs/campaigns/dad-high-value-recovery/campaign.json",
+        "docs/campaigns/dad-high-value-recovery/checks/ACCEPTANCE_MATRIX.md"
+      ],
+      "material_drift": true
+    },
+    {
+      "prior_role_id": "human-owner",
+      "disposition": "reused",
+      "current_role_ids": [
+        "human-owner"
+      ],
+      "reason": "H-001 through H-009 are recorded exactly; H-010 must be reissued for the changed activation candidate and no broader authority is inferred.",
+      "evidence_refs": [
+        "docs/campaigns/dad-high-value-recovery/checks/evidence/decision/human-decision-receipt.json"
+      ],
+      "material_drift": false
+    },
+    {
+      "prior_role_id": "bounded-writer",
+      "disposition": "reused",
+      "current_role_ids": [
+        "bounded-writer"
+      ],
+      "reason": "The single manifest writer remains bounded-writer, but its contract now materializes atomic slots only in memory, restricts each child to one unique envelope, binds producer-attempt evidence, and rejects all navigation-writer paths. No campaign job is leased or executed.",
+      "evidence_refs": [
+        "docs/campaigns/dad-high-value-recovery/campaign.json"
+      ],
+      "material_drift": true
+    },
+    {
+      "prior_role_id": "independent-checker",
+      "disposition": "reused",
+      "current_role_ids": [
+        "independent-checker"
+      ],
+      "reason": "The distinct read-only checker now binds an exact producer-attempt digest to a separate checker record and fails closed on stale, challenged, self-authored, circular, incomplete-closure, route, or navigation evidence.",
+      "evidence_refs": [
+        "docs/campaigns/dad-high-value-recovery/checks/ACCEPTANCE_MATRIX.md"
+      ],
+      "material_drift": true
+    },
+    {
+      "disposition": "added",
+      "current_role_ids": [
+        "campaign-navigation-writer"
+      ],
+      "reason": "Revision 7 requires a task-local specialist that is temporally and path-separated from job writers, the inert controller, and the independent checker for any future terminal navigation mutation.",
+      "evidence_refs": [
+        "docs/campaigns/dad-high-value-recovery/campaign.json",
+        "docs/campaigns/dad-high-value-recovery/jobs/J-600_ISSUE_SCALE_NARROW_RETIRE_DECISION.md",
+        "docs/campaigns/dad-high-value-recovery/checks/ACCEPTANCE_MATRIX.md"
+      ],
+      "material_drift": true
+    }
+  ]
+}

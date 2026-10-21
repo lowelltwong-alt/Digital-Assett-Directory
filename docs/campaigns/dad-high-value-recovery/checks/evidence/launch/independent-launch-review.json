@@ -1,0 +1,41 @@
+{
+  "schema_version": "dad.campaign.independent_launch_review.v1",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "campaign_revision": "4-activation-candidate-20260821",
+  "manifest_digest": "sha256:40a73141b10f0f073c8b158b587a130e3873ae647a41ce1c22adcad38ff13d4e",
+  "mesh_semantic_digest": "sha256:56e9e4a6438798baf79959907585efd716ab16fc53367f0ef947f997d28c6c40",
+  "reviewer_role": "independent-checker",
+  "reviewer_relationship": "non-author-read-only",
+  "bounded_prelaunch_repair_disposition": "accept",
+  "launch_disposition": "block",
+  "j_100_disposition": "block",
+  "verified": [
+    "campaign schema, consistency, and mesh-with-prior validators pass",
+    "revision-3 H-010 approval is non-transferable to revision 4",
+    "execution mode is specification_only and execution_authorized is false",
+    "controller and host adapter expose no launch path and the dry run is blocked_human with seven zero effect counters",
+    "receipt verification flattens atomic child slots and validates file digests and packet timing fields",
+    "stale installed-host evidence is scoped without supporting current installed-host claims",
+    "stale portability artifacts and dependent cores are denied protected routing",
+    "MCP structural tests pin evidence time while the dedicated stale and future evidence test remains fail closed"
+  ],
+  "launch_blockers": [
+    "missing exact H-010 approval for revision 4 and its manifest digest",
+    "execution_authorized is false and no launch command or authorization receipt exists",
+    "commit authority is absent and six campaign pointer targets remain untracked",
+    "hook scale benchmark exceeded its 1500ms warm latency boundary twice",
+    "two repository-validation tests remain blocked by untracked pointers",
+    "worktree validation reports two pre-existing branch-disposition findings"
+  ],
+  "residual_caveats": [
+    "The attempt-event schema-validator cache assumes schema immutability for the process lifetime and has no digest-keyed invalidation test.",
+    "The full suite was not repeated after the narrow MCP structural-test correction; unchanged-state repetition was deferred because launch is already blocked."
+  ],
+  "effects": {
+    "files_edited_by_checker": 0,
+    "campaign_state_or_receipts_created_by_checker": 0,
+    "git_or_external_effects": 0,
+    "j_100_executed": false
+  },
+  "authority_boundary": "This independent review accepts only the bounded prelaunch repairs. It does not authorize H-010, launch, J-100, Git changes, downstream mutation, publication, deployment, or cleanup."
+}

@@ -1,0 +1,199 @@
+{
+  "schema_version": "dad.campaign.prelaunch_qualification.v2",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "campaign_revision": "6-execution-control-bridge-candidate-20260823",
+  "manifest_digest": "sha256:58bf4181a3eeb2cc45156d8e50dc7089e8c1a42a17cd3ff4c4eda67f077c2ee9",
+  "mesh_semantic_digest": "sha256:7ec717e316d513c65da5dc3eca372202b4488977aead6b88c1ae3d1ddf865451",
+  "recorded_at": "2026-08-23T05:27:04Z",
+  "qualification_result": "pass_bounded_revision_6_prelaunch_only",
+  "bridge_contract": {
+    "controller_revision": "portability-card-revision:library-campaign-packet-controller:0.2.0",
+    "adapter_revision": "dad-campaign-codex-shell-adapter:0.2.0-prelaunch",
+    "event_binding_schema": "dad.campaign.execution_control_binding.v1",
+    "authorization_schema": "dad.campaign.execution_authorization.v1",
+    "outcomes": [
+      "blocked",
+      "ready-manual"
+    ],
+    "authority_ledger": "existing Portfolio OS execution-control projection",
+    "new_executor_added": false,
+    "execution_authorized": false,
+    "dispatch_allowed": false
+  },
+  "machine_gates_qualified": [
+    "exact positive authorization binding; prohibition removal cannot authorize",
+    "source and resolved receipt-bound input digests",
+    "stable evidence digest with validated but non-binding observation-time metadata",
+    "accepted direct dependency receipt log digest and PASS row",
+    "digest-bound worker, checker, and adapter qualifications",
+    "single lease, heartbeat freshness, expiry, supersession, and reissue reconciliation",
+    "campaign and per-job attempt, cost, wall, context, output, and storage budgets",
+    "idempotency and conflict rejection",
+    "declared paths, effects, outputs, checkpoint, receipt, evidence, and durability",
+    "repair-limit and stop-state transitions",
+    "shutdown candidate requires dispatch revocation, lease release, checkpointing, and partial-effect reconciliation"
+  ],
+  "host_gate_decoupling": {
+    "campaign_j100_gate": false,
+    "future_supervised_continuity_trial_gate": true,
+    "evidence": "campaign manifest, adapter host snapshot, portability adapter predicate",
+    "boundary": "Neither gate can substitute for the other's authority or qualification evidence."
+  },
+  "role_qualifications": [
+    {
+      "role": "bounded-writer",
+      "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/bounded-writer.json",
+      "digest": "sha256:ec202b91f2400eb6bc35cab13647344bc26294242c82d2d80dc7e4c62187b564"
+    },
+    {
+      "role": "independent-checker",
+      "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/independent-checker.json",
+      "digest": "sha256:1041cdee8ce03b52d78a66966dea8ccfe64b3e7a27b4c9257c4d8c3500d7ec9b"
+    },
+    {
+      "role": "campaign-owner",
+      "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/campaign-owner.json",
+      "digest": "sha256:968e0e4b33161e61d84320d4e042aaa6ab7e02b916729d6e2b722d2e6cbf1d6f"
+    },
+    {
+      "role": "ci-stability-observer",
+      "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/ci-stability-observer.json",
+      "digest": "sha256:4351ffab199511a87d8575d12ce77546c8f858dbdeffd4c62fc45df5d58ba6e9"
+    },
+    {
+      "role": "pilot-designer",
+      "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/pilot-designer.json",
+      "digest": "sha256:dc07ce200b7b073f77c5510ce4db5a42cfefcdb05de2381b32ccb18541fd1b94"
+    },
+    {
+      "role": "pilot-producer",
+      "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/pilot-producer.json",
+      "digest": "sha256:04646a950e6a8d47127b3c81f512d43aaf0e7705f131d143d16183e9f1c5f1b4"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/prelaunch-dry-run-revision-6.json",
+      "digest": "sha256:14fe75dbacac7c362f5d970ac07396d950d71ecb2732fcbb4978f3f9c15f594c",
+      "result": "blocked_for_missing_exact_execution_authorization_and_portfolio_binding; zero effects"
+    },
+    {
+      "path": "schemas/portfolio-execution-control-event.schema.json",
+      "digest": "sha256:103b13ddd46773aa59bd5679442a233b3d3096e254b851d4132d75101785b395",
+      "result": "strict optional campaign binding is scope-digest material"
+    },
+    {
+      "path": "registry/portable-capability-registry.json",
+      "digest": "sha256:3f3bdf76a3474d73d3c7d5529bc7a574682679becad9e93df41f6c97c523c938",
+      "result": "core and adapter revision 0.2.0, valid with one unrelated non-routable stale warning"
+    },
+    {
+      "path": "registry/branch-disposition-registry.json",
+      "digest": "sha256:d54f46179efb2346d4e4bb8473d04e945eb26c8583e3b3cd0acd67eab44215ae",
+      "result": "two exact metadata-only dispositions valid; no branch mutation"
+    }
+  ],
+  "commands": [
+    {
+      "command": "python -m pytest tests/test_campaign_controller.py docs/campaigns/dad-high-value-recovery/checks/test_verify_receipt_durability.py tests/test_portfolio_execution_control.py tests/test_portfolio_execution_authority_invariants.py tests/test_portfolio_attempt_journal.py tests/test_portfolio_attempt_journal_semantics.py tests/test_portfolio_approval_verifier.py -q",
+      "result": "82 passed; 1 cryptography-dependent integration test skipped under the standard project runtime",
+      "exit_code": 0,
+      "wall_seconds": 11.3
+    },
+    {
+      "command": "PYTHONPATH=src;<bundled-primary-runtime-site-packages> python -m pytest tests/test_campaign_controller.py::test_real_adapter_reaches_ready_manual_through_signed_public_fold -q",
+      "result": "1 passed using cryptography 50.0.0; real Ed25519 grant and dispatch attestations reached inert ready-manual through the public adapter and Portfolio fold",
+      "exit_code": 0,
+      "wall_seconds": 2.9
+    },
+    {
+      "command": "python C:\\Users\\lowel\\.codex\\skills\\orchestrate-long-run-campaigns\\scripts\\validate_campaign.py docs/campaigns/dad-high-value-recovery/campaign.json",
+      "result": "valid static specification only",
+      "exit_code": 0
+    },
+    {
+      "command": "python docs/campaigns/dad-high-value-recovery/checks/validate_campaign_consistency.py",
+      "result": "valid packets, digests, CI split, atomic slots, budgets, receipt contract, mesh snapshot",
+      "exit_code": 0
+    },
+    {
+      "command": "python assets/agent-skills/dad-manifest-graph-engineering/scripts/validate_agent_mesh_manifest.py docs/campaigns/dad-high-value-recovery/mesh/agent-mesh.plan.v1.json --prior docs/campaigns/dad-high-value-recovery/mesh/agent-mesh.plan.v5.prior.json",
+      "result": "valid semantic digest sha256:7ec717e316d513c65da5dc3eca372202b4488977aead6b88c1ae3d1ddf865451",
+      "exit_code": 0
+    },
+    {
+      "command": "python -c validate_portability(Path('.'))",
+      "result": "valid; zero hard findings; one unrelated nonroutable_stale_evidence warning",
+      "exit_code": 0,
+      "wall_seconds": 5.6
+    },
+    {
+      "command": "five impacted portability-control pytest nodes",
+      "result": "5 passed on the final registry bytes",
+      "exit_code": 0,
+      "wall_seconds": 20.33
+    },
+    {
+      "command": "python -m ruff check <revision-6 Python implementation and tests>",
+      "result": "all checks passed",
+      "exit_code": 0
+    },
+    {
+      "command": "check_branch_dispositions(Path('.'), now=2026-08-23 UTC)",
+      "result": "valid; both authorized metadata rows status ok",
+      "exit_code": 0,
+      "wall_seconds": 5.7
+    }
+  ],
+  "dry_run": {
+    "status": "blocked",
+    "packet_digest": "sha256:a56b05d4685c1cd56fec19cc87fde9f43c65809fa036fa043ad651263d436988",
+    "authorization_receipt_digest": "sha256:6de66562314b5d7246f44a5630210da4239d1b7f1164807106b2da555aa64198",
+    "source_or_qualification_stale_reasons": [],
+    "blocker_classes": [
+      "missing exact revision-6 execution authorization",
+      "missing exact Portfolio OS lease and ready-manual dispatch binding",
+      "unimplemented atomic-child execution binding blocks every atomic parent packet"
+    ],
+    "all_seven_effect_counters_zero": true,
+    "execution_authorized": false,
+    "dispatch_allowed": false
+  },
+  "branch_dispositions": {
+    "metadata_only": true,
+    "branch_or_ref_mutations": 0,
+    "decisions": [
+      {
+        "branch": "codex/preserve-parallel-orchestration-20260710",
+        "tip": "4f085940b8e5f529911c58477742dbd42c6c186f",
+        "disposition": "tombstone"
+      },
+      {
+        "branch": "preserve/c4-ci-test-routing",
+        "tip": "e17cb43cd8269d507e0635f67b3ff4689f2e4abe",
+        "disposition": "active",
+        "review_after": "2026-09-05"
+      }
+    ]
+  },
+  "independent_review_repairs": [
+    {
+      "severity": "high",
+      "finding": "Observation time was initially included in the evidence snapshot and packet binding, making a later qualification non-reproducible.",
+      "resolution": "observed_at is retained as validated non-authoritative metadata but excluded from snapshot and packet digests; unchanged evidence rebuilt one second later now produces the same snapshot and packet digests",
+      "regression_test": "test_observation_time_is_nonbinding_but_must_not_be_in_the_future"
+    }
+  ],
+  "limitations": [
+    "No exact revision-6 execution authorization or H-010 exists.",
+    "No campaign-bound Portfolio OS lease, verified dispatch approval, or ready-manual row exists.",
+    "The positive ready-manual path has a real Ed25519 public-fold integration test, but the bridge remains non-executing and no runtime executor exists.",
+    "The standard project Python environment lacks the optional cryptography backend; the existing bundled Codex runtime supplied cryptography 50.0.0 for the signed integration proof.",
+    "The intent-continuity host gate remains unqualified for a future supervised continuity trial and is deliberately not a campaign gate.",
+    "Untracked campaign pointers and broader repository validation remain outside this bounded prelaunch lane."
+  ],
+  "candidate_only": true,
+  "execution_authorized": false,
+  "dispatch_allowed": false,
+  "authority_boundary": "This qualification accepts only the bounded local revision-6 prelaunch implementation and deterministic evidence. It does not authorize H-010, J-100, launch, staging, commit, push, merge, deployment, GitHub changes, downstream mutation, plugins, global settings, automation, branch deletion, worktree cleanup, or any destructive effect."
+}

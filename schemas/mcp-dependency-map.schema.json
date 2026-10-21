@@ -116,7 +116,7 @@
           "properties": {
             "path": {"const": "src/digital_asset_directory/validation.py"},
             "function": {"const": "validate_repo"},
-            "status_field": {"const": "current_claims_allowed"}
+            "status_field": {"const": "structural_claims_allowed"}
           }
         },
         "consumer_node_ids": {

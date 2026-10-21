@@ -27,6 +27,13 @@ def _contract(root: Path = BUNDLE) -> dict:
     return json.loads((root / "contract.json").read_text(encoding="utf-8"))
 
 
+def _evidence_capture_time(root: Path = BUNDLE) -> datetime:
+    evidence = json.loads(
+        (root / "installed-host-evidence.json").read_text(encoding="utf-8")
+    )
+    return datetime.fromisoformat(str(evidence["captured_at"]).replace("Z", "+00:00"))
+
+
 def _template_document(adapter: dict) -> dict:
     path = BUNDLE / adapter["template"]
     if adapter["format"] == "json":
@@ -84,7 +91,7 @@ def test_all_host_templates_resolve_to_one_entrypoint_and_authority():
     assert len({item.allowed_tools for item in resolved}) == 1
     assert len({item.authority for item in resolved}) == 1
 
-    report = VALIDATOR.validate_bundle(BUNDLE)
+    report = VALIDATOR.validate_bundle(BUNDLE, now=_evidence_capture_time())
     assert report["status"] == "valid"
     assert report["adapter_count"] == 7
     assert report["installation_authorized"] is False
@@ -154,14 +161,14 @@ def test_validator_fails_closed_on_entrypoint_or_template_set_drift(tmp_path: Pa
     path.write_text(json.dumps(document), encoding="utf-8")
 
     with pytest.raises(VALIDATOR.BundleValidationError, match="entry-point args drift"):
-        VALIDATOR.validate_bundle(copy)
+        VALIDATOR.validate_bundle(copy, now=_evidence_capture_time(copy))
 
     path.write_text(
         (BUNDLE / adapter["template"]).read_text(encoding="utf-8"), encoding="utf-8"
     )
     (copy / "templates" / "undeclared.json").write_text("{}", encoding="utf-8")
     with pytest.raises(VALIDATOR.BundleValidationError, match="declared template set"):
-        VALIDATOR.validate_bundle(copy)
+        VALIDATOR.validate_bundle(copy, now=_evidence_capture_time(copy))
 
 
 def test_host_evidence_exact_age_boundary_and_future_rejection(tmp_path: Path):

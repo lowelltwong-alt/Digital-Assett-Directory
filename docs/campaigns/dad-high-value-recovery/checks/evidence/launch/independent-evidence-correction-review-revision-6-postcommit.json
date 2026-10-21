@@ -1,0 +1,407 @@
+{
+  "schema_version": "dad.campaign.prelaunch_evidence_correction_review.v1",
+  "review_id": "E-PRELAUNCH-007-INDEPENDENT-REVIEW",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "campaign_revision": "6-execution-control-bridge-candidate-20260823",
+  "recorded_at": "2026-08-24T19:27:00Z",
+  "reviewer_role": "independent-checker",
+  "reviewer_relationship": "non-author",
+  "review_scope": "bounded_local_six_path_evidence_only_correction",
+  "correction_disposition": "ACCEPT",
+  "decision_summary": "Accept the bounded postcommit evidence correction only. The correction accurately supersedes the frozen revision-6 review's precommit git-diff cleanliness assertion, preserves every other revision-6 control finding and digest, and introduces no new correction-delta whitespace finding. The original commit remains not whitespace-clean. H-010, J-100, and launch remain BLOCK.",
+  "git_identity": {
+    "worktree": "C:/wt/dad-high-value-execution",
+    "branch": "codex/dad-high-value-execution-plan-20260820",
+    "head": "76c268d191d40dd66016e7f41ad5fa79ffbd5f29",
+    "parent": "e05c4e5de2d8ad0fb87e19c42783ad28dd04a3b4",
+    "tree": "2b2daa145a052314afbdba36a856cf86252a6d94",
+    "staged_path_count_before_checker_write": 0,
+    "result": "exact_match"
+  },
+  "writer_candidate_binding": {
+    "status_before_checker_write": [
+      {
+        "kind": "modified",
+        "path": "docs/campaigns/dad-high-value-recovery/07_EVIDENCE_INDEX.md",
+        "digest": "sha256:b13a75041e705771da5a5220dafdb5cf9e73c75dae965b9320a4efc1438c90f3"
+      },
+      {
+        "kind": "modified",
+        "path": "docs/campaigns/dad-high-value-recovery/README.md",
+        "digest": "sha256:2bdbeddf3d8dd882e4ce424be0777aa30807557dabe0edc18401446fc0ccd0a7"
+      },
+      {
+        "kind": "modified",
+        "path": "docs/campaigns/dad-high-value-recovery/checks/LAUNCH_RISK_REVIEW.md",
+        "digest": "sha256:deed575c09fe086c58e2c60e37f0c6e6bb2ccb718208caccf7f1415b500cffe0"
+      },
+      {
+        "kind": "untracked",
+        "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/prelaunch-evidence-correction-revision-6-postcommit.json",
+        "digest": "sha256:6e8ffbd7508ccb9c7f8e2e7d2f1910331a59c6114b6abe4ab1dedd23988a9ca1"
+      },
+      {
+        "kind": "modified",
+        "path": "docs/campaigns/dad-high-value-recovery/handoff.md",
+        "digest": "sha256:14e0c72a5999bd87cbbc835afaa28e64c5d7f8cacc76834767b7b95f7e10911e"
+      }
+    ],
+    "path_count": 5,
+    "raw_working_byte_digest": "sha256:ad536984d02a2a064256cacf4f0d167edc41f999e87c750d15cfb4282fb506b2",
+    "digest_algorithm": "For each of the five writer-owned paths, hash raw working-file bytes with SHA-256 and prefix sha256:. Sort repository-relative POSIX paths with [Array]::Sort(paths, [StringComparer]::Ordinal). Serialize each row as kind<TAB>path<TAB>digest, join rows with LF, append one final LF, encode as UTF-8 without BOM, hash with SHA-256, and prefix sha256:.",
+    "writer_receipt": {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/prelaunch-evidence-correction-revision-6-postcommit.json",
+      "schema_version": "dad.campaign.prelaunch_evidence_correction.v1",
+      "digest": "sha256:6e8ffbd7508ccb9c7f8e2e7d2f1910331a59c6114b6abe4ab1dedd23988a9ca1",
+      "finding_count": 29,
+      "parse_result": "valid_json"
+    },
+    "result": "exact_match"
+  },
+  "checker_sort_finding_and_resolution": {
+    "finding": "The earlier candidate described the historical c800 digest ordering as case-sensitive ordinal even though the recorded command used PowerShell Sort-Object -Property Path -CaseSensitive, which is culture-sensitive.",
+    "resolution": "The writer refroze the receipt with the exact en-US PowerShell 7.6.4 Windows algorithm and an explicit portability caveat. The new correction-set digest was separately changed to explicit StringComparer.Ordinal ordering.",
+    "verification": "The refrozen writer receipt and true-ordinal five-path digest independently reproduce exactly.",
+    "remaining_defect": false
+  },
+  "historical_commit_reproduction": {
+    "command": "git diff-tree --check HEAD^ HEAD",
+    "exit_code": 2,
+    "finding_count": 29,
+    "affected_path_count": 18,
+    "trailing_whitespace_count": 13,
+    "blank_line_at_eof_count": 16,
+    "normalized_merged_output_digest": "sha256:0c54363719ff001eafb00e259aa2eeb593b25a9d3193bba25c8e1ccdadda6fbf",
+    "normalized_output_basis": "UTF-8 encoding of merged output lines joined by LF with one final LF",
+    "authorized_original_change_set": {
+      "path_count": 100,
+      "modified_path_count": 36,
+      "originally_untracked_path_count": 64,
+      "raw_working_byte_digest": "sha256:c8006cbe442b21a5e66d37806d7e48fecfb793e510debc5dbbbd3c0f9ad9b988",
+      "reconstruction": "Use HEAD blob bytes for the four original campaign documents now edited by the correction and current raw working bytes for the other 96 unchanged original paths; retain the precommit modified/untracked kinds reconstructed from HEAD^..HEAD.",
+      "historical_digest_algorithm": "Sort records with PowerShell Sort-Object -Property Path -CaseSensitive on en-US, PowerShell 7.6.4, Microsoft Windows NT 10.0.26200.0; serialize kind<TAB>path<TAB>sha256:<raw-byte-digest><LF> with a final LF and hash the UTF-8 payload with SHA-256.",
+      "portability_caveat": "This c800 digest is a valid immutable historical binding on the recorded host, but its ordering algorithm is culture-sensitive and must not be represented as portable ordinal ordering.",
+      "result": "exact_match"
+    }
+  },
+  "immutable_review_supersession": {
+    "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/independent-launch-review-revision-6.json",
+    "digest": "sha256:f1d058c3762084045732c5efc46d121f5ed4391b843846fc5c67baaf539841d1",
+    "superseded_json_pointer": "/independent_validation/5/result",
+    "superseded_value": "pass",
+    "superseded_check": "git diff --check",
+    "supersession_scope": "Only the frozen review's precommit diff-cleanliness assertion is superseded. Its bounded revision-6 execution-control ACCEPT, launch/H-010/J-100 BLOCK, and every other finding remain immutable and in force.",
+    "result": "exact_match"
+  },
+  "preserved_authority": {
+    "campaign_manifest": {
+      "path": "docs/campaigns/dad-high-value-recovery/campaign.json",
+      "schema_version": "long_run_campaign.v2",
+      "revision": "6-execution-control-bridge-candidate-20260823",
+      "execution_mode": "specification_only",
+      "digest": "sha256:58bf4181a3eeb2cc45156d8e50dc7089e8c1a42a17cd3ff4c4eda67f077c2ee9"
+    },
+    "campaign_charter": {
+      "path": "docs/campaigns/dad-high-value-recovery/campaign.md",
+      "digest": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362"
+    },
+    "source_authority": [
+      {
+        "path": "AGENTS.md",
+        "digest": "sha256:686d11cac8f4f6fc06757ce365b80b34f12ef7c1fd19f2eb7858ee4af7c36742"
+      },
+      {
+        "path": "docs/campaigns/dad-high-value-recovery/campaign.md",
+        "digest": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362"
+      },
+      {
+        "path": "docs/campaigns/dad-high-value-recovery/09_RESEARCH_BENCHMARK_AND_DESIGN_PRINCIPLES.md",
+        "digest": "sha256:45bf381c425686fa2eb3bc98194f0a7d0d4a08e3faaac0420e236e842dd79820"
+      },
+      {
+        "path": "docs/SELF_LEARNING_IMPROVEMENT_SYSTEM_PLAN.md",
+        "digest": "sha256:7e9a9dd5f99ad06c1e604dba9f53cde9aa6b7a318fa3e6033d959f43f93080e1"
+      },
+      {
+        "path": "docs/DAD_PORTFOLIO_AI_OPERATING_SYSTEM_PLAN.md",
+        "digest": "sha256:238782f90fe25bb350c8099f4a1b7f29ad18c7a4cdf97a7386d576115ec09b0d"
+      }
+    ],
+    "revision_6_control_and_evidence": [
+      {
+        "path": "src/digital_asset_directory/campaign_controller.py",
+        "digest": "sha256:0a358a98850b526481afbe0201277297c14ae95d29e2d4cca55f059f28f00166"
+      },
+      {
+        "path": "src/digital_asset_directory/campaign_codex_shell_adapter.py",
+        "digest": "sha256:cadc5c3a0127d1a186dee875adab9320d260889f445f40d98e10e21ffb53b940"
+      },
+      {
+        "path": "src/digital_asset_directory/portfolio_execution.py",
+        "digest": "sha256:5f22eb55c28438b32c444c439b61a0af5bdfed618aa8f5fda1d4c3b90506480b"
+      },
+      {
+        "path": "docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py",
+        "digest": "sha256:5d616eb78f30e4c238b8075f515302efbf890126493e6fa82c9e67587d535004"
+      },
+      {
+        "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/qualifications/prelaunch-revision-6.json",
+        "digest": "sha256:a648fb704e9578cc8b40b8948658788576f5df5810bb073e8df936352878254b"
+      },
+      {
+        "path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/prelaunch-dry-run-revision-6.json",
+        "digest": "sha256:14fe75dbacac7c362f5d970ac07396d950d71ecb2732fcbb4978f3f9c15f594c"
+      },
+      {
+        "path": "tests/test_campaign_controller.py",
+        "digest": "sha256:a4d55978849200b1b8453957a320454b2dbd54f13623184a8427a5c702cba7e9"
+      }
+    ],
+    "result": "all_exact_match"
+  },
+  "historical_finding_preservation": {
+    "trailing_whitespace_lines_checked": 13,
+    "trailing_whitespace_lines_byte_identical_to_head_excluding_line_terminator": 13,
+    "blank_line_at_eof_finding_paths_checked": 16,
+    "blank_line_at_eof_finding_paths_untouched": 16,
+    "finding_inventory_matches_writer_receipt": true,
+    "result": "all_29_historical_findings_preserved"
+  },
+  "correction_delta_hygiene": {
+    "tracked_writer_delta": {
+      "command": "git diff --check -- <four writer-modified tracked paths>",
+      "exit_code": 0,
+      "whitespace_finding_count": 0,
+      "output_note": "Only Git's LF-to-CRLF working-copy warnings were emitted."
+    },
+    "untracked_writer_receipt": {
+      "command": "git diff --no-index --check -- /dev/null <writer receipt>",
+      "exit_code": 1,
+      "exit_code_meaning": "Expected no-index content difference",
+      "whitespace_finding_count": 0
+    },
+    "scope_clarification": "These checks prove only that the evidence-correction delta introduces no new whitespace finding. They do not prove, rewrite, normalize, or make the original revision-6 commit delta whitespace-clean.",
+    "result": "pass_for_correction_delta_only"
+  },
+  "deterministic_validation": {
+    "checker_run": [
+      {
+        "check": "campaign static schema",
+        "command": "python -B C:/Users/lowel/.codex/skills/orchestrate-long-run-campaigns/scripts/validate_campaign.py docs/campaigns/dad-high-value-recovery/campaign.json",
+        "exit_code": 0,
+        "result": "VALID long_run_campaign.v2; static specification only"
+      },
+      {
+        "check": "campaign consistency",
+        "command": "python -B docs/campaigns/dad-high-value-recovery/checks/validate_campaign_consistency.py",
+        "exit_code": 0,
+        "result": "VALID packets, digests, CI split, atomic pilot slots, budgets, receipt contract, and mesh snapshot"
+      },
+      {
+        "check": "mesh reconciliation against revision 5 prior",
+        "command": "python -B C:/Users/lowel/.codex/skills/dad-manifest-graph-engineering/scripts/validate_agent_mesh_manifest.py docs/campaigns/dad-high-value-recovery/mesh/agent-mesh.plan.v1.json --prior docs/campaigns/dad-high-value-recovery/mesh/agent-mesh.plan.v5.prior.json --print-digest",
+        "exit_code": 0,
+        "semantic_digest": "sha256:7ec717e316d513c65da5dc3eca372202b4488977aead6b88c1ae3d1ddf865451"
+      },
+      {
+        "check": "repository validation",
+        "command": "python -B -m digital_asset_directory.cli validate --hub .",
+        "exit_code": 0,
+        "valid": true,
+        "checked_count": 382,
+        "error_count": 0,
+        "warning_count": 1,
+        "warning": "Existing 48-branch stale sensitive-diff watchlist"
+      },
+      {
+        "check": "portability",
+        "command": "validate_portability(Path('.'), now=2026-08-23 UTC)",
+        "valid": true,
+        "hard_finding_count": 0,
+        "warning_count": 1,
+        "warning": "Unrelated nonroutable_stale_evidence for the weekly-research adapter"
+      },
+      {
+        "check": "two metadata-only branch dispositions",
+        "command": "check_branch_dispositions(Path('.'), now=2026-08-23 UTC)",
+        "valid": true,
+        "scoped_branch_count": 2,
+        "rows": [
+          {
+            "branch": "codex/preserve-parallel-orchestration-20260710",
+            "tip": "4f085940b8e5f529911c58477742dbd42c6c186f",
+            "disposition": "tombstone",
+            "status": "ok"
+          },
+          {
+            "branch": "preserve/c4-ci-test-routing",
+            "tip": "e17cb43cd8269d507e0635f67b3ff4689f2e4abe",
+            "disposition": "active",
+            "review_after": "2026-09-05",
+            "status": "ok"
+          }
+        ],
+        "branch_or_ref_mutations": 0
+      }
+    ],
+    "runner_note": "The checker's first static-schema and mesh invocations were malformed by host command-string backslash escaping and did not execute the validators. Both were immediately rerun with forward-slash script paths; only the successful reruns above are acceptance evidence.",
+    "same_head_evidence_not_repeated": {
+      "full_suite": "2209 passed, 1 skipped at HEAD 76c268d191d40dd66016e7f41ad5fa79ffbd5f29; not rerun by this checker because the authorized correction changes evidence documents only and the full suite previously took 1530.37 seconds",
+      "receipt_durability_tests": "11 passed in the writer's current correction validation; not repeated by this checker",
+      "focused_revision_6_control_suite": "82 passed, 1 optional-cryptography test skipped under the standard runtime; preserved qualification evidence",
+      "bundled_signed_test": "1 passed using bundled cryptography 50.0.0; preserved qualification evidence"
+    }
+  },
+  "current_inert_qualification": {
+    "command": "python -B -m digital_asset_directory.campaign_codex_shell_adapter qualify --repo . --manifest docs/campaigns/dad-high-value-recovery/campaign.json --decision-receipt docs/campaigns/dad-high-value-recovery/checks/evidence/decision/human-decision-receipt.json --job J-100 --source-revision 76c268d191d40dd66016e7f41ad5fa79ffbd5f29",
+    "status": "blocked",
+    "execution_authorized": false,
+    "dispatch_allowed": false,
+    "manual_packet_ready": false,
+    "source_revision_digest": "sha256:63808754e85eb6b1439bbd60d904e558340ec9d42ec0a8aa371a732fd59007c6",
+    "adapter_snapshot_digest": "sha256:ec64ac59086b499016bccd60b81f333627cdc6a2c66717389a4ccfefd771959c",
+    "evidence_snapshot_digest": "sha256:66eff02fa653c83b61add990b079fc367445d5e1aaa0a0829d5bbbe2971429aa",
+    "packet_digest": "sha256:a56b05d4685c1cd56fec19cc87fde9f43c65809fa036fa043ad651263d436988",
+    "blocking_reason_count": 47,
+    "blocking_reasons": [
+      "campaign_binding_mismatch:acceptance_evidence_paths",
+      "campaign_binding_mismatch:action_class",
+      "campaign_binding_mismatch:adapter_revision",
+      "campaign_binding_mismatch:allowed_effects",
+      "campaign_binding_mismatch:allowed_paths",
+      "campaign_binding_mismatch:authority_approval_ids",
+      "campaign_binding_mismatch:authorization_receipt_digest",
+      "campaign_binding_mismatch:budget_receipt_digests",
+      "campaign_binding_mismatch:campaign_budget_digest",
+      "campaign_binding_mismatch:campaign_id",
+      "campaign_binding_mismatch:campaign_revision",
+      "campaign_binding_mismatch:checker_revision_id",
+      "campaign_binding_mismatch:checkpoint_path",
+      "campaign_binding_mismatch:dependency_receipt_digests",
+      "campaign_binding_mismatch:durability_verifier_digest",
+      "campaign_binding_mismatch:evidence_snapshot_digest",
+      "campaign_binding_mismatch:heartbeat_minutes",
+      "campaign_binding_mismatch:idempotency_key",
+      "campaign_binding_mismatch:input_digests",
+      "campaign_binding_mismatch:job_budget_digest",
+      "campaign_binding_mismatch:job_id",
+      "campaign_binding_mismatch:lease_minutes",
+      "campaign_binding_mismatch:manifest_digest",
+      "campaign_binding_mismatch:max_repairs",
+      "campaign_binding_mismatch:output_paths",
+      "campaign_binding_mismatch:packet_digest",
+      "campaign_binding_mismatch:qualification_evidence_digests",
+      "campaign_binding_mismatch:receipt_path",
+      "campaign_binding_mismatch:repair_attempt",
+      "campaign_binding_mismatch:schema_version",
+      "campaign_binding_mismatch:source_revision",
+      "campaign_binding_mismatch:worker_revision_id",
+      "campaign_binding_schema_invalid",
+      "campaign_dispatch_binding_missing",
+      "campaign_lease_binding_missing",
+      "campaign_lease_count_invalid",
+      "campaign_partial_effects_unreconciled",
+      "campaign_repair_limit_invalid",
+      "human_authorization_approver_invalid",
+      "human_authorization_digest_mismatch",
+      "human_authorization_effects_mismatch",
+      "human_authorization_identity_invalid",
+      "human_authorization_job_mismatch",
+      "human_authorization_not_active",
+      "human_authorization_portfolio_refs_invalid",
+      "human_authorization_revision_mismatch",
+      "human_authorization_schema_invalid"
+    ],
+    "effects": {
+      "campaign_job_receipts_created": 0,
+      "campaign_state_writes": 0,
+      "downstream_writes": 0,
+      "git_changes": 0,
+      "model_calls": 0,
+      "network_calls": 0,
+      "subprocesses_started": 0
+    },
+    "state_files_absent": [
+      "docs/campaigns/dad-high-value-recovery/state/J-100.json",
+      "docs/campaigns/dad-high-value-recovery/state/J-100.receipts.jsonl",
+      "docs/campaigns/dad-high-value-recovery/state/receipts.jsonl"
+    ],
+    "receipt_absence_interpretation": "Expected before J-100. Aggregate durability verification must fail closed until an authorized execution creates durable receipts.",
+    "result": "stable_and_inert"
+  },
+  "crypto_runtime_observation": {
+    "standard_project_runtime": {
+      "cryptography_present": false
+    },
+    "already_bundled_primary_runtime": {
+      "cryptography_present": true,
+      "version": "50.0.0"
+    },
+    "interpretation": "This confirms preserved qualification evidence availability only. It does not select or authorize a launch runtime, install a dependency, or weaken the current block."
+  },
+  "scope_and_preservation_findings": {
+    "correction_is_evidence_only": true,
+    "writer_owned_paths_before_checker_write": 5,
+    "checker_owned_paths_written": 1,
+    "campaign_manifest_changed": false,
+    "campaign_charter_changed": false,
+    "source_authority_changed": false,
+    "implementation_changed": false,
+    "tests_changed": false,
+    "control_receipts_changed": false,
+    "qualification_evidence_changed": false,
+    "dry_run_evidence_changed": false,
+    "runtime_or_control_failure_introduced": false,
+    "revision_6_bounded_control_disposition": "ACCEPT_unchanged",
+    "h_010_disposition": "BLOCK",
+    "j_100_disposition": "BLOCK",
+    "launch_disposition": "BLOCK"
+  },
+  "residual_caveats": [
+    "The original 100-file revision-6 commit is not git-diff whitespace-clean: it retains 29 findings across 18 paths.",
+    "Correction-delta hygiene does not establish original-commit hygiene and must never be presented as doing so.",
+    "The historical c800 change-set digest is bound to the recorded en-US PowerShell Sort-Object ordering and is not a portable ordinal algorithm.",
+    "The 25-minute full suite was not rerun by this checker; its same-HEAD 2209-passed, 1-skipped result is inherited evidence, while current deterministic validators and qualification were independently rerun.",
+    "Repository validation retains one existing 48-branch stale sensitive-diff warning; portability retains one unrelated nonroutable stale-evidence warning.",
+    "The standard project runtime still lacks cryptography; the bundled 50.0.0 proof does not itself select or authorize a runtime.",
+    "This ACCEPT is limited to the six-path evidence-correction packet and does not authorize staging, commit, H-010, J-100, or launch."
+  ],
+  "effects": {
+    "checker_owned_files_created": 1,
+    "checker_owned_path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/independent-evidence-correction-review-revision-6-postcommit.json",
+    "writer_owned_paths_modified_by_checker": 0,
+    "campaign_state_or_job_receipt_effects": 0,
+    "git_index_commit_ref_or_remote_effects": 0,
+    "github_effects": 0,
+    "downstream_or_external_effects": 0,
+    "h_010_or_j_100_execution_effects": 0,
+    "scope_note": "The sole authorized filesystem effect is this checker-owned untracked review receipt. No stage, commit, ref, remote, campaign-state, job-receipt, or external mutation occurred."
+  },
+  "next_gate": "After this immutable checker receipt exists, the owner must compute the final six-path raw-working-byte digest with the explicit StringComparer.Ordinal algorithm and present that exact binding for a separate human decision. Any later staging or commit requires separate exact atomic authority. H-010 must remain separately revision- and digest-bound, and J-100/launch require their own later authorization after all gates are green.",
+  "authority_boundary": {
+    "authorized": "Create exactly this independent checker receipt after bounded read-only verification.",
+    "excluded": [
+      "stage",
+      "commit",
+      "push",
+      "merge",
+      "launch",
+      "H-010",
+      "J-100",
+      "campaign state creation",
+      "campaign receipt creation",
+      "GitHub mutation",
+      "downstream mutation",
+      "enrollment mutation",
+      "plugin installation or activation",
+      "global settings mutation",
+      "automation mutation",
+      "cleanup",
+      "reset",
+      "rebase",
+      "secret access",
+      "writer-file repair",
+      "any unrelated change"
+    ]
+  }
+}

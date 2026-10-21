@@ -1,0 +1,273 @@
+{
+  "schema_version": "dad.campaign.prelaunch_evidence_correction.v1",
+  "correction_id": "E-PRELAUNCH-007",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "campaign_revision": "6-execution-control-bridge-candidate-20260823",
+  "recorded_at": "2026-08-24T19:05:04Z",
+  "producer_role": "bounded-evidence-writer",
+  "correction_scope": "evidence_only_non_cascading",
+  "status": "candidate_pending_independent_review",
+  "source_commit": {
+    "head": "76c268d191d40dd66016e7f41ad5fa79ffbd5f29",
+    "parent": "e05c4e5de2d8ad0fb87e19c42783ad28dd04a3b4",
+    "tree": "2b2daa145a052314afbdba36a856cf86252a6d94",
+    "committed_at": "2026-08-24T12:00:22-04:00",
+    "message": "chore: add DAD high-value recovery campaign control plane"
+  },
+  "authorized_original_change_set": {
+    "digest": "sha256:c8006cbe442b21a5e66d37806d7e48fecfb793e510debc5dbbbd3c0f9ad9b988",
+    "path_count": 100,
+    "modified_path_count": 36,
+    "originally_untracked_path_count": 64,
+    "remeasurement_result": "match",
+    "historical_digest_algorithm": "For every path in the committed HEAD^..HEAD delta, retain its original precommit kind as modified or untracked; sort records with PowerShell Sort-Object -Property Path -CaseSensitive on the recorded Windows host; emit kind<TAB>path<TAB>sha256:<raw-working-byte-digest><LF>; hash the UTF-8 payload, including the final LF, with SHA-256.",
+    "historical_digest_host": {
+      "culture": "en-US",
+      "ui_culture": "en-US",
+      "powershell_version": "7.6.4",
+      "os": "Microsoft Windows NT 10.0.26200.0"
+    },
+    "portability_caveat": "The authorized digest is an immutable historical binding, but its sort was culture-sensitive rather than true ordinal. New correction-set digests use explicit StringComparer.Ordinal ordering and must not relabel the historical algorithm."
+  },
+  "contradicted_assertion": {
+    "immutable_evidence_path": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/independent-launch-review-revision-6.json",
+    "immutable_evidence_digest": "sha256:f1d058c3762084045732c5efc46d121f5ed4391b843846fc5c67baaf539841d1",
+    "json_pointer": "/independent_validation/5/result",
+    "historical_check": "git diff --check",
+    "historical_result": "pass",
+    "coverage_gap": "The historical check was run before the atomic commit. At that time it covered tracked working-tree changes but did not cover the 64 files that were still untracked. The frozen review truthfully records that precommit attempt but does not establish that the later commit delta is whitespace-clean.",
+    "corrected_check": "git diff-tree --check HEAD^ HEAD",
+    "corrected_result": "fail_with_29_findings",
+    "supersession_scope": "Only the revision-6 review's git-diff cleanliness assertion is superseded. Its bounded execution-control acceptance, launch/H-010/J-100 block, control findings, and all other validation evidence remain immutable and in force."
+  },
+  "postcommit_reproduction": {
+    "worktree": "C:/wt/dad-high-value-execution",
+    "branch": "codex/dad-high-value-execution-plan-20260820",
+    "command": "git diff-tree --check HEAD^ HEAD",
+    "exit_code": 2,
+    "finding_count": 29,
+    "affected_path_count": 18,
+    "trailing_whitespace_count": 13,
+    "blank_line_at_eof_count": 16,
+    "normalized_output_digest": "sha256:0c54363719ff001eafb00e259aa2eeb593b25a9d3193bba25c8e1ccdadda6fbf",
+    "normalized_output_digest_basis": "UTF-8 bytes of the command's merged output lines with LF separators and one final LF",
+    "normalized_output_byte_count": 3496
+  },
+  "findings": [
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/03_OUTCOME_CONTRACT_AND_DATA_REPAIR.md",
+      "line": 164,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/06_SCALE_OR_SHRINK_DECISION.md",
+      "line": 106,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/08_SUPERSESSION_AND_ARCHIVE_MAP.md",
+      "line": 46,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/09_RESEARCH_BENCHMARK_AND_DESIGN_PRINCIPLES.md",
+      "line": 3,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/09_RESEARCH_BENCHMARK_AND_DESIGN_PRINCIPLES.md",
+      "line": 4,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/09_RESEARCH_BENCHMARK_AND_DESIGN_PRINCIPLES.md",
+      "line": 99,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/README.md",
+      "line": 3,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/README.md",
+      "line": 4,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/README.md",
+      "line": 5,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/README.md",
+      "line": 6,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/LAUNCH_RISK_REVIEW.md",
+      "line": 3,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/LAUNCH_RISK_REVIEW.md",
+      "line": 4,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/LAUNCH_RISK_REVIEW.md",
+      "line": 5,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/LAUNCH_RISK_REVIEW.md",
+      "line": 6,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/LAUNCH_RISK_REVIEW.md",
+      "line": 7,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/LAUNCH_RISK_REVIEW.md",
+      "line": 8,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/LAUNCH_RISK_REVIEW.md",
+      "line": 9,
+      "kind": "trailing_whitespace"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/checks/human-decision-receipt.template.json",
+      "line": 19,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/jobs/J-110_TEMPORARY_EXPANSION_FREEZE.md",
+      "line": 64,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/jobs/J-200_REPAIR_LOCAL_AND_SCHEDULED_REGRESSION.md",
+      "line": 67,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/jobs/J-215_OBSERVE_FOUR_WEEK_CI_STABILITY.md",
+      "line": 65,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/jobs/J-300_ENFORCE_RECOMMENDATION_OUTCOME_CONTRACT.md",
+      "line": 69,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/jobs/J-310_CLASSIFY_AND_QUARANTINE_LEGACY_OUTCOMES.md",
+      "line": 63,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/jobs/J-320_CORRECT_LEARNING_YIELD_SEMANTICS.md",
+      "line": 65,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/jobs/J-410_RECONCILE_DAEMON_JOURNAL_AND_TASK_HEALTH.md",
+      "line": 65,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/jobs/J-600_ISSUE_SCALE_NARROW_RETIRE_DECISION.md",
+      "line": 74,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/mesh/agent-mesh.plan.v3.prior.json",
+      "line": 370,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/mesh/agent-mesh.plan.v5.prior.json",
+      "line": 315,
+      "kind": "new_blank_line_at_eof"
+    },
+    {
+      "path": "docs/campaigns/dad-high-value-recovery/state/README.md",
+      "line": 14,
+      "kind": "new_blank_line_at_eof"
+    }
+  ],
+  "preserved_authority": {
+    "campaign_manifest_digest": "sha256:58bf4181a3eeb2cc45156d8e50dc7089e8c1a42a17cd3ff4c4eda67f077c2ee9",
+    "campaign_charter_digest": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362",
+    "source_authority": [
+      {
+        "path": "AGENTS.md",
+        "digest": "sha256:686d11cac8f4f6fc06757ce365b80b34f12ef7c1fd19f2eb7858ee4af7c36742"
+      },
+      {
+        "path": "docs/campaigns/dad-high-value-recovery/campaign.md",
+        "digest": "sha256:8a26deb7c57fde99f4a5f2331afe9a2324378eb33a72b4491e8c1f2f1e053362"
+      },
+      {
+        "path": "docs/campaigns/dad-high-value-recovery/09_RESEARCH_BENCHMARK_AND_DESIGN_PRINCIPLES.md",
+        "digest": "sha256:45bf381c425686fa2eb3bc98194f0a7d0d4a08e3faaac0420e236e842dd79820"
+      },
+      {
+        "path": "docs/SELF_LEARNING_IMPROVEMENT_SYSTEM_PLAN.md",
+        "digest": "sha256:7e9a9dd5f99ad06c1e604dba9f53cde9aa6b7a318fa3e6033d959f43f93080e1"
+      },
+      {
+        "path": "docs/DAD_PORTFOLIO_AI_OPERATING_SYSTEM_PLAN.md",
+        "digest": "sha256:238782f90fe25bb350c8099f4a1b7f29ad18c7a4cdf97a7386d576115ec09b0d"
+      }
+    ]
+  },
+  "preservation_requirements": [
+    "Do not edit the frozen revision-6 independent review; supersede only its diff-check assertion through this receipt and its independent correction review.",
+    "Do not edit campaign.json, campaign.md, any of the five source-authority files, implementation, tests, control receipts, qualifications, or dry-run evidence.",
+    "Do not normalize, delete, or otherwise change any of the 29 historical finding lines in this evidence-only correction.",
+    "A clean check on the correction delta proves only that the correction introduces no new whitespace error; it does not rewrite or make the original commit delta clean."
+  ],
+  "control_state": {
+    "bounded_revision_6_control_disposition": "ACCEPT_unchanged",
+    "historical_commit_diff_clean": false,
+    "execution_authorized": false,
+    "dispatch_allowed": false,
+    "manual_packet_ready": false,
+    "dry_run_status": "blocked",
+    "dry_run_reason_count": 47,
+    "launch_h010_j100_disposition": "BLOCK_unchanged"
+  },
+  "preserved_revision_6_dry_run_effects": {
+    "campaign_job_receipts_created": 0,
+    "campaign_state_writes": 0,
+    "downstream_writes": 0,
+    "git_changes": 0,
+    "model_calls": 0,
+    "network_calls": 0,
+    "subprocesses_started": 0
+  },
+  "correction_lane_effects_at_candidate_freeze": {
+    "writer_owned_working_tree_paths": 5,
+    "staged_paths": 0,
+    "commits": 0,
+    "branch_or_ref_mutations": 0,
+    "external_or_downstream_mutations": 0
+  },
+  "authorized_paths": {
+    "writer_owned": [
+      "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/prelaunch-evidence-correction-revision-6-postcommit.json",
+      "docs/campaigns/dad-high-value-recovery/README.md",
+      "docs/campaigns/dad-high-value-recovery/checks/LAUNCH_RISK_REVIEW.md",
+      "docs/campaigns/dad-high-value-recovery/07_EVIDENCE_INDEX.md",
+      "docs/campaigns/dad-high-value-recovery/handoff.md"
+    ],
+    "checker_owned": "docs/campaigns/dad-high-value-recovery/checks/evidence/launch/independent-evidence-correction-review-revision-6-postcommit.json"
+  },
+  "next_gate": "A distinct checker must reproduce the commit identity, authorized 100-file digest, exact 29-finding inventory, immutable authority digests, five writer-owned path set, clean correction delta, and zero prohibited effects. Stop before staging or commit and request separate exact authorization bound to the final six-path digest.",
+  "authority_boundary": "This receipt corrects evidence only. It does not authorize H-010, J-100, runtime or trust activation, campaign launch, staging, commit, push, merge, publication, deployment, GitHub changes, downstream mutation, enrollment, plugins, global settings, automation, cleanup, reset, rebase, secret access, or any unrelated change."
+}

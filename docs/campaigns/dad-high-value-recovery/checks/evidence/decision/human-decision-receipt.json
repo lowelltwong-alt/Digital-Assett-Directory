@@ -1,0 +1,103 @@
+{
+  "schema_version": "dad.high_value_recovery.human_decision.v1",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "campaign_revision": "3-launch-candidate-20260821",
+  "manifest_digest": "sha256:1ed2bb5a715ec61d9b92899016fabe90fa835511b079abd3615811a7fdf90a3c",
+  "decision_id": "H-001-through-H-010",
+  "decision": "approved_candidate_decisions_and_bounded_prelaunch_repair",
+  "decisions": [
+    {
+      "decision_id": "H-001",
+      "value": "Lowell"
+    },
+    {
+      "decision_id": "H-002",
+      "value": "2026-11-19"
+    },
+    {
+      "decision_id": "H-003",
+      "value": "approve"
+    },
+    {
+      "decision_id": "H-004",
+      "value": "enforce administrators",
+      "boundary": "No GitHub protection or repository setting change is authorized by this receipt."
+    },
+    {
+      "decision_id": "H-005",
+      "value": "cycle time",
+      "boundary": "The campaign's existing metric definition and minimum P5B/P5C thresholds remain binding."
+    },
+    {
+      "decision_id": "H-006",
+      "value": [
+        "preflight recommendation and reuse",
+        "exception to validated-fix reuse",
+        "PR/worktree recovery triage"
+      ]
+    },
+    {
+      "decision_id": "H-007",
+      "value": [
+        "repo:dad",
+        "repo:mock-trial",
+        "repo:lawfirm-os"
+      ],
+      "boundary": "Selection only. Every non-DAD repository still requires exact repo-local approval and privacy-boundary verification before dispatch or write."
+    },
+    {
+      "decision_id": "H-008",
+      "value": "immutable quarantine from aggregates"
+    },
+    {
+      "decision_id": "H-009",
+      "value": "review-only classification"
+    },
+    {
+      "decision_id": "H-010",
+      "value": {
+        "campaign_revision": "3-launch-candidate-20260821",
+        "manifest_digest": "sha256:1ed2bb5a715ec61d9b92899016fabe90fa835511b079abd3615811a7fdf90a3c"
+      },
+      "boundary": "This approval does not carry forward automatically to a changed activation-candidate revision or digest."
+    }
+  ],
+  "scope": [
+    "record H-001 through H-010 for the approved candidate",
+    "repair MCP installed-host evidence and dependency-map blockers without expanding authority",
+    "repair portability content-digest and stale-evidence blockers",
+    "implement and qualify an inert provider-neutral local campaign controller/runtime adapter",
+    "repair the Windows ledger-lock and repository-validation blockers",
+    "produce and independently review a new activation candidate"
+  ],
+  "allowed_effects": [
+    "bounded local edits in the registered campaign worktree",
+    "local deterministic tests and read-only inventories",
+    "controller dry-run and shutdown qualification that cannot dispatch J-100 or another campaign job",
+    "privacy-safe evidence, decision, qualification, and review artifacts"
+  ],
+  "prohibited_effects": [
+    "execute J-100 or any later campaign job",
+    "launch or activate the campaign controller",
+    "mutate or enroll a downstream repository",
+    "change GitHub protection or repository settings",
+    "commit, push, publish, merge, release, or deploy",
+    "install plugins or change global settings",
+    "send messages or access unapproved mail",
+    "access secrets or private payloads",
+    "delete, prune, move, clean, reset, rebase, or destructively modify a branch or worktree"
+  ],
+  "owner": "Lowell",
+  "approved_by": "Lowell",
+  "approved_at": "2026-08-21T11:09:35.2574604-04:00",
+  "expires_at": "2026-11-19T23:59:59-05:00",
+  "approval_method": "affirmative_interactive_thread_message",
+  "cryptographic_signature_status": "not_provided",
+  "evidence_refs": [
+    "codex-thread:01a01fc1-0516-7653-99e2-f7a66a1a7bba#human-approval-2026-08-21",
+    "docs/campaigns/dad-high-value-recovery/campaign.md#7-human-decisions-required-before-launch",
+    "docs/campaigns/dad-high-value-recovery/campaign.json"
+  ],
+  "rollback_or_reversal": "Lowell may revoke or supersede this candidate approval in a later explicit decision. Local repair outputs remain inert candidate evidence until a new exact activation revision is separately approved.",
+  "authority_boundary": "This receipt grants only the exact candidate decisions and bounded prelaunch repair effects listed above. It is not a launch authorization and does not imply J-100 execution, publication, merge, deployment, cleanup, deletion, secret access, global settings, GitHub changes, or cross-repository write authority."
+}

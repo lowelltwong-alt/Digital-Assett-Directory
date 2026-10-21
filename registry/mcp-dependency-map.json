@@ -60,7 +60,7 @@
       "fingerprint": {
         "kind": "exact_sha256",
         "path": "src/digital_asset_directory/mcp_server.py",
-        "sha256": "sha256:0c6d3e8611b87602b38ead1bd8fad8fd4b566d7f495e91551f7cbaf626c45852"
+        "sha256": "sha256:fecfe875dd576fb32f663759b16fa532a96d5b7503e5bcf4e96de77af9a5957d"
       }
     },
     {
@@ -85,7 +85,7 @@
       "fingerprint": {
         "kind": "exact_sha256",
         "path": "src/digital_asset_directory/mcp_server.py",
-        "sha256": "sha256:0c6d3e8611b87602b38ead1bd8fad8fd4b566d7f495e91551f7cbaf626c45852"
+        "sha256": "sha256:fecfe875dd576fb32f663759b16fa532a96d5b7503e5bcf4e96de77af9a5957d"
       }
     },
     {
@@ -121,7 +121,7 @@
       "fingerprint": {
         "kind": "exact_sha256",
         "path": "src/digital_asset_directory/mcp_dependency_map.py",
-        "sha256": "sha256:f1cd29d05b2c3ed32557cebe7c1274d5ef9ac729d60e06400ea9eeb2988030e5"
+        "sha256": "sha256:1fe8e04b1dcd02b875873fda0adc259a920dc0ecff1599b9c78ab551fa431123"
       }
     },
     {
@@ -190,7 +190,7 @@
       "fingerprint": {
         "kind": "exact_sha256",
         "path": "schemas/mcp-dependency-map.schema.json",
-        "sha256": "sha256:142e598bbfa6f95e9db535d7443933b15531aeb5dc8ff06652b7575b2c8617c3"
+        "sha256": "sha256:f3df64ba6316ff67c296bb29a531e6758c7de0b8e83489d3414a6344c1aca3c2"
       }
     },
     {
@@ -339,7 +339,7 @@
       "fingerprint": {
         "kind": "exact_sha256",
         "path": "tests/test_mcp_dependency_map.py",
-        "sha256": "sha256:400ba1043e5dda514bb2f29dafdf2f9e3970ebf33656e908240d45a293d54709"
+        "sha256": "sha256:029681f9c916a038c7ad873a8c084e6641d47298233f07080b1bf2a4115f0c1d"
       }
     },
     {
@@ -352,7 +352,7 @@
         "kind": "python_symbol_sha256",
         "path": "src/digital_asset_directory/validation.py",
         "symbol": "validate_repo",
-        "sha256": "sha256:ec75239adbc1fd10f966990a0dc68d3e6c7ab07ced6119f2c478af08f114e42d"
+        "sha256": "sha256:f8d5727a906cee0eaab258cf98060131ec975371190bec62a76e7eaca5c37be2"
       }
     },
     {
@@ -747,7 +747,7 @@
     "repository_validation_gate": {
       "path": "src/digital_asset_directory/validation.py",
       "function": "validate_repo",
-      "status_field": "current_claims_allowed"
+      "status_field": "structural_claims_allowed"
     },
     "consumer_node_ids": [
       "mcp.node.host-adapter.installed-evidence",

@@ -16,7 +16,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Mapping
 import uuid
 
 from .ids import stable_id
@@ -112,6 +112,7 @@ def lease_scope_digest(payload: dict[str, Any]) -> str:
             "portability_assessment_id",
             "portability_artifact_ids",
             "portability_scope_digest",
+            "campaign_binding",
         )
         if key in payload
     )
@@ -122,6 +123,7 @@ def lease_scope_digest(payload: dict[str, Any]) -> str:
 
 
 def dispatch_scope_digest(payload: dict[str, Any]) -> str:
+    optional = ("campaign_binding",) if "campaign_binding" in payload else ()
     return _scope_digest(
         "dispatch",
         {
@@ -140,9 +142,27 @@ def dispatch_scope_digest(payload: dict[str, Any]) -> str:
                 "authority_refs",
                 "expected_repo_snapshot",
                 "forbidden_actions",
+                *optional,
             )
         },
     )
+
+
+def _canonical_campaign_binding(
+    value: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Detach a strict campaign binding before it enters the authority ledger."""
+
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise TypeError("campaign_binding must be a mapping")
+    normalized = json.loads(
+        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    )
+    if normalized.get("schema_version") != "dad.campaign.execution_control_binding.v1":
+        raise ValueError("unsupported campaign_binding schema_version")
+    return normalized
 
 
 def _accepted_repo_binding(workstream: dict[str, Any], binding_id: str) -> dict[str, Any] | None:
@@ -387,6 +407,8 @@ def _repo_paths_are_canonical(values: Any) -> bool:
 
 def _dispatch_scope_problems(dispatch: dict[str, Any], lease: dict[str, Any]) -> list[str]:
     problems: list[str] = []
+    if dispatch.get("campaign_binding") != lease.get("campaign_binding"):
+        problems.append("campaign_binding_outside_lease")
     if dispatch.get("action") not in lease.get("action_classes", []):
         problems.append("action_outside_lease")
     if dispatch.get("repo_binding_id") != lease.get("repo_binding_id"):
@@ -668,6 +690,10 @@ def fold_execution_control(
                 "scope_digest"
             ) or not reconciliation.get("attempt_id"):
                 status = "blocked_reconciliation_scope"
+            elif reconciliation.get("campaign_binding", dispatch.get("campaign_binding")) != (
+                dispatch.get("campaign_binding")
+            ):
+                status = "blocked_reconciliation_scope"
             elif not _event_is_verified(
                 "dispatch_reconciliation_recorded", reconciliation, verified
             ):
@@ -798,6 +824,7 @@ def request_execution_lease(
     portability_assessment_id: str = "",
     portability_artifact_ids: Iterable[str] = (),
     portability_scope_digest: str = "",
+    campaign_binding: Mapping[str, Any] | None = None,
     supersedes_lease_id: str = "",
     lease_id: str = "",
     command_id: str | None = None,
@@ -841,6 +868,9 @@ def request_execution_lease(
             portability_artifact_ids, field="portability_artifact_ids"
         )
         payload["portability_scope_digest"] = portability_scope_digest
+    normalized_campaign_binding = _canonical_campaign_binding(campaign_binding)
+    if normalized_campaign_binding is not None:
+        payload["campaign_binding"] = normalized_campaign_binding
     payload["scope_digest"] = lease_scope_digest(payload)
 
     def prepare(
@@ -1005,6 +1035,7 @@ def propose_dispatch_intent(
     authority_refs: Iterable[str],
     expected_repo_snapshot: str,
     forbidden_actions: Iterable[str] = (),
+    campaign_binding: Mapping[str, Any] | None = None,
     dispatch_revision_id: str = "",
     command_id: str | None = None,
     now: datetime | None = None,
@@ -1075,6 +1106,14 @@ def propose_dispatch_intent(
                 )
             ),
         }
+        normalized_campaign_binding = _canonical_campaign_binding(campaign_binding)
+        if normalized_campaign_binding is not None:
+            if normalized_campaign_binding != lease.get("campaign_binding"):
+                return {
+                    "status": "campaign_binding_scope_mismatch",
+                    "events_appended": 0,
+                }
+            payload["campaign_binding"] = normalized_campaign_binding
         payload["scope_digest"] = dispatch_scope_digest(payload)
         return payload, {
             "status": "proposed",

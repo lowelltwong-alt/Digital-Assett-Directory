@@ -2,17 +2,43 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+import json
 from pathlib import Path
+import runpy
 from types import SimpleNamespace
 
 import pytest
 
+import digital_asset_directory.campaign_codex_shell_adapter as shell_adapter
 import digital_asset_directory.portability_control as pc
+from digital_asset_directory.campaign_controller import (
+    campaign_source_digest,
+    file_digest,
+    load_campaign_manifest,
+)
 from digital_asset_directory.harness_engineering import validate_harness_revision
-from digital_asset_directory.portfolio_execution import request_execution_lease
+from digital_asset_directory.portfolio_execution import (
+    CAMPAIGN_BINDING_SCHEMA,
+    request_execution_lease,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
+CAMPAIGN_MANIFEST = ROOT / "docs/campaigns/dad-high-value-recovery/campaign.json"
+CAMPAIGN_CONSISTENCY_CHECK = (
+    ROOT / "docs/campaigns/dad-high-value-recovery/checks/validate_campaign_consistency.py"
+)
+RECEIPT_VERIFIER_RELATIVE = Path(
+    "docs/campaigns/dad-high-value-recovery/checks/verify_receipt_durability.py"
+)
+RECEIPT_VERIFIER = ROOT / RECEIPT_VERIFIER_RELATIVE
+
+
+def _consistency_loader(repo_root: Path):
+    namespace = runpy.run_path(str(CAMPAIGN_CONSISTENCY_CHECK))
+    loader = namespace["_load_receipt_checker"]
+    loader.__globals__["REPO_ROOT"] = repo_root
+    return loader
 
 
 def _inventory(new_ids: list[str]) -> dict:
@@ -222,6 +248,166 @@ def test_runtime_adapter_interface_is_bound_to_its_source_authority(
     assert "adapter_interface_digest_mismatch" in {
         row["code"] for row in result["findings"]
     }
+
+
+def test_explicit_stale_disposition_is_visible_but_not_globally_hard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = deepcopy(pc.load_registry(ROOT))
+    adapter = next(
+        card
+        for card in registry["cards"]
+        if card["artifact_id"]
+        == "runtime-adapter:codex-gpt-5-6-luna-low-weekly-research"
+    )
+    adapter["status"] = "stale"
+    adapter["fresh_until"] = "2020-01-01T00:00:00+00:00"
+    monkeypatch.setattr(pc, "load_registry", lambda _root: registry)
+
+    result = pc.validate_portability(ROOT)
+    assert result["valid"] is True
+    assert {
+        (row["code"], row["severity"]) for row in result["findings"]
+    } >= {("nonroutable_stale_evidence", "warning")}
+
+
+def test_campaign_bridge_core_and_adapter_are_revision_bound_and_host_decoupled() -> None:
+    registry = pc.load_registry(ROOT)
+    manifest = json.loads(CAMPAIGN_MANIFEST.read_text(encoding="utf-8"))
+    core = next(
+        card
+        for card in registry["cards"]
+        if card["artifact_id"] == "library:campaign-packet-controller"
+    )
+    adapter = next(
+        card
+        for card in registry["cards"]
+        if card["artifact_id"] == "adapter:campaign-codex-shell-inert"
+    )
+    assert core["revision_id"].endswith(":0.3.2")
+    assert adapter["revision_id"].endswith(":0.3.2")
+    assert shell_adapter.revision == "dad-campaign-codex-shell-adapter:0.3.2-prelaunch"
+    assert shell_adapter.revision == manifest["execution"]["adapter"]["revision"]
+    assert adapter["core_revision_id"] == core["revision_id"]
+    assert core["adapter_revision_ids"] == [adapter["revision_id"]]
+    assert adapter["target_capability_predicate"] == {
+        "runtime_adapter_id": "adapter:codex-host",
+        "manual_host_only": True,
+        "canonical_manifest_only": True,
+        "durable_portfolio_state_required": True,
+        "explicit_repository_local_attestations": True,
+        "ed25519_backend_required_for_positive_fold": True,
+        "intent_continuity_host_gate_required": False,
+        "launch_available": False,
+        "execution_authorized": False,
+    }
+    assert {
+        "portfolio_execution_control_binding",
+        "atomic_case_binding_table_v2_validation",
+        "atomic_case_envelope_projection",
+        "cohort_closure_validation",
+        "terminal_dependency_route_projection",
+        "producer_checker_record_binding",
+        "navigation_projection_with_separate_writer_gate",
+    } <= set(core["capability_ids"])
+    assert core["content_digest"] == pc._portable_files_digest(ROOT, core)
+    assert adapter["content_digest"] == pc._portable_files_digest(ROOT, adapter)
+    assert adapter["adapter_interface_digest"] == pc._adapter_interface_digest(
+        ROOT, adapter
+    )
+    assert adapter["adapter_interface_digest"] == (
+        "sha256:f55e2ca0f8c3226ce50bf79d6ce6e13f563dd96786b0ea585fccc4c397199662"
+    )
+    assert adapter["preserved_contract_digests"] == core["contract_digests"]
+    assert core["candidate_only"] is True
+    assert adapter["candidate_only"] is True
+    assert core["execution_authorized"] is False
+    assert adapter["execution_authorized"] is False
+
+
+def test_campaign_consistency_rejects_modified_verifier_before_execution(
+    tmp_path: Path,
+) -> None:
+    verifier = tmp_path / RECEIPT_VERIFIER_RELATIVE
+    verifier.parent.mkdir(parents=True, exist_ok=True)
+    marker = tmp_path / "modified-verifier-executed.txt"
+    verifier.write_bytes(
+        RECEIPT_VERIFIER.read_bytes()
+        + (
+            "\nfrom pathlib import Path as _MarkerPath\n"
+            f"_MarkerPath({str(marker)!r}).write_text('executed', encoding='utf-8')\n"
+        ).encode("utf-8")
+    )
+
+    with pytest.raises(ValueError, match="verifier digest mismatch"):
+        _consistency_loader(tmp_path)()
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize("link_kind", ["leaf", "ancestor"])
+def test_campaign_consistency_rejects_symlinked_verifier(
+    tmp_path: Path, link_kind: str
+) -> None:
+    repo_root = tmp_path / "repo"
+    verifier = repo_root / RECEIPT_VERIFIER_RELATIVE
+    outside_checks = tmp_path / "outside-checks"
+    outside_checks.mkdir(parents=True)
+    outside_verifier = outside_checks / "verify_receipt_durability.py"
+    outside_verifier.write_bytes(RECEIPT_VERIFIER.read_bytes())
+
+    try:
+        if link_kind == "leaf":
+            verifier.parent.mkdir(parents=True)
+            verifier.symlink_to(outside_verifier)
+        else:
+            verifier.parent.parent.mkdir(parents=True)
+            verifier.parent.symlink_to(outside_checks, target_is_directory=True)
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f"symlink creation is unavailable: {exc}")
+
+    with pytest.raises(ValueError, match="traverses a symlink"):
+        _consistency_loader(repo_root)()
+
+
+def test_campaign_consistency_loader_failure_is_deterministic_invalid(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    namespace = runpy.run_path(str(CAMPAIGN_CONSISTENCY_CHECK))
+
+    def fail_closed():
+        raise ValueError("receipt durability verifier digest mismatch")
+
+    namespace["validate"].__globals__["_load_receipt_checker"] = fail_closed
+    assert namespace["main"]() == 1
+    output = capsys.readouterr()
+    assert output.err == ""
+    assert "validator failed closed: ValueError: receipt durability verifier digest mismatch" in output.out
+    assert "INVALID: 1 consistency error(s)" in output.out
+    assert "Traceback" not in output.out
+
+
+def test_stale_artifact_and_dependent_core_are_denied_protected_routing() -> None:
+    stale = pc.assess_lifecycle(
+        ROOT,
+        stage="activation",
+        task="Activate the weekly research runtime adapter",
+        artifact_ids=[
+            "runtime-adapter:codex-gpt-5-6-luna-low-weekly-research"
+        ],
+        protected_transition=True,
+    )
+    assert stale["gate_outcome"] == "block"
+    assert "artifact_nonroutable" in stale["finding_codes"]
+
+    dependent = pc.assess_lifecycle(
+        ROOT,
+        stage="activation",
+        task="Activate the reusable synthetic helper research workflow",
+        artifact_ids=["workflow:ml-synthetic-helper-research-refresh"],
+        protected_transition=True,
+    )
+    assert dependent["gate_outcome"] == "block"
+    assert "artifact_nonroutable" in dependent["finding_codes"]
 
 
 def test_existing_identity_revision_needs_fresh_disposition(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -458,3 +644,66 @@ def test_exception_candidate_never_creates_reviewed_exception() -> None:
     candidate = pc.exception_candidate("skill:bound", "requires certified hardware")
     assert candidate["reviewed_exception_created"] is False
     assert candidate["execution_authorized"] is False
+
+def test_campaign_source_digest_is_newline_stable_and_raw_digest_is_not(
+    tmp_path: Path,
+) -> None:
+    candidate = tmp_path / "campaign-source.json"
+    lf = b'{"value":"alpha"}\n'
+    crlf = lf.replace(b"\n", b"\r\n")
+    candidate.write_bytes(lf)
+    canonical = campaign_source_digest(candidate)
+    raw = file_digest(candidate)
+    static_digest = runpy.run_path(str(CAMPAIGN_CONSISTENCY_CHECK))["_sha256"]
+    assert static_digest(candidate) == canonical
+
+    candidate.write_bytes(crlf)
+    assert campaign_source_digest(candidate) == canonical
+    assert static_digest(candidate) == canonical
+    assert file_digest(candidate) != raw
+
+    candidate.write_bytes(crlf.replace(b"alpha", b"beta"))
+    assert campaign_source_digest(candidate) != canonical
+    assert static_digest(candidate) != canonical
+
+
+def test_campaign_readiness_contract_matches_runtime_binding(
+    tmp_path: Path,
+) -> None:
+    manifest = json.loads(CAMPAIGN_MANIFEST.read_text(encoding="utf-8"))
+    assert manifest["execution"]["readiness_contract"]["schema_version"] == (
+        CAMPAIGN_BINDING_SCHEMA
+    )
+
+    stale = deepcopy(manifest)
+    stale["execution"]["readiness_contract"]["schema_version"] = (
+        "dad.campaign.execution_control_binding.v2"
+    )
+    path = tmp_path / "campaign.json"
+    path.write_text(json.dumps(stale), encoding="utf-8")
+    with pytest.raises(ValueError, match="readiness contract"):
+        load_campaign_manifest(path)
+
+
+def test_intent_continuity_core_and_adapter_bind_current_sources() -> None:
+    registry = pc.load_registry(ROOT)
+    core = next(
+        card
+        for card in registry["cards"]
+        if card["artifact_id"] == "skill:personal-project-management-ops"
+    )
+    adapter = next(
+        card
+        for card in registry["cards"]
+        if card["artifact_id"] == "adapter:intent-continuity-codex-host"
+    )
+    assert core["revision_id"].endswith(":0.4.18")
+    assert adapter["revision_id"].endswith(":0.3.21")
+    assert adapter["core_revision_id"] == core["revision_id"]
+    assert core["adapter_revision_ids"] == [adapter["revision_id"]]
+    assert core["content_digest"] == pc._portable_files_digest(ROOT, core)
+    assert adapter["adapter_interface_digest"] == pc._adapter_interface_digest(
+        ROOT, adapter
+    )
+    assert adapter["adapter_interface_digest"] == "sha256:31663336b3f1917a81ce341b751392cae741aed6e9da2a86a9869c80759da628"
+

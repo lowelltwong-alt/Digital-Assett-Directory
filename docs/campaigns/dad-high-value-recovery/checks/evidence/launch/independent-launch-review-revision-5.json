@@ -1,0 +1,61 @@
+{
+  "schema_version": "dad.campaign.independent_launch_review.v1",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "campaign_revision": "5-hook-latency-candidate-20260821",
+  "manifest_digest": "sha256:ab01a104ab4e77df8157d43052d4602c80779dc1488d0e114d1f7a5029d4a875",
+  "mesh_semantic_digest": "sha256:e4b4f15d08ee05faae8fe5c024eed811378532dbcff2a1919fdc92ebc1847787",
+  "reviewer_role": "independent-checker",
+  "reviewer_relationship": "non-author-read-only",
+  "bounded_hook_repair_disposition": "ACCEPT",
+  "launch_j100_disposition": "BLOCK",
+  "verified": [
+    "campaign manifest SHA-256 and mesh semantic digest are exact",
+    "campaign schema, local consistency, and mesh reconciliation against preserved revision 4 all pass",
+    "hook qualification evidence SHA-256 is exact and requalifies under the current validator",
+    "all 16 scale samples are silent, persisted, index-consistent, full-oracle-valid, timeout-free, and failure-marker-free",
+    "warm p95 values 1039.816ms, 1180.959ms, and 1151.946ms are below 1500ms; cold 10000-row latency 2803.612ms is below 5000ms",
+    "current adapter 0.3.10, portability card 0.3.20, and interface digest sha256:751a7439821d93304475cb1f906136dc10afbe16d8a7aea21381aaaa9718ad0b agree",
+    "historical July performance, scale, and host-readiness evidence remains stale and cannot qualify the current revision",
+    "direct portability validation has zero hard findings and one explicit non-routable stale weekly-research warning",
+    "revision-5 dry run is blocked_human only for activation_not_authorized, decision_digest_mismatch, and decision_revision_mismatch, with all seven effect counters zero",
+    "independent focused hook run passed 50 tests",
+    "post-revision-5 full suite reported no hook-latency, portability, controller, adapter, runtime, or receipt regression"
+  ],
+  "post_revision_5_full_suite": {
+    "result": "fail_known_authority_blocker",
+    "failure_count": 2,
+    "failures": [
+      "tests/test_synthetic_data_resources.py::test_repo_validation_includes_synthetic_resource_registry",
+      "tests/test_validation_roadmap.py::test_repo_contracts_validate"
+    ],
+    "classification": "Both failures are caused exclusively by pointer_target_untracked for the six untracked campaign pointers. No hook-latency, portability, controller, adapter, runtime, or receipt regression was reported."
+  },
+  "repository_validation": {
+    "result": "fail_known_blockers",
+    "current_campaign_blocker": "Six pointer_target_untracked errors require atomic tracking under separately granted commit authority.",
+    "pre_existing_findings": "Two branch-disposition errors and one stale-branch warning predate the bounded hook repair.",
+    "repair_regressions_observed": false
+  },
+  "launch_blockers": [
+    "no exact H-010 approval for revision 5 and manifest digest sha256:ab01a104ab4e77df8157d43052d4602c80779dc1488d0e114d1f7a5029d4a875",
+    "execution remains specification_only and execution_authorized is false",
+    "no launch command or authorization receipt exists",
+    "controller and runtime adapter remain intentionally inert",
+    "six campaign pointers remain untracked because staging and commit authority were withheld",
+    "Codex project trust, hook discovery, and authenticated real-host dispatch remain unattested"
+  ],
+  "residual_caveats": [
+    "source_worktree_unchanged is based on Git porcelain-status equality rather than an exact full-worktree byte fingerprint",
+    "date-time format remains annotation behavior in both validation paths",
+    "cold 10K evidence contains one sample",
+    "synthetic qualification does not prove Codex project trust, hook discovery, authenticated real-host dispatch, or business value"
+  ],
+  "review_conclusion": "The post-revision-5 full-suite and repository-validation evidence removes the prior unknown validation gap and strengthens acceptance of the bounded hook repair. It does not make the repository green or authorize launch.",
+  "effects": {
+    "files_edited_by_checker": 0,
+    "campaign_state_or_receipts_created_by_checker": 0,
+    "git_or_external_effects": 0,
+    "j_100_executed": false
+  },
+  "authority_boundary": "This independent review accepts only the bounded candidate repair. It does not authorize H-010, J-100, campaign launch, staging, commit, push, merge, GitHub changes, deployment, downstream mutation, automation, or cleanup."
+}

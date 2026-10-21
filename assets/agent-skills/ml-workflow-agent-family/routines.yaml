@@ -115,7 +115,7 @@ routines:
     checker_role: ml-independent-checker
     runtime_route:
       capability_alias: luna
-      adapter_revision_id: portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.0
+      adapter_revision_id: portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.1
       reasoning_effort: low
       pause_on_model_retirement: true
     search_policy: changed_source_web_discovery_primary_source_verification

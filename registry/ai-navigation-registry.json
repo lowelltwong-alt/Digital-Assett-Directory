@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.20.1",
-  "updated_at": "2026-07-20T14:00:00Z",
+  "navigation_version": "2026.08.20.1",
+  "updated_at": "2026-08-20T19:45:00Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -758,6 +758,33 @@
         "registry/technical-product-company-os-registry.json"
       ],
       "freshness_hint": "The design is candidate-only; the P7D radar, optimizers, training work, notifications, and mutations are dormant until independently checked and separately approved by Lowell."
+    },
+    {
+      "branch_id": "dad_high_value_recovery_campaign",
+      "path": "docs/campaigns/dad-high-value-recovery/README.md",
+      "role": "Ordered specification-only recovery campaign for truthful baseline, binding CI, valid recommendation-to-outcome joins, operational closure, real-task pilots, and an evidence-backed scale-or-shrink decision.",
+      "tags": [
+        "roadmap",
+        "recovery",
+        "validation",
+        "learning_loop",
+        "human_gate",
+        "governance"
+      ],
+      "use_when": "You execute or audit the highest-value DAD recovery sequence after the August 2026 effectiveness audit, or need the exact order and human gates before changing CI, outcome semantics, lifecycle state, or pilots.",
+      "current_version": "0.2.0",
+      "last_material_change_at": "2026-08-20T19:45:00Z",
+      "change_class": "navigation_contract",
+      "route_after": [
+        "docs/campaigns/dad-high-value-recovery/campaign.md",
+        "docs/campaigns/dad-high-value-recovery/campaign.json",
+        "docs/campaigns/dad-high-value-recovery/GOAL_PROMPT.md",
+        "docs/campaigns/dad-high-value-recovery/09_RESEARCH_BENCHMARK_AND_DESIGN_PRINCIPLES.md",
+        "docs/TESTING_AND_ORCHESTRATION.md",
+        "docs/DAD_EVENT_PIPELINE.md",
+        "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md"
+      ],
+      "freshness_hint": "Specification only: validate the current manifest and resolve H-001 through H-010 before launch. The files do not authorize GitHub settings, downstream writes, cleanup, publication, merge, deployment, or recurring activation."
     },
     {
       "branch_id": "agent_family_portfolio",

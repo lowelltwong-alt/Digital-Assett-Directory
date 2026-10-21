@@ -25,11 +25,13 @@ from .portfolio_continuity_codex_hook import (
     build_codex_hook_receipt,
 )
 from .portfolio_continuity_events import (
+    ContinuityIntegrityError,
     _append_observation_to_ledger,
     _expected_event_id,
     _load_ledger_index,
     _refresh_continuity_ledger_path_index,
     read_observation_events,
+    validate_continuity_ledger_full,
 )
 from .transport import init_data_root
 from .utils import atomic_write_text, json_dumps
@@ -98,16 +100,17 @@ def _hook_command(repo_root: Path) -> tuple[str, str, list[str] | str, bool, int
     timeout_ms = int(float(handler["timeout"]) * 1000)
     if os.name == "nt":
         command_kind = "commandWindows"
-        body = (
-            "$payload = [Console]::In.ReadToEnd(); "
-            "$root = git rev-parse --show-toplevel; "
-            "$payload | python "
-            "(Join-Path $root '.codex/hooks/intent_continuity_shadow.py')"
-        )
-        args = ["powershell", "-NoProfile", "-NonInteractive", "-Command", body]
         command = str(handler[command_kind])
-        if command != subprocess.list2cmdline(args):
-            raise HookPerformanceEvidenceError("commandWindows is not the reviewed argument vector")
+        expected = 'python "$(git rev-parse --show-toplevel)/.codex/hooks/intent_continuity_shadow.py"'
+        if command != expected:
+            raise HookPerformanceEvidenceError("commandWindows is not the reviewed command")
+        args = [
+            "powershell",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            command,
+        ]
         return command_kind, command, args, False, timeout_ms
     command_kind = "command"
     command = str(handler[command_kind])
@@ -338,10 +341,113 @@ def _synthetic_scale_rows(base: Path, count: int) -> list[str]:
     return rows
 
 
-def run_hook_scale_harness(repo_root: Path) -> dict[str, Any]:
-    """Measure cold recovery and warm indexed hooks at 0, 1K, and 10K events."""
+def _collect_scale_sample(
+    *,
+    repo_root: Path,
+    ledger: Path,
+    data_root: Path,
+    rows: list[str],
+    count: int,
+    index_state: str,
+    invocation: list[str] | str,
+    use_shell: bool,
+    timeout_ms: int,
+    env: Mapping[str, str],
+) -> dict[str, Any]:
+    ledger.write_text(
+        ("\n".join(rows[:count]) + "\n") if count else "",
+        encoding="utf-8",
+    )
+    index_path = ledger.with_suffix(ledger.suffix + ".index.json")
+    index_path.unlink(missing_ok=True)
+    failure_path = data_root / "raw/portfolio/continuity-hook-failures.jsonl"
+    failure_path.unlink(missing_ok=True)
+    if index_state == "warm":
+        _refresh_continuity_ledger_path_index(ledger)
+    payload = json.dumps(
+        {
+            "session_id": f"scale-session-{count}-{index_state}",
+            "turn_id": f"scale-turn-{count}-{index_state}",
+            "hook_event_name": "Stop",
+        }
+    )
+    started = time.perf_counter()
+    timed_out = False
+    try:
+        completed = subprocess.run(
+            invocation,
+            cwd=repo_root,
+            input=payload,
+            capture_output=True,
+            text=True,
+            timeout=timeout_ms / 1000,
+            check=False,
+            env=dict(env),
+            shell=use_shell,
+        )
+        exit_code = completed.returncode
+        silent = not completed.stdout and not completed.stderr
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        exit_code = -1
+        silent = False
+    elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
+    ledger_bytes = ledger.read_bytes() if ledger.exists() else b""
+    ledger_line_count = ledger_bytes.count(b"\n")
+    try:
+        raw_index = json.loads(index_path.read_text(encoding="utf-8"))
+        if not isinstance(raw_index, dict):
+            raw_index = {}
+    except (OSError, json.JSONDecodeError):
+        raw_index = {}
+    try:
+        index = _load_ledger_index(ledger)
+    except (OSError, ValueError, ContinuityIntegrityError):
+        index = None
+    try:
+        full_events = validate_continuity_ledger_full(ledger)
+        full_oracle_valid = len(full_events) == count + 1
+    except (OSError, ValueError, ContinuityIntegrityError):
+        full_oracle_valid = False
+    failure_marker_count = (
+        failure_path.read_bytes().count(b"\n") if failure_path.exists() else 0
+    )
+    return {
+        "latency_ms": elapsed_ms,
+        "exit_code": exit_code,
+        "silent": silent,
+        "ledger_event_count": ledger_line_count,
+        "index_event_count": int(raw_index.get("event_count", -1)),
+        "index_valid": index is not None,
+        "index_size_matches": int(raw_index.get("ledger_size", -1))
+        == len(ledger_bytes),
+        "index_digest_matches": raw_index.get("ledger_sha256")
+        == "sha256:" + hashlib.sha256(ledger_bytes).hexdigest(),
+        "index_command_count": len(raw_index.get("commands", {})),
+        "failure_marker_count": failure_marker_count,
+        "persistence_confirmed": index is not None
+        and int(index["event_count"]) == count + 1
+        and ledger_line_count == count + 1,
+        "full_oracle_valid": full_oracle_valid,
+        "timed_out": timed_out,
+    }
+
+
+def collect_hook_scale_evidence(
+    repo_root: Path,
+    *,
+    warm_sample_count: int = MINIMUM_QUALIFYING_SAMPLES,
+    cold_sample_count: int = 1,
+) -> dict[str, Any]:
+    """Collect all scale outcomes without discarding a failed qualification."""
 
     repo_root = repo_root.resolve()
+    if not MINIMUM_QUALIFYING_SAMPLES <= warm_sample_count <= 100:
+        raise HookPerformanceEvidenceError(
+            f"warm_sample_count must be between {MINIMUM_QUALIFYING_SAMPLES} and 100"
+        )
+    if not 1 <= cold_sample_count <= 100:
+        raise HookPerformanceEvidenceError("cold_sample_count must be between 1 and 100")
     _kind, _command, invocation, use_shell, timeout_ms = _hook_command(repo_root)
     status_before = _status(repo_root)
     with tempfile.TemporaryDirectory(prefix="dad-hook-scale-") as raw_temp:
@@ -359,61 +465,58 @@ def run_hook_scale_harness(repo_root: Path) -> dict[str, Any]:
         results: list[dict[str, Any]] = []
         cases = ((0, "warm"), (1_000, "warm"), (10_000, "cold"), (10_000, "warm"))
         for count, index_state in cases:
-            ledger.write_text(
-                ("\n".join(rows[:count]) + "\n") if count else "",
-                encoding="utf-8",
-            )
-            index_path = ledger.with_suffix(ledger.suffix + ".index.json")
-            index_path.unlink(missing_ok=True)
-            if index_state == "warm":
-                _refresh_continuity_ledger_path_index(ledger)
-            payload = json.dumps(
-                {
-                    "session_id": f"scale-session-{count}-{index_state}",
-                    "turn_id": f"scale-turn-{count}-{index_state}",
-                    "hook_event_name": "Stop",
-                }
-            )
-            started = time.perf_counter()
-            completed = subprocess.run(
-                invocation,
-                cwd=repo_root,
-                input=payload,
-                capture_output=True,
-                text=True,
-                timeout=timeout_ms / 1000,
-                check=False,
-                env=env,
-                shell=use_shell,
-            )
-            elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
-            index = _load_ledger_index(ledger)
-            raw_index = json.loads(index_path.read_text(encoding="utf-8"))
-            ledger_bytes = ledger.read_bytes()
-            ledger_line_count = ledger_bytes.count(b"\n")
-            failure_path = data_root / "raw/portfolio/continuity-hook-failures.jsonl"
-            failure_marker_count = (
-                failure_path.read_bytes().count(b"\n") if failure_path.exists() else 0
-            )
+            target = warm_sample_count if index_state == "warm" else cold_sample_count
+            samples = [
+                _collect_scale_sample(
+                    repo_root=repo_root,
+                    ledger=ledger,
+                    data_root=data_root,
+                    rows=rows,
+                    count=count,
+                    index_state=index_state,
+                    invocation=invocation,
+                    use_shell=use_shell,
+                    timeout_ms=timeout_ms,
+                    env=env,
+                )
+                for _sample_index in range(target)
+            ]
+            latency_samples = [float(sample["latency_ms"]) for sample in samples]
+            p95 = nearest_rank_p95(latency_samples)
+            last = samples[-1]
             results.append(
                 {
                     "preexisting_event_count": count,
                     "index_state": index_state,
-                    "latency_ms": elapsed_ms,
-                    "exit_code": completed.returncode,
-                    "silent": not completed.stdout and not completed.stderr,
-                    "ledger_event_count": ledger_line_count,
-                    "index_event_count": int(raw_index.get("event_count", -1)),
-                    "index_valid": index is not None,
-                    "index_size_matches": int(raw_index.get("ledger_size", -1))
-                    == len(ledger_bytes),
-                    "index_digest_matches": raw_index.get("ledger_sha256")
-                    == "sha256:" + hashlib.sha256(ledger_bytes).hexdigest(),
-                    "index_command_count": len(raw_index.get("commands", {})),
-                    "failure_marker_count": failure_marker_count,
-                    "persistence_confirmed": index is not None
-                    and int(index["event_count"]) == count + 1
-                    and ledger_line_count == count + 1,
+                    "sample_count": len(samples),
+                    "latency_ms_samples": latency_samples,
+                    "latency_ms_p95": p95,
+                    "samples": samples,
+                    "latency_ms": p95,
+                    "exit_code": 0 if all(sample["exit_code"] == 0 for sample in samples) else -1,
+                    "silent": all(sample["silent"] is True for sample in samples),
+                    "ledger_event_count": last["ledger_event_count"],
+                    "index_event_count": last["index_event_count"],
+                    "index_valid": all(sample["index_valid"] is True for sample in samples),
+                    "index_size_matches": all(
+                        sample["index_size_matches"] is True for sample in samples
+                    ),
+                    "index_digest_matches": all(
+                        sample["index_digest_matches"] is True for sample in samples
+                    ),
+                    "index_command_count": last["index_command_count"],
+                    "failure_marker_count": sum(
+                        int(sample["failure_marker_count"]) for sample in samples
+                    ),
+                    "persistence_confirmed": all(
+                        sample["persistence_confirmed"] is True for sample in samples
+                    ),
+                    "full_oracle_valid": all(
+                        sample["full_oracle_valid"] is True for sample in samples
+                    ),
+                    "timed_out_count": sum(
+                        int(sample["timed_out"] is True) for sample in samples
+                    ),
                 }
             )
     material = {
@@ -440,13 +543,15 @@ def run_hook_scale_harness(repo_root: Path) -> dict[str, Any]:
         "measurement_id": "dad:hook-scale:" + canonical_digest(material).split(":", 1)[1],
         **material,
     }
-    validate_hook_scale_evidence(repo_root, evidence)
+    validate_hook_scale_collection(repo_root, evidence)
     return evidence
 
 
-def validate_hook_scale_evidence(
+def validate_hook_scale_collection(
     repo_root: Path, evidence: Mapping[str, Any]
 ) -> dict[str, Any]:
+    """Validate identity and measurement math, but not pass/fail qualification."""
+
     repo_root = repo_root.resolve()
     value = dict(evidence)
     _validate_scale_schema(repo_root, value)
@@ -471,34 +576,86 @@ def validate_hook_scale_evidence(
     if observed_cases != expected_cases:
         raise HookPerformanceEvidenceError("scale cases are incomplete or unordered")
     for row in value["results"]:
-        expected_event_count = int(row["preexisting_event_count"]) + 1
-        if (
-            int(row["exit_code"]) != 0
-            or row["silent"] is not True
-            or row["persistence_confirmed"] is not True
-            or row["index_valid"] is not True
-            or row["index_size_matches"] is not True
-            or row["index_digest_matches"] is not True
-            or int(row["ledger_event_count"]) != expected_event_count
-            or int(row["index_event_count"]) != expected_event_count
-            or int(row["index_command_count"]) != expected_event_count
-            or row["failure_marker_count"] != 0
+        required_new_fields = {
+            "sample_count",
+            "latency_ms_samples",
+            "latency_ms_p95",
+            "samples",
+            "full_oracle_valid",
+            "timed_out_count",
+        }
+        if not required_new_fields.issubset(row):
+            raise HookPerformanceEvidenceError("scale evidence lacks repeated-sample fields")
+        samples = list(row["samples"])
+        latencies = [float(sample["latency_ms"]) for sample in samples]
+        minimum = MINIMUM_QUALIFYING_SAMPLES if row["index_state"] == "warm" else 1
+        if int(row["sample_count"]) != len(samples) or len(samples) < minimum:
+            raise HookPerformanceEvidenceError("scale sample count is insufficient")
+        if [float(item) for item in row["latency_ms_samples"]] != latencies:
+            raise HookPerformanceEvidenceError("scale latency samples do not match outcomes")
+        p95 = nearest_rank_p95(latencies)
+        if float(row["latency_ms_p95"]) != p95 or float(row["latency_ms"]) != p95:
+            raise HookPerformanceEvidenceError("scale p95 does not match nearest-rank methodology")
+        if int(row["timed_out_count"]) != sum(
+            int(sample["timed_out"] is True) for sample in samples
         ):
-            raise HookPerformanceEvidenceError("scale case did not complete safely")
+            raise HookPerformanceEvidenceError("scale timeout count does not match samples")
+    if value["source_worktree_unchanged"] is not True:
+        raise HookPerformanceEvidenceError("source worktree changed during scale harness")
+    return value
+
+
+def qualify_hook_scale_evidence(
+    repo_root: Path, evidence: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Fail closed on any safety, oracle, timeout, or latency result."""
+
+    value = validate_hook_scale_collection(repo_root, evidence)
+    for row in value["results"]:
+        expected_event_count = int(row["preexisting_event_count"]) + 1
+        for sample in row["samples"]:
+            if (
+                int(sample["exit_code"]) != 0
+                or sample["silent"] is not True
+                or sample["timed_out"] is not False
+                or sample["persistence_confirmed"] is not True
+                or sample["full_oracle_valid"] is not True
+                or sample["index_valid"] is not True
+                or sample["index_size_matches"] is not True
+                or sample["index_digest_matches"] is not True
+                or int(sample["ledger_event_count"]) != expected_event_count
+                or int(sample["index_event_count"]) != expected_event_count
+                or int(sample["index_command_count"]) != expected_event_count
+                or int(sample["failure_marker_count"]) != 0
+            ):
+                raise HookPerformanceEvidenceError("scale case did not complete safely")
         budget = (
             float(value["warm_latency_budget_ms"])
             if row["index_state"] == "warm"
             else float(value["cold_hard_timeout_ms"])
         )
-        if float(row["latency_ms"]) > budget:
+        if float(row["latency_ms_p95"]) > budget:
             raise HookPerformanceEvidenceError(
                 "scale case exceeded its latency boundary: "
                 f"{row['preexisting_event_count']}/{row['index_state']} "
-                f"{row['latency_ms']}ms > {budget}ms"
+                f"{row['latency_ms_p95']}ms > {budget}ms"
             )
-    if value["source_worktree_unchanged"] is not True:
-        raise HookPerformanceEvidenceError("source worktree changed during scale harness")
     return value
+
+
+def validate_hook_scale_evidence(
+    repo_root: Path, evidence: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Compatibility name for the fail-closed qualification step."""
+
+    return qualify_hook_scale_evidence(repo_root, evidence)
+
+
+def run_hook_scale_harness(repo_root: Path) -> dict[str, Any]:
+    """Collect and qualify repeated cold/warm 0, 1K, and 10K evidence."""
+
+    evidence = collect_hook_scale_evidence(repo_root)
+    return qualify_hook_scale_evidence(repo_root, evidence)
 
 
 def write_hook_scale_evidence(path: Path, evidence: Mapping[str, Any]) -> None:
@@ -509,11 +666,14 @@ __all__ = [
     "HookPerformanceEvidenceError",
     "MINIMUM_QUALIFYING_SAMPLES",
     "METHODOLOGY_ID",
+    "collect_hook_scale_evidence",
     "nearest_rank_p95",
+    "qualify_hook_scale_evidence",
     "run_hook_performance_benchmark",
     "run_hook_scale_harness",
-    "validate_hook_scale_evidence",
     "validate_hook_performance_evidence",
+    "validate_hook_scale_collection",
+    "validate_hook_scale_evidence",
     "write_hook_performance_evidence",
     "write_hook_scale_evidence",
 ]

@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 import os
 import json
-import yaml
 
 from .transport import resolve_data_root
 from .utils import atomic_write_text, find_repo_root
@@ -311,7 +310,12 @@ def load_github_repositories_file(path: Path) -> list[dict[str, Any]]:
     if not path.exists() or not path.is_file():
         raise FileNotFoundError(f"GitHub repository metadata file not found: {path}")
     text = path.read_text(encoding="utf-8-sig")
-    payload = json.loads(text) if path.suffix.lower() == ".json" else yaml.safe_load(text)
+    if path.suffix.lower() == ".json":
+        payload = json.loads(text)
+    else:
+        import yaml
+
+        payload = yaml.safe_load(text)
     return _github_repository_rows_from_payload(payload)
 
 
@@ -480,6 +484,8 @@ def resolve_hub_root(repo_root: Path | None = None) -> Path:
 
 
 def load_config(path: Path | None = None, repo_root: Path | None = None) -> AppConfig:
+    import yaml
+
     root = resolve_hub_root(repo_root)
     cfg_path = resolve_config_path(root, path)
     if not cfg_path.exists():

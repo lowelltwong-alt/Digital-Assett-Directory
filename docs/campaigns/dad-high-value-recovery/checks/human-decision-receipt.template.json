@@ -1,0 +1,19 @@
+{
+  "schema_version": "dad.high_value_recovery.human_decision.v1",
+  "campaign_id": "dad-high-value-recovery-v1",
+  "campaign_revision": "replace",
+  "manifest_digest": "sha256:replace",
+  "decision_id": "H-000",
+  "decision": "replace",
+  "scope": [],
+  "allowed_effects": [],
+  "prohibited_effects": [],
+  "owner": "replace",
+  "approved_by": "Lowell",
+  "approved_at": "replace",
+  "expires_at": "replace",
+  "evidence_refs": [],
+  "rollback_or_reversal": "replace",
+  "authority_boundary": "This receipt grants only the exact decision and effects listed above. It does not imply publication, merge, deployment, cleanup, deletion, secret access, global settings, or cross-repository write authority."
+}
+

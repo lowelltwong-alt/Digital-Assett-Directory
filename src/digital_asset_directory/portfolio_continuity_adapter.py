@@ -6,13 +6,37 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from .portfolio_continuity_events import append_observation
+from .portfolio_continuity_events import (
+    _append_codex_hook_observation,
+    append_observation,
+)
 
 
 ADAPTER_AUTHORITY_BOUNDARY = (
     "The shadow adapter records minimized local metadata only. It cannot call models, "
     "networks, notifications, schedulers, Git, task mutation, or archival actions."
 )
+
+
+def _result_metadata(result: Mapping[str, Any]) -> dict[str, Any]:
+    event = result["event"]
+    return {
+        "schema_version": "dad.portfolio_continuity_adapter_result.v1",
+        "status": result["status"],
+        "event_id": event["event_id"],
+        "command_id": event["command_id"],
+        "redaction_count": event["redaction_count"],
+        "silent": True,
+        "model_calls": 0,
+        "network_calls": 0,
+        "notifications_attempted": 0,
+        "scheduler_actions": 0,
+        "git_actions": 0,
+        "task_mutations": 0,
+        "candidate_only": True,
+        "execution_authorized": False,
+        "authority_boundary": ADAPTER_AUTHORITY_BOUNDARY,
+    }
 
 
 def ingest_receipt(
@@ -35,24 +59,23 @@ def ingest_receipt(
         lock_timeout_seconds=lock_timeout_seconds,
         retry_clock_tolerant=retry_clock_tolerant,
     )
-    event = result["event"]
-    return {
-        "schema_version": "dad.portfolio_continuity_adapter_result.v1",
-        "status": result["status"],
-        "event_id": event["event_id"],
-        "command_id": event["command_id"],
-        "redaction_count": event["redaction_count"],
-        "silent": True,
-        "model_calls": 0,
-        "network_calls": 0,
-        "notifications_attempted": 0,
-        "scheduler_actions": 0,
-        "git_actions": 0,
-        "task_mutations": 0,
-        "candidate_only": True,
-        "execution_authorized": False,
-        "authority_boundary": ADAPTER_AUTHORITY_BOUNDARY,
-    }
+    return _result_metadata(result)
+
+
+def _ingest_codex_hook_receipt(
+    hub_root: Path,
+    receipt: Mapping[str, Any],
+    *,
+    lock_timeout_seconds: float,
+) -> dict[str, Any]:
+    """Use the schema-pinned fast path only for the native Codex hook."""
+
+    result = _append_codex_hook_observation(
+        hub_root,
+        receipt,
+        lock_timeout_seconds=lock_timeout_seconds,
+    )
+    return _result_metadata(result)
 
 
 def ingest_receipt_file(hub_root: Path, receipt_file: Path) -> dict[str, Any]:
